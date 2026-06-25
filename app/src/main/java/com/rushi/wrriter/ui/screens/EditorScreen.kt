@@ -14,10 +14,14 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.documentfile.provider.DocumentFile
 import androidx.webkit.WebViewAssetLoader
@@ -56,7 +60,44 @@ fun EditorScreen(
     var noteBody by remember { mutableStateOf("") }
     var noteMetadata by remember { mutableStateOf<NoteMetadata?>(null) }
     var webViewInstance by remember { mutableStateOf<WebView?>(null) }
-    var showReminderMenu by remember { mutableStateOf(false) }
+    var showReminderBottomSheet by remember { mutableStateOf(false) }
+    var selectedDateText by remember { mutableStateOf("No date selected") }
+    var selectedTimeText by remember { mutableStateOf("No time selected") }
+    val calendar = remember { java.util.Calendar.getInstance() }
+    var isDateTimeSelected by remember { mutableStateOf(false) }
+
+    val datePickerDialog = remember {
+        android.app.DatePickerDialog(
+            context,
+            { _, year, month, dayOfMonth ->
+                calendar.set(java.util.Calendar.YEAR, year)
+                calendar.set(java.util.Calendar.MONTH, month)
+                calendar.set(java.util.Calendar.DAY_OF_MONTH, dayOfMonth)
+                selectedDateText = String.format("%04d-%02d-%02d", year, month + 1, dayOfMonth)
+                isDateTimeSelected = selectedTimeText != "No time selected"
+            },
+            calendar.get(java.util.Calendar.YEAR),
+            calendar.get(java.util.Calendar.MONTH),
+            calendar.get(java.util.Calendar.DAY_OF_MONTH)
+        )
+    }
+
+    val timePickerDialog = remember {
+        android.app.TimePickerDialog(
+            context,
+            { _, hourOfDay, minute ->
+                calendar.set(java.util.Calendar.HOUR_OF_DAY, hourOfDay)
+                calendar.set(java.util.Calendar.MINUTE, minute)
+                calendar.set(java.util.Calendar.SECOND, 0)
+                calendar.set(java.util.Calendar.MILLISECOND, 0)
+                selectedTimeText = String.format("%02d:%02d", hourOfDay, minute)
+                isDateTimeSelected = selectedDateText != "No date selected"
+            },
+            calendar.get(java.util.Calendar.HOUR_OF_DAY),
+            calendar.get(java.util.Calendar.MINUTE),
+            false
+        )
+    }
     
     // Load note content and metadata
     LaunchedEffect(noteUriString) {
@@ -108,52 +149,11 @@ fun EditorScreen(
                 },
                 actions = {
                     // Set Reminder Icon
-                    IconButton(onClick = { showReminderMenu = true }) {
+                    IconButton(onClick = { showReminderBottomSheet = true }) {
                         Icon(
                             imageVector = Icons.Default.Notifications,
                             contentDescription = "Set Reminder",
                             tint = Color.White
-                        )
-                    }
-                    DropdownMenu(
-                        expanded = showReminderMenu,
-                        onDismissRequest = { showReminderMenu = false },
-                        modifier = Modifier.background(Color(0xFF121212))
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Remind in 5 mins", color = Color.White) },
-                            onClick = {
-                                showReminderMenu = false
-                                val triggerTime = System.currentTimeMillis() + 5 * 60 * 1000L
-                                com.rushi.wrriter.receiver.AlarmReceiver.scheduleAlarm(context, noteUriString, noteTitle, triggerTime)
-                                Toast.makeText(context, "Reminder set for 5 minutes", Toast.LENGTH_SHORT).show()
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Remind in 1 hour", color = Color.White) },
-                            onClick = {
-                                showReminderMenu = false
-                                val triggerTime = System.currentTimeMillis() + 60 * 60 * 1000L
-                                com.rushi.wrriter.receiver.AlarmReceiver.scheduleAlarm(context, noteUriString, noteTitle, triggerTime)
-                                Toast.makeText(context, "Reminder set for 1 hour", Toast.LENGTH_SHORT).show()
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Remind in 1 day", color = Color.White) },
-                            onClick = {
-                                showReminderMenu = false
-                                val triggerTime = System.currentTimeMillis() + 24 * 60 * 60 * 1000L
-                                com.rushi.wrriter.receiver.AlarmReceiver.scheduleAlarm(context, noteUriString, noteTitle, triggerTime)
-                                Toast.makeText(context, "Reminder set for 1 day", Toast.LENGTH_SHORT).show()
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Cancel Reminder", color = Color.White) },
-                            onClick = {
-                                showReminderMenu = false
-                                com.rushi.wrriter.receiver.AlarmReceiver.cancelAlarm(context, noteUriString)
-                                Toast.makeText(context, "Reminder cancelled", Toast.LENGTH_SHORT).show()
-                            }
                         )
                     }
                     // Brush/Drawing Icon
@@ -251,6 +251,111 @@ fun EditorScreen(
                         webViewInstance = webView
                     }
                 )
+            }
+        }
+    }
+
+    if (showReminderBottomSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showReminderBottomSheet = false },
+            sheetState = rememberModalBottomSheetState(),
+            containerColor = Color(0xFF121212),
+            contentColor = Color.White,
+            dragHandle = { BottomSheetDefaults.DragHandle(color = Color(0xFF475569)) }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp)
+                    .navigationBarsPadding(),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "Set Custom Reminder",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                Text(
+                    text = "Select a custom date and time to schedule a notification reminder for this note.",
+                    color = Color(0xFF94A3B8),
+                    fontSize = 13.sp
+                )
+
+                // Date Picker trigger button
+                Button(
+                    onClick = { datePickerDialog.show() },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF1E293B),
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(text = "Select Date: $selectedDateText")
+                }
+
+                // Time Picker trigger button
+                Button(
+                    onClick = { timePickerDialog.show() },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF1E293B),
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(text = "Select Time: $selectedTimeText")
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Set Alarm
+                    Button(
+                        onClick = {
+                            if (isDateTimeSelected) {
+                                val triggerTime = calendar.timeInMillis
+                                if (triggerTime <= System.currentTimeMillis()) {
+                                    Toast.makeText(context, "Please select a future date and time", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    com.rushi.wrriter.receiver.AlarmReceiver.scheduleAlarm(context, noteUriString, noteTitle, triggerTime)
+                                    Toast.makeText(context, "Reminder set successfully", Toast.LENGTH_SHORT).show()
+                                    showReminderBottomSheet = false
+                                }
+                            } else {
+                                Toast.makeText(context, "Please select both date and time", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF94A3B8), // Brand Slate Grey
+                            contentColor = Color.Black
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("Set Reminder", fontWeight = FontWeight.Bold)
+                    }
+
+                    // Cancel Alarm
+                    Button(
+                        onClick = {
+                            com.rushi.wrriter.receiver.AlarmReceiver.cancelAlarm(context, noteUriString)
+                            Toast.makeText(context, "Reminder cancelled", Toast.LENGTH_SHORT).show()
+                            showReminderBottomSheet = false
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFEF4444), // Red
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("Cancel Reminder")
+                    }
+                }
             }
         }
     }

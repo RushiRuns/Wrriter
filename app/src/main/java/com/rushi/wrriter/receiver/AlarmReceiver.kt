@@ -39,18 +39,56 @@ class AlarmReceiver : BroadcastReceiver() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                alarmManager.setExactAndAllowWhileIdle(
-                    android.app.AlarmManager.RTC_WAKEUP,
-                    triggerTimeMs,
-                    pendingIntent
-                )
-            } else {
-                alarmManager.setExact(
-                    android.app.AlarmManager.RTC_WAKEUP,
-                    triggerTimeMs,
-                    pendingIntent
-                )
+            try {
+                val canScheduleExact = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    alarmManager.canScheduleExactAlarms()
+                } else {
+                    true
+                }
+
+                if (canScheduleExact) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        alarmManager.setExactAndAllowWhileIdle(
+                            android.app.AlarmManager.RTC_WAKEUP,
+                            triggerTimeMs,
+                            pendingIntent
+                        )
+                    } else {
+                        alarmManager.setExact(
+                            android.app.AlarmManager.RTC_WAKEUP,
+                            triggerTimeMs,
+                            pendingIntent
+                        )
+                    }
+                } else {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        alarmManager.setAndAllowWhileIdle(
+                            android.app.AlarmManager.RTC_WAKEUP,
+                            triggerTimeMs,
+                            pendingIntent
+                        )
+                    } else {
+                        alarmManager.set(
+                            android.app.AlarmManager.RTC_WAKEUP,
+                            triggerTimeMs,
+                            pendingIntent
+                        )
+                    }
+                }
+            } catch (e: SecurityException) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    alarmManager.setAndAllowWhileIdle(
+                        android.app.AlarmManager.RTC_WAKEUP,
+                        triggerTimeMs,
+                        pendingIntent
+                    )
+                } else {
+                    alarmManager.set(
+                        android.app.AlarmManager.RTC_WAKEUP,
+                        triggerTimeMs,
+                        pendingIntent
+                    )
+                }
             }
         }
 

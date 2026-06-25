@@ -109,8 +109,8 @@
 
 **Independent Test**: Open Tasks screen, check a task, open source note, verify text updates to `- [x]`.
 
-- [ ] T027 [US6] Implement checklist markdown line scanner and updater in `app/src/main/java/com/rushi/wrriter/data/VaultManager.kt`
-- [ ] T028 [US6] Create Tasks aggregated dashboard UI in `app/src/main/java/com/rushi/wrriter/ui/screens/TasksScreen.kt`
+- [x] T027 [US6] Implement checklist markdown line scanner and updater in `app/src/main/java/com/rushi/wrriter/data/VaultManager.kt`
+- [x] T028 [US6] Create Tasks aggregated dashboard UI in `app/src/main/java/com/rushi/wrriter/ui/screens/TasksScreen.kt`
 
 ---
 

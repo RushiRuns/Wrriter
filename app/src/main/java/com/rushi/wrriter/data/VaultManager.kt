@@ -508,4 +508,122 @@ class VaultManager(private val context: Context) {
                 .toSet()
         }
     }
+
+    /**
+     * Scans all note files in the cache for checklist task items (- [ ] / - [x]).
+     */
+    fun getAllTasks(): List<TaskItem> {
+        val tasks = mutableListOf<TaskItem>()
+        val notes = getCachedNotes()
+        val taskRegex = """^\s*[-*]\s+\[([ xX])\]\s+(.*)$""".toRegex()
+
+        for (note in notes) {
+            try {
+                val fileUri = Uri.parse(note.uriString)
+                val inputStream = contentResolver.openInputStream(fileUri) ?: continue
+                val reader = BufferedReader(InputStreamReader(inputStream))
+                val lines = reader.use { it.readLines() }
+
+                var frontmatterEndIndex = -1
+                if (lines.isNotEmpty() && lines[0].trim() == "---") {
+                    for (i in 1 until lines.size) {
+                        if (lines[i].trim() == "---") {
+                            frontmatterEndIndex = i
+                            break
+                        }
+                    }
+                }
+
+                val startLineIndex = if (frontmatterEndIndex != -1) frontmatterEndIndex + 1 else 0
+
+                for (i in startLineIndex until lines.size) {
+                    val line = lines[i]
+                    val match = taskRegex.matchEntire(line)
+                    if (match != null) {
+                        val statusChar = match.groupValues[1]
+                        val description = match.groupValues[2].trim()
+                        val isCompleted = statusChar.lowercase() == "x"
+
+                        tasks.add(
+                            TaskItem(
+                                sourceNoteUri = note.uriString,
+                                sourceNoteTitle = note.title,
+                                description = description,
+                                isCompleted = isCompleted,
+                                lineIndex = i,
+                                rawText = line
+                            )
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+        return tasks
+    }
+
+    /**
+     * Updates the completion status of a task inside its source Markdown file.
+     */
+    fun updateTaskCompletion(task: TaskItem, isCompleted: Boolean): Boolean {
+        try {
+            val fileUri = Uri.parse(task.sourceNoteUri)
+            val inputStream = contentResolver.openInputStream(fileUri) ?: return false
+            val reader = BufferedReader(InputStreamReader(inputStream))
+            val lines = reader.use { it.readLines() }.toMutableList()
+
+            if (task.lineIndex >= lines.size) return false
+            val targetLine = lines[task.lineIndex]
+
+            if (targetLine != task.rawText) {
+                var foundIndex = -1
+                for (i in lines.indices) {
+                    if (lines[i] == task.rawText) {
+                        foundIndex = i
+                        break
+                    }
+                }
+                if (foundIndex == -1) return false
+                lines[foundIndex] = toggleLineCheckbox(lines[foundIndex], isCompleted)
+            } else {
+                lines[task.lineIndex] = toggleLineCheckbox(targetLine, isCompleted)
+            }
+
+            val content = lines.joinToString("\n")
+            val outputStream = contentResolver.openOutputStream(fileUri, "wt") ?: return false
+            outputStream.use { it.write(content.toByteArray()) }
+
+            val existingMetadata = synchronized(noteCache) { noteCache[task.sourceNoteUri] }
+            if (existingMetadata != null) {
+                val updatedMetadata = existingMetadata.copy(modifiedTime = System.currentTimeMillis())
+                synchronized(noteCache) {
+                    noteCache[task.sourceNoteUri] = updatedMetadata
+                }
+            }
+            return true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return false
+        }
+    }
+
+    private fun toggleLineCheckbox(line: String, isCompleted: Boolean): String {
+        val uncompletedRegex = """^(\s*[-*]\s+\[)\s(\]\s+.*)$""".toRegex()
+        val completedRegex = """^(\s*[-*]\s+\[)[xX](\]\s+.*)$""".toRegex()
+
+        return if (isCompleted) {
+            if (uncompletedRegex.matches(line)) {
+                line.replace(uncompletedRegex, "$1x$2")
+            } else {
+                line
+            }
+        } else {
+            if (completedRegex.matches(line)) {
+                line.replace(completedRegex, "$1 $2")
+            } else {
+                line
+            }
+        }
+    }
 }

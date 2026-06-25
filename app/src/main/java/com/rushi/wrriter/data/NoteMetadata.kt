@@ -14,3 +14,16 @@ data class NoteMetadata(
     val isInbox: Boolean,       // Flag indicating if the file resides in the "/Inbox" folder
     val wordCount: Int          // Total word count computed on read/index
 )
+
+/**
+ * Data class representing a parsed checklist task item from a markdown note.
+ */
+data class TaskItem(
+    val sourceNoteUri: String,   // Reference to the note file
+    val sourceNoteTitle: String, // Note display title
+    val description: String,     // Task text (e.g. "Buy milk")
+    val isCompleted: Boolean,    // true if - [x], false if - [ ]
+    val lineIndex: Int,          // Line number in the file for atomic replacement (0-indexed)
+    val rawText: String          // Original raw markdown line text
+)
+

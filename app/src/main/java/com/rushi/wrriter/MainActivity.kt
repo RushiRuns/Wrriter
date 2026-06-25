@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Assignment
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material3.*
@@ -21,6 +22,7 @@ import com.rushi.wrriter.ui.screens.DrawingPadScreen
 import com.rushi.wrriter.ui.screens.EditorScreen
 import com.rushi.wrriter.ui.screens.InboxScreen
 import com.rushi.wrriter.ui.screens.JournalScreen
+import com.rushi.wrriter.ui.screens.TasksScreen
 import com.rushi.wrriter.ui.screens.OnboardingScreen
 import com.rushi.wrriter.ui.theme.WrriterTheme
 import kotlinx.coroutines.launch
@@ -138,27 +140,52 @@ class MainActivity : ComponentActivity() {
                                                     indicatorColor = Color(0xFF1E293B)
                                                 )
                                             )
+                                            NavigationBarItem(
+                                                selected = selectedTab == "tasks",
+                                                onClick = { selectedTab = "tasks" },
+                                                icon = { Icon(Icons.Default.Assignment, contentDescription = "Tasks") },
+                                                label = { Text("Tasks") },
+                                                colors = NavigationBarItemDefaults.colors(
+                                                    selectedIconColor = Color(0xFFF97316),
+                                                    selectedTextColor = Color(0xFFF97316),
+                                                    unselectedIconColor = Color(0xFF64748B),
+                                                    unselectedTextColor = Color(0xFF64748B),
+                                                    indicatorColor = Color(0xFF1E293B)
+                                                )
+                                            )
                                         }
                                     },
                                     containerColor = Color.Black
                                 ) { innerPadding ->
                                     Box(modifier = Modifier.padding(innerPadding)) {
-                                        if (selectedTab == "inbox") {
-                                            InboxScreen(
-                                                vaultManager = vaultManager,
-                                                vaultUri = vaultUri,
-                                                onNoteSelected = { note ->
-                                                    activeNoteUri = note.uriString
-                                                }
-                                            )
-                                        } else {
-                                            JournalScreen(
-                                                vaultManager = vaultManager,
-                                                vaultUri = vaultUri,
-                                                onNoteSelected = { note ->
-                                                    activeNoteUri = note.uriString
-                                                }
-                                            )
+                                        when (selectedTab) {
+                                            "inbox" -> {
+                                                InboxScreen(
+                                                    vaultManager = vaultManager,
+                                                    vaultUri = vaultUri,
+                                                    onNoteSelected = { note ->
+                                                        activeNoteUri = note.uriString
+                                                    }
+                                                )
+                                            }
+                                            "journal" -> {
+                                                JournalScreen(
+                                                    vaultManager = vaultManager,
+                                                    vaultUri = vaultUri,
+                                                    onNoteSelected = { note ->
+                                                        activeNoteUri = note.uriString
+                                                    }
+                                                )
+                                            }
+                                            "tasks" -> {
+                                                TasksScreen(
+                                                    vaultManager = vaultManager,
+                                                    vaultUri = vaultUri,
+                                                    onNoteSelected = { note ->
+                                                        activeNoteUri = note.uriString
+                                                    }
+                                                )
+                                            }
                                         }
                                     }
                                 }

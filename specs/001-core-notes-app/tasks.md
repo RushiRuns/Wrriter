@@ -70,10 +70,10 @@
 
 **Independent Test**: Long-press a note row, choose target folder, verify note moves out of Inbox and path changes.
 
-- [ ] T017 [US3] Create row action toolbar layout in `app/src/main/java/com/rushi/wrriter/ui/components/InboxToolbar.kt`
-- [ ] T018 [US3] Implement physical note moving and deleting in `app/src/main/java/com/rushi/wrriter/data/VaultManager.kt`
-- [ ] T019 [US3] Connect toolbar actions to file moving operations in `app/src/main/java/com/rushi/wrriter/ui/screens/InboxScreen.kt`
-- [ ] T020 [US3] Implement custom folder selector with nested folder creator in `app/src/main/java/com/rushi/wrriter/ui/components/InboxToolbar.kt`
+- [x] T017 [US3] Create row action toolbar layout in `app/src/main/java/com/rushi/wrriter/ui/components/InboxToolbar.kt`
+- [x] T018 [US3] Implement physical note moving and deleting in `app/src/main/java/com/rushi/wrriter/data/VaultManager.kt`
+- [x] T019 [US3] Connect toolbar actions to file moving operations in `app/src/main/java/com/rushi/wrriter/ui/screens/InboxScreen.kt`
+- [x] T020 [US3] Implement custom folder selector with nested folder creator in `app/src/main/java/com/rushi/wrriter/ui/components/InboxToolbar.kt`
 
 **Checkpoint**: Inbox note filing and nested folders are fully functional.
 

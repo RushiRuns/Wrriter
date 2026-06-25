@@ -7,8 +7,9 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -32,7 +33,11 @@ import androidx.core.content.ContextCompat
 import androidx.documentfile.provider.DocumentFile
 import com.rushi.wrriter.data.AudioRecorder
 import com.rushi.wrriter.data.NoteMetadata
+import com.rushi.wrriter.data.PreferencesManager
 import com.rushi.wrriter.data.VaultManager
+import com.rushi.wrriter.ui.components.InboxToolbar
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -45,9 +50,17 @@ fun InboxScreen(
     onNoteSelected: (NoteMetadata) -> Unit
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val preferencesManager = remember { PreferencesManager(context) }
+
     var notesList by remember { mutableStateOf(emptyList<NoteMetadata>()) }
     var dumpText by remember { mutableStateOf("") }
     
+    // Selection state for toolbar
+    var selectedNoteUri by remember { mutableStateOf<String?>(null) }
+    var lastUsedFolder by remember { mutableStateOf("Later") }
+    var existingFolders by remember { mutableStateOf(emptyList<String>()) }
+
     // Audio recording state
     val audioRecorder = remember { AudioRecorder(context) }
     var isRecording by remember { mutableStateOf(false) }
@@ -65,11 +78,15 @@ fun InboxScreen(
         }
     }
 
-    // Refresh inbox list from cache/disk
+    // Refresh inbox lists and configs
     val refreshInbox = {
         try {
             vaultManager.rebuildCache(vaultUri)
             notesList = vaultManager.getInboxNotes().sortedByDescending { it.modifiedTime }
+            existingFolders = vaultManager.getCachedNotes().map { it.filePath }.distinct()
+            coroutineScope.launch {
+                lastUsedFolder = preferencesManager.lastUsedFolderFlow.first()
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -133,7 +150,59 @@ fun InboxScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(notesList, key = { it.uriString }) { note ->
-                        InboxNoteRow(note = note, onClick = { onNoteSelected(note) })
+                        val isSelected = selectedNoteUri == note.uriString
+                        
+                        Column {
+                            InboxNoteRow(
+                                note = note,
+                                isSelected = isSelected,
+                                onClick = {
+                                    if (selectedNoteUri != null) {
+                                        // Dismiss selection if clicking elsewhere
+                                        selectedNoteUri = null
+                                    } else {
+                                        onNoteSelected(note)
+                                    }
+                                },
+                                onLongClick = {
+                                    selectedNoteUri = note.uriString
+                                }
+                            )
+
+                            // Show processing toolbar inline if selected
+                            if (isSelected) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                InboxToolbar(
+                                    note = note,
+                                    lastUsedFolder = lastUsedFolder,
+                                    existingFolders = existingFolders,
+                                    onMove = { folder ->
+                                        coroutineScope.launch {
+                                            try {
+                                                vaultManager.moveNote(note, folder, vaultUri)
+                                                preferencesManager.saveLastUsedFolder(folder)
+                                                selectedNoteUri = null
+                                                refreshInbox()
+                                            } catch (e: Exception) {
+                                                e.printStackTrace()
+                                                Toast.makeText(context, "Error moving file", Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                    },
+                                    onDelete = {
+                                        val deleted = vaultManager.deleteNote(note)
+                                        if (deleted) {
+                                            selectedNoteUri = null
+                                            refreshInbox()
+                                            Toast.makeText(context, "Note deleted", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            Toast.makeText(context, "Failed to delete note", Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
+                                    modifier = Modifier.padding(horizontal = 4.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -221,15 +290,29 @@ fun InboxScreen(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun InboxNoteRow(note: NoteMetadata, onClick: () -> Unit) {
+fun InboxNoteRow(
+    note: NoteMetadata,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
+) {
+    val dateString = remember(note.modifiedTime) {
+        val date = Date(note.modifiedTime)
+        SimpleDateFormat("HH:mm", Locale.getDefault()).format(date)
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() },
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            ),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF121212) // Slate black card
+            containerColor = if (isSelected) Color(0xFF1E293B) else Color(0xFF121212) // Slate highlighted when active
         )
     ) {
         Row(
@@ -237,9 +320,9 @@ fun InboxNoteRow(note: NoteMetadata, onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                imageVector = Icons.Default.Edit,
-                contentDescription = "Note",
-                tint = Color(0xFFF97316),
+                imageVector = if (isSelected) Icons.Default.Check else Icons.Default.Edit,
+                contentDescription = "Note Status",
+                tint = if (isSelected) Color(0xFFF97316) else Color(0xFF475569),
                 modifier = Modifier.size(20.dp)
             )
             Spacer(modifier = Modifier.width(16.dp))
@@ -261,6 +344,12 @@ fun InboxNoteRow(note: NoteMetadata, onClick: () -> Unit) {
                     color = Color(0xFF64748B)
                 )
             }
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = dateString,
+                fontSize = 12.sp,
+                color = Color(0xFF475569)
+            )
         }
     }
 }

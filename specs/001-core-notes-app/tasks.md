@@ -97,9 +97,9 @@
 
 **Independent Test**: Navigate to Journal, select a calendar date, and verify corresponding date-named note loads.
 
-- [ ] T024 [US5] Implement auto-creation of `Journal/YYYY-MM-DD.md` in `app/src/main/java/com/rushi/wrriter/data/VaultManager.kt`
-- [ ] T025 [US5] Build Compose Calendar grid component showing entry indicators in `app/src/main/java/com/rushi/wrriter/ui/components/CalendarGrid.kt`
-- [ ] T026 [US5] Create Journal dashboard screen in `app/src/main/java/com/rushi/wrriter/ui/screens/JournalScreen.kt`
+- [x] T024 [US5] Implement auto-creation of `Journal/YYYY-MM-DD.md` in `app/src/main/java/com/rushi/wrriter/data/VaultManager.kt`
+- [x] T025 [US5] Build Compose Calendar grid component showing entry indicators in `app/src/main/java/com/rushi/wrriter/ui/components/CalendarGrid.kt`
+- [x] T026 [US5] Create Journal dashboard screen in `app/src/main/java/com/rushi/wrriter/ui/screens/JournalScreen.kt`
 
 ---
 

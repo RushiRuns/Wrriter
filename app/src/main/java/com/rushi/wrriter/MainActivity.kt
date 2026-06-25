@@ -6,15 +6,21 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Book
+import androidx.compose.material.icons.filled.Inbox
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import com.rushi.wrriter.data.PreferencesManager
 import com.rushi.wrriter.data.VaultManager
 import com.rushi.wrriter.ui.screens.DrawingPadScreen
 import com.rushi.wrriter.ui.screens.EditorScreen
 import com.rushi.wrriter.ui.screens.InboxScreen
+import com.rushi.wrriter.ui.screens.JournalScreen
 import com.rushi.wrriter.ui.screens.OnboardingScreen
 import com.rushi.wrriter.ui.theme.WrriterTheme
 import kotlinx.coroutines.launch
@@ -24,6 +30,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var preferencesManager: PreferencesManager
     private lateinit var vaultManager: VaultManager
 
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
@@ -44,6 +51,7 @@ class MainActivity : ComponentActivity() {
                     var activeNoteUri by remember { mutableStateOf<String?>(null) }
                     var showDrawingPad by remember { mutableStateOf(false) }
                     var insertedDrawingPath by remember { mutableStateOf<String?>(null) }
+                    var selectedTab by remember { mutableStateOf("inbox") }
                     
                     val vaultUri = vaultUriState.value
 
@@ -98,13 +106,62 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                             else -> {
-                                InboxScreen(
-                                    vaultManager = vaultManager,
-                                    vaultUri = vaultUri,
-                                    onNoteSelected = { note ->
-                                        activeNoteUri = note.uriString
+                                Scaffold(
+                                    bottomBar = {
+                                        NavigationBar(
+                                            containerColor = Color(0xFF121212),
+                                            contentColor = Color.White
+                                        ) {
+                                            NavigationBarItem(
+                                                selected = selectedTab == "inbox",
+                                                onClick = { selectedTab = "inbox" },
+                                                icon = { Icon(Icons.Default.Inbox, contentDescription = "Inbox") },
+                                                label = { Text("Inbox") },
+                                                colors = NavigationBarItemDefaults.colors(
+                                                    selectedIconColor = Color(0xFFF97316),
+                                                    selectedTextColor = Color(0xFFF97316),
+                                                    unselectedIconColor = Color(0xFF64748B),
+                                                    unselectedTextColor = Color(0xFF64748B),
+                                                    indicatorColor = Color(0xFF1E293B)
+                                                )
+                                            )
+                                            NavigationBarItem(
+                                                selected = selectedTab == "journal",
+                                                onClick = { selectedTab = "journal" },
+                                                icon = { Icon(Icons.Default.Book, contentDescription = "Journal") },
+                                                label = { Text("Journal") },
+                                                colors = NavigationBarItemDefaults.colors(
+                                                    selectedIconColor = Color(0xFFF97316),
+                                                    selectedTextColor = Color(0xFFF97316),
+                                                    unselectedIconColor = Color(0xFF64748B),
+                                                    unselectedTextColor = Color(0xFF64748B),
+                                                    indicatorColor = Color(0xFF1E293B)
+                                                )
+                                            )
+                                        }
+                                    },
+                                    containerColor = Color.Black
+                                ) { innerPadding ->
+                                    Box(modifier = Modifier.padding(innerPadding)) {
+                                        if (selectedTab == "inbox") {
+                                            InboxScreen(
+                                                vaultManager = vaultManager,
+                                                vaultUri = vaultUri,
+                                                onNoteSelected = { note ->
+                                                    activeNoteUri = note.uriString
+                                                }
+                                            )
+                                        } else {
+                                            JournalScreen(
+                                                vaultManager = vaultManager,
+                                                vaultUri = vaultUri,
+                                                onNoteSelected = { note ->
+                                                    activeNoteUri = note.uriString
+                                                }
+                                            )
+                                        }
                                     }
-                                )
+                                }
                             }
                         }
                     }

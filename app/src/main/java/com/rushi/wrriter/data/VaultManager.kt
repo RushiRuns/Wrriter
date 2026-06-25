@@ -438,4 +438,74 @@ class VaultManager(private val context: Context) {
         if (trimmed.isEmpty()) return 0
         return trimmed.split("\\s+".toRegex()).size
     }
+
+    /**
+     * Gets an existing journal note or creates a new one for the specified date string (YYYY-MM-DD) under the Journal folder.
+     */
+    fun getOrCreateDailyJournalNote(rootUriString: String, dateString: String): NoteMetadata {
+        synchronized(noteCache) {
+            val existing = noteCache.values.firstOrNull {
+                it.filePath == "Journal" && it.fileName == "$dateString.md"
+            }
+            if (existing != null) {
+                return existing
+            }
+        }
+
+        val rootUri = Uri.parse(rootUriString)
+        val rootDir = DocumentFile.fromTreeUri(context, rootUri) ?: throw Exception("Root vault invalid")
+        val journalFolder = rootDir.findFile("Journal") ?: rootDir.createDirectory("Journal")
+            ?: throw Exception("Failed to access/create Journal folder")
+
+        val fileName = "$dateString.md"
+        val existingFile = journalFolder.findFile(fileName)
+        if (existingFile != null) {
+            val metadata = loadMetadata(existingFile, "Journal")
+            synchronized(noteCache) {
+                noteCache[existingFile.uri.toString()] = metadata
+            }
+            return metadata
+        }
+
+        val createdTime = System.currentTimeMillis()
+        val file = journalFolder.createFile("text/markdown", fileName)
+            ?: throw Exception("Failed to create journal file $fileName")
+
+        val metadata = NoteMetadata(
+            uriString = file.uri.toString(),
+            filePath = "Journal",
+            fileName = file.name ?: fileName,
+            title = dateString,
+            tags = listOf("journal"),
+            createdTime = createdTime,
+            modifiedTime = createdTime,
+            isInbox = false,
+            wordCount = 0
+        )
+
+        val body = "# Journal - $dateString\n\n"
+        val serialized = serializeFrontmatter(metadata, body)
+        val outputStream = contentResolver.openOutputStream(file.uri) ?: throw Exception("Cannot open write stream")
+        outputStream.use { it.write(serialized.toByteArray()) }
+
+        synchronized(noteCache) {
+            noteCache[file.uri.toString()] = metadata
+        }
+
+        return metadata
+    }
+
+    /**
+     * Retrieves all dates (YYYY-MM-DD strings) for which a journal entry exists.
+     */
+    fun getExistingJournalDates(): Set<String> {
+        val dateRegex = """^\d{4}-\d{2}-\d{2}$""".toRegex()
+        synchronized(noteCache) {
+            return noteCache.values
+                .filter { it.filePath == "Journal" }
+                .map { it.fileName.removeSuffix(".md") }
+                .filter { dateRegex.matches(it) }
+                .toSet()
+        }
+    }
 }

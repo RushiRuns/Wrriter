@@ -1,13 +1,19 @@
 package com.rushi.wrriter
 
+import android.content.Context
+import android.hardware.Sensor
+import android.hardware.SensorManager
+import android.os.Build
 import android.os.Bundle
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.Box
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Assignment
 import androidx.compose.material.icons.filled.Book
@@ -18,12 +24,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.rushi.wrriter.data.PreferencesManager
 import com.rushi.wrriter.data.VaultManager
+import com.rushi.wrriter.sensor.ShakeDetector
 import com.rushi.wrriter.ui.screens.DrawingPadScreen
 import com.rushi.wrriter.ui.screens.EditorScreen
 import com.rushi.wrriter.ui.screens.InboxScreen
 import com.rushi.wrriter.ui.screens.JournalScreen
-import com.rushi.wrriter.ui.screens.TasksScreen
 import com.rushi.wrriter.ui.screens.OnboardingScreen
+import com.rushi.wrriter.ui.screens.TasksScreen
 import com.rushi.wrriter.ui.theme.WrriterTheme
 import kotlinx.coroutines.launch
 
@@ -31,6 +38,9 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var preferencesManager: PreferencesManager
     private lateinit var vaultManager: VaultManager
+    private var sensorManager: SensorManager? = null
+    private var shakeDetector: ShakeDetector? = null
+    private var onShakeCallback: (() -> Unit)? = null
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,6 +48,11 @@ class MainActivity : ComponentActivity() {
         
         preferencesManager = PreferencesManager(applicationContext)
         vaultManager = VaultManager(applicationContext)
+
+        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        shakeDetector = ShakeDetector {
+            onShakeCallback?.invoke()
+        }
 
         enableEdgeToEdge()
         setContent {
@@ -56,6 +71,18 @@ class MainActivity : ComponentActivity() {
                     var selectedTab by remember { mutableStateOf("inbox") }
                     
                     val vaultUri = vaultUriState.value
+
+                    onShakeCallback = {
+                        val notes = vaultManager.getCachedNotes()
+                        if (notes.isEmpty()) {
+                            Toast.makeText(applicationContext, "No notes available to open", Toast.LENGTH_SHORT).show()
+                        } else {
+                            val randomNote = notes.random()
+                            Toast.makeText(applicationContext, "Opening random note: ${randomNote.title}...", Toast.LENGTH_SHORT).show()
+                            triggerVibration()
+                            activeNoteUri = randomNote.uriString
+                        }
+                    }
 
                     if (vaultUri.isNullOrEmpty()) {
                         // Onboarding first launch
@@ -193,6 +220,33 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val accelerometer = sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        if (accelerometer != null && shakeDetector != null) {
+            sensorManager?.registerListener(shakeDetector, accelerometer, SensorManager.SENSOR_DELAY_UI)
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        if (shakeDetector != null) {
+            sensorManager?.unregisterListener(shakeDetector)
+        }
+    }
+
+    private fun triggerVibration() {
+        val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+        if (vibrator != null) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                vibrator.vibrate(VibrationEffect.createOneShot(200, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                @Suppress("DEPRECATION")
+                vibrator.vibrate(200)
             }
         }
     }

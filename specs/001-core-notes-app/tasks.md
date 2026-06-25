@@ -120,10 +120,10 @@
 
 **Independent Test**: Shake device, verify vibration and Toast message, confirm random note opens.
 
-- [ ] T029 [US7] Implement in-memory vault search scanner and cache in `app/src/main/java/com/rushi/wrriter/data/VaultManager.kt`
-- [ ] T030 [US7] Create search bar filter header in `app/src/main/java/com/rushi/wrriter/ui/components/SearchBar.kt`
-- [ ] T031 [US7] Implement SensorEventListener shake detector in `app/src/main/java/com/rushi/wrriter/sensor/ShakeDetector.kt`
-- [ ] T032 [US7] Bind shake triggers to haptic feedback and editor loader in `app/src/main/java/com/rushi/wrriter/MainActivity.kt`
+- [x] T029 [US7] Implement in-memory vault search scanner and cache in `app/src/main/java/com/rushi/wrriter/data/VaultManager.kt`
+- [x] T030 [US7] Create search bar filter header in `app/src/main/java/com/rushi/wrriter/ui/components/SearchBar.kt`
+- [x] T031 [US7] Implement SensorEventListener shake detector in `app/src/main/java/com/rushi/wrriter/sensor/ShakeDetector.kt`
+- [x] T032 [US7] Bind shake triggers to haptic feedback and editor loader in `app/src/main/java/com/rushi/wrriter/MainActivity.kt`
 
 ---
 

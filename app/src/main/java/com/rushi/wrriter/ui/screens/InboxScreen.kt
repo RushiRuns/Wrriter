@@ -36,8 +36,11 @@ import com.rushi.wrriter.data.NoteMetadata
 import com.rushi.wrriter.data.PreferencesManager
 import com.rushi.wrriter.data.VaultManager
 import com.rushi.wrriter.ui.components.InboxToolbar
+import com.rushi.wrriter.ui.components.SearchBar
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -55,6 +58,7 @@ fun InboxScreen(
 
     var notesList by remember { mutableStateOf(emptyList<NoteMetadata>()) }
     var dumpText by remember { mutableStateOf("") }
+    var searchQuery by remember { mutableStateOf("") }
     
     // Selection state for toolbar
     var selectedNoteUri by remember { mutableStateOf<String?>(null) }
@@ -82,17 +86,26 @@ fun InboxScreen(
     val refreshInbox = {
         try {
             vaultManager.rebuildCache(vaultUri)
-            notesList = vaultManager.getInboxNotes().sortedByDescending { it.modifiedTime }
             existingFolders = vaultManager.getCachedNotes().map { it.filePath }.distinct()
             coroutineScope.launch {
                 lastUsedFolder = preferencesManager.lastUsedFolderFlow.first()
+            }
+            coroutineScope.launch(Dispatchers.IO) {
+                val list = if (searchQuery.trim().isEmpty()) {
+                    vaultManager.getInboxNotes().sortedByDescending { it.modifiedTime }
+                } else {
+                    vaultManager.searchNotes(searchQuery)
+                }
+                withContext(Dispatchers.Main) {
+                    notesList = list
+                }
             }
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
 
-    LaunchedEffect(vaultUri) {
+    LaunchedEffect(vaultUri, searchQuery) {
         refreshInbox()
     }
 
@@ -115,7 +128,7 @@ fun InboxScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Inbox",
+                    text = if (searchQuery.trim().isEmpty()) "Inbox" else "Search Results",
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
@@ -127,6 +140,16 @@ fun InboxScreen(
                 )
             }
 
+            // Search Bar Filter Header
+            SearchBar(
+                query = searchQuery,
+                onQueryChange = { searchQuery = it },
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 12.dp),
+                placeholderText = "Search titles, tags, or content..."
+            )
+
             // Notes list
             if (notesList.isEmpty()) {
                 Box(
@@ -136,7 +159,7 @@ fun InboxScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Clean slate. Dump your thoughts below.",
+                        text = if (searchQuery.trim().isEmpty()) "Clean slate. Dump your thoughts below." else "No notes match your search.",
                         fontSize = 14.sp,
                         color = Color(0xFF475569) // Muted text
                     )

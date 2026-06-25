@@ -626,4 +626,40 @@ class VaultManager(private val context: Context) {
             }
         }
     }
+
+    /**
+     * Searches all cached notes for matching query terms in title, tags, or body content.
+     */
+    fun searchNotes(query: String): List<NoteMetadata> {
+        val result = mutableListOf<NoteMetadata>()
+        val notes = getCachedNotes()
+        if (query.trim().isEmpty()) return notes
+
+        val lowerQuery = query.trim().lowercase()
+        for (note in notes) {
+            if (note.title.lowercase().contains(lowerQuery)) {
+                result.add(note)
+                continue
+            }
+
+            if (note.tags.any { it.lowercase().contains(lowerQuery) }) {
+                result.add(note)
+                continue
+            }
+
+            try {
+                val fileUri = Uri.parse(note.uriString)
+                val inputStream = contentResolver.openInputStream(fileUri) ?: continue
+                val reader = BufferedReader(InputStreamReader(inputStream))
+                val text = reader.use { it.readText() }
+                val (_, body) = parseFrontmatter(text)
+                if (body.lowercase().contains(lowerQuery)) {
+                    result.add(note)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+        return result
+    }
 }

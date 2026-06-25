@@ -28,15 +28,60 @@ document.addEventListener("click", function(e) {
 /**
  * Loads markdown body and configures editor styles.
  */
+/**
+ * Injects texture styles directly into the document to bypass CSS caching.
+ * Uses a dedicated <style id="texture-style"> element for easy replacement.
+ */
+function applyTexture(texture) {
+    let styleEl = document.getElementById("texture-style");
+    if (!styleEl) {
+        styleEl = document.createElement("style");
+        styleEl.id = "texture-style";
+        document.head.appendChild(styleEl);
+    }
+
+    const textures = {
+        paper: `body {
+            background-color: #000000;
+            background-image: radial-gradient(rgba(148,163,184,0.35) 1.5px, transparent 0);
+            background-size: 20px 20px;
+            background-attachment: local;
+        }`,
+        ruled: `body {
+            background-color: #000000;
+            background-image: linear-gradient(
+                transparent calc(32px - 1px),
+                rgba(94,116,138,0.6) calc(32px - 1px),
+                rgba(94,116,138,0.6) 32px,
+                transparent 32px
+            );
+            background-size: 100% 32px;
+            background-attachment: local;
+            line-height: 32px;
+        }`,
+        grid: `body {
+            background-color: #000000;
+            background-image:
+                linear-gradient(rgba(94,116,138,0.35) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(94,116,138,0.35) 1px, transparent 1px);
+            background-size: 32px 32px;
+            background-attachment: local;
+        }`
+    };
+
+    if (texture && texture !== "none" && textures[texture]) {
+        styleEl.textContent = textures[texture];
+    } else {
+        styleEl.textContent = "body { background-color: #000000; background-image: none; }";
+    }
+}
+
 function loadNoteContent(markdownContent, optionsJson) {
     try {
         const options = JSON.parse(optionsJson);
         
-        // Apply textures
-        document.body.className = ""; // Reset
-        if (options.texture && options.texture !== "none") {
-            document.body.classList.add("texture-" + options.texture);
-        }
+        // Apply textures via inline style injection (bypasses CSS cache)
+        applyTexture(options.texture);
 
         // Apply typography
         if (options.font && options.font !== "default") {
@@ -60,11 +105,8 @@ function updateEditorOptions(optionsJson) {
     try {
         const options = JSON.parse(optionsJson);
         
-        // Apply textures
-        document.body.className = ""; // Reset
-        if (options.texture && options.texture !== "none") {
-            document.body.classList.add("texture-" + options.texture);
-        }
+        // Apply textures via inline style injection (bypasses CSS cache)
+        applyTexture(options.texture);
 
         // Apply typography
         if (options.font && options.font !== "default") {

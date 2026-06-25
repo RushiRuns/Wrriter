@@ -392,6 +392,9 @@ fun WebViewContainer(
                 // Prevent native WebView white background from showing through
                 setBackgroundColor(android.graphics.Color.BLACK)
 
+                // Clear cache to ensure updated JS/CSS assets are always loaded fresh from APK
+                clearCache(true)
+
                 // Secure Local Assets and dynamic attachments Loading
                 val assetLoader = WebViewAssetLoader.Builder()
                     .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(ctx))

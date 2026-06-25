@@ -173,7 +173,7 @@ fun InboxScreen(
                     ) {
                         val allFolders = (listOf("Inbox", "Later", "Read", "Shop", "Watch", "Journal") + existingFolders)
                             .distinct()
-                            .filter { it.isNotEmpty() && it != "Attachments" }
+                            .filter { it.isNotEmpty() && it != "Attachments" && it != "Tasks" && it != "Tasks/Completed" }
                             .sorted()
                             
                         allFolders.forEach { folder ->
@@ -210,7 +210,7 @@ fun InboxScreen(
                 val allFolders = remember(existingFolders) {
                     (listOf("Inbox", "Later", "Read", "Shop", "Watch", "Journal") + existingFolders)
                         .distinct()
-                        .filter { it.isNotEmpty() && it != "Attachments" }
+                        .filter { it.isNotEmpty() && it != "Attachments" && it != "Tasks" && it != "Tasks/Completed" }
                         .sortedWith(Comparator { o1, o2 ->
                             if (o1 == "Inbox") -1 else if (o2 == "Inbox") 1 else o1.compareTo(o2)
                         })

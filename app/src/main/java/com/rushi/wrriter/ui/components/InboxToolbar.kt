@@ -88,6 +88,11 @@ fun InboxToolbar(
             Icon(Icons.Default.Favorite, "Move to Journal", tint = Color.White)
         }
 
+        // Tasks Icon: /Tasks
+        IconButton(onClick = { onMove("Tasks") }) {
+            Icon(Icons.Default.Assignment, "Move to Tasks", tint = Color.White)
+        }
+
         // Trash Icon: Delete
         IconButton(onClick = onDelete) {
             Icon(Icons.Default.Delete, "Delete", tint = Color(0xFFEF4444))
@@ -116,7 +121,7 @@ fun FolderPickerDialog(
     
     // Filter folders to display (excluding Attachments and defaults)
     val filteredFolders = existingFolders.filter { 
-        it !in listOf("Inbox", "Later", "Read", "Shop", "Watch", "Journal", "Attachments")
+        it !in listOf("Inbox", "Later", "Read", "Shop", "Watch", "Journal", "Tasks", "Tasks/Completed", "Attachments")
     }.distinct()
 
     Dialog(onDismissRequest = onDismiss) {

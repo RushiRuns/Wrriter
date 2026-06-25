@@ -22,7 +22,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rushi.wrriter.data.NoteMetadata
-import com.rushi.wrriter.data.TaskItem
 import com.rushi.wrriter.data.VaultManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -38,7 +37,7 @@ fun TasksScreen(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    var tasksList by remember { mutableStateOf(emptyList<TaskItem>()) }
+    var tasksList by remember { mutableStateOf(emptyList<NoteMetadata>()) }
     var selectedTab by remember { mutableStateOf("active") } // "active" or "completed"
     var isLoading by remember { mutableStateOf(true) }
 
@@ -47,9 +46,10 @@ fun TasksScreen(
         coroutineScope.launch(Dispatchers.IO) {
             try {
                 vaultManager.rebuildCache(vaultUri)
-                val allTasks = vaultManager.getAllTasks()
+                val allNotes = vaultManager.getCachedNotes()
+                val taskNotes = allNotes.filter { it.filePath == "Tasks" || it.filePath == "Tasks/Completed" }
                 withContext(Dispatchers.Main) {
-                    tasksList = allTasks
+                    tasksList = taskNotes
                     isLoading = false
                 }
             } catch (e: Exception) {
@@ -67,9 +67,9 @@ fun TasksScreen(
 
     val filteredTasks = remember(tasksList, selectedTab) {
         if (selectedTab == "active") {
-            tasksList.filter { !it.isCompleted }
+            tasksList.filter { it.filePath == "Tasks" }
         } else {
-            tasksList.filter { it.isCompleted }
+            tasksList.filter { it.filePath == "Tasks/Completed" }
         }
     }
 
@@ -90,7 +90,7 @@ fun TasksScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Aggregated Tasks",
+                    text = "Tasks",
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
@@ -108,7 +108,7 @@ fun TasksScreen(
                 containerColor = Color(0xFF121212),
                 contentColor = Color.White,
                 indicator = { tabPositions ->
-                    TabRowDefaults.Indicator(
+                    TabRowDefaults.SecondaryIndicator(
                         modifier = Modifier.tabIndicatorOffset(tabPositions[if (selectedTab == "active") 0 else 1]),
                         color = Color(0xFF94A3B8) // Brand Slate Grey
                     )
@@ -156,7 +156,7 @@ fun TasksScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (selectedTab == "active") "No active tasks found in your notes." else "No completed tasks yet.",
+                        text = if (selectedTab == "active") "No active tasks found. Move notes here to set tasks." else "No completed tasks yet.",
                         fontSize = 14.sp,
                         color = Color(0xFF475569)
                     )
@@ -169,31 +169,31 @@ fun TasksScreen(
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(filteredTasks, key = { "${it.sourceNoteUri}_${it.lineIndex}_${it.rawText}" }) { task ->
+                    items(filteredTasks, key = { it.uriString }) { note ->
                         TaskRowItem(
-                            task = task,
+                            note = note,
                             onToggle = { isChecked ->
                                 coroutineScope.launch(Dispatchers.IO) {
-                                    val success = vaultManager.updateTaskCompletion(task, isChecked)
-                                    withContext(Dispatchers.Main) {
-                                        if (success) {
-                                            // Re-fetch all tasks to refresh UI
-                                            val allTasks = vaultManager.getAllTasks()
-                                            tasksList = allTasks
-                                        } else {
-                                            Toast.makeText(context, "Failed to update task", Toast.LENGTH_SHORT).show()
+                                    try {
+                                        val targetFolder = if (isChecked) "Tasks/Completed" else "Tasks"
+                                        vaultManager.moveNote(note, targetFolder, vaultUri)
+                                        
+                                        // Refresh
+                                        val allNotes = vaultManager.getCachedNotes()
+                                        val taskNotes = allNotes.filter { it.filePath == "Tasks" || it.filePath == "Tasks/Completed" }
+                                        withContext(Dispatchers.Main) {
+                                            tasksList = taskNotes
+                                        }
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
+                                        withContext(Dispatchers.Main) {
+                                            Toast.makeText(context, "Failed to update task status", Toast.LENGTH_SHORT).show()
                                         }
                                     }
                                 }
                             },
                             onClick = {
-                                val notes = vaultManager.getCachedNotes()
-                                val note = notes.firstOrNull { it.uriString == task.sourceNoteUri }
-                                if (note != null) {
-                                    onNoteSelected(note)
-                                } else {
-                                    Toast.makeText(context, "Source note not found", Toast.LENGTH_SHORT).show()
-                                }
+                                onNoteSelected(note)
                             }
                         )
                     }
@@ -205,10 +205,11 @@ fun TasksScreen(
 
 @Composable
 fun TaskRowItem(
-    task: TaskItem,
+    note: NoteMetadata,
     onToggle: (Boolean) -> Unit,
     onClick: () -> Unit
 ) {
+    val isCompleted = note.filePath == "Tasks/Completed"
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -223,7 +224,7 @@ fun TaskRowItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Checkbox(
-                checked = task.isCompleted,
+                checked = isCompleted,
                 onCheckedChange = onToggle,
                 colors = CheckboxDefaults.colors(
                     checkedColor = Color(0xFF94A3B8),
@@ -236,11 +237,11 @@ fun TaskRowItem(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = task.description,
+                    text = note.title,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Medium,
-                    color = if (task.isCompleted) Color(0xFF64748B) else Color.White,
-                    textDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None,
+                    color = if (isCompleted) Color(0xFF64748B) else Color.White,
+                    textDecoration = if (isCompleted) TextDecoration.LineThrough else TextDecoration.None,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -250,13 +251,13 @@ fun TaskRowItem(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Assignment,
-                        contentDescription = "Source Note",
+                        contentDescription = "Task Note",
                         tint = Color(0xFF475569),
                         modifier = Modifier.size(12.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = task.sourceNoteTitle,
+                        text = if (isCompleted) "Completed Task" else "Active Task",
                         fontSize = 12.sp,
                         color = Color(0xFF64748B),
                         maxLines = 1,

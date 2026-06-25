@@ -24,6 +24,10 @@ import com.rushi.wrriter.data.VaultManager
 import com.rushi.wrriter.ui.components.CalendarGrid
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun JournalScreen(
@@ -32,12 +36,12 @@ fun JournalScreen(
     onNoteSelected: (NoteMetadata) -> Unit
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     var existingDates by remember { mutableStateOf(emptySet<String>()) }
     var journalNotes by remember { mutableStateOf(emptyList<NoteMetadata>()) }
 
     val refreshJournal = {
         try {
-            vaultManager.rebuildCache(vaultUri)
             existingDates = vaultManager.getExistingJournalDates()
             journalNotes = vaultManager.getCachedNotes()
                 .filter { it.filePath == "Journal" }
@@ -48,7 +52,12 @@ fun JournalScreen(
     }
 
     LaunchedEffect(vaultUri) {
-        refreshJournal()
+        coroutineScope.launch(Dispatchers.IO) {
+            vaultManager.rebuildCache(vaultUri)
+            withContext(Dispatchers.Main) {
+                refreshJournal()
+            }
+        }
     }
 
     Box(

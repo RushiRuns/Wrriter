@@ -87,10 +87,9 @@ fun InboxScreen(
         }
     }
 
-    // Refresh inbox lists and configs
+    // Refresh inbox lists and configs from memory cache (instant, zero disk I/O)
     val refreshInbox = {
         try {
-            vaultManager.rebuildCache(vaultUri)
             existingFolders = vaultManager.getCachedNotes().map { it.filePath }.distinct()
             coroutineScope.launch {
                 lastUsedFolder = preferencesManager.lastUsedFolderFlow.first()
@@ -112,7 +111,18 @@ fun InboxScreen(
         }
     }
 
-    LaunchedEffect(vaultUri, searchQuery, selectedFolder) {
+    // Trigger full background disk rescan only when vault URI changes (e.g. app startup or settings path change)
+    LaunchedEffect(vaultUri) {
+        coroutineScope.launch(Dispatchers.IO) {
+            vaultManager.rebuildCache(vaultUri)
+            withContext(Dispatchers.Main) {
+                refreshInbox()
+            }
+        }
+    }
+
+    // Fast memory-cache-only refresh when query or folder chip selection changes
+    LaunchedEffect(searchQuery, selectedFolder) {
         refreshInbox()
     }
 

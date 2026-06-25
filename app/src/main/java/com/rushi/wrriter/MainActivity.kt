@@ -37,6 +37,7 @@ import com.rushi.wrriter.ui.screens.TasksScreen
 import com.rushi.wrriter.ui.screens.SettingsScreen
 import com.rushi.wrriter.ui.screens.StatisticsScreen
 import com.rushi.wrriter.ui.theme.WrriterTheme
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -88,6 +89,15 @@ class MainActivity : ComponentActivity() {
                         if (incomingNoteUri != null) {
                             activeNoteUri = incomingNoteUri
                             openNoteUriState.value = null // Consume
+                        }
+                    }
+
+                    // Trigger cache rebuild on Dispatchers.IO when vaultUri is loaded/changed
+                    LaunchedEffect(vaultUri) {
+                        if (!vaultUri.isNullOrEmpty()) {
+                            coroutineScope.launch(Dispatchers.IO) {
+                                vaultManager.rebuildCache(vaultUri)
+                            }
                         }
                     }
 

@@ -145,9 +145,9 @@
 
 **Independent Test**: Tap float button, select Quick Write, save text, check note creates in Inbox in background.
 
-- [ ] T036 [US9] Create foreground service window overlays manager in `app/src/main/java/com/rushi/wrriter/service/FloatingWidgetService.kt`
-- [ ] T037 [US9] Implement draggable overlay action button in `app/src/main/java/com/rushi/wrriter/service/FloatingWidgetService.kt`
-- [ ] T038 [US9] Implement floating Quick Write dialog and float recording popup in `app/src/main/java/com/rushi/wrriter/service/FloatingWidgetService.kt`
+- [x] T036 [US9] Create foreground service window overlays manager in `app/src/main/java/com/rushi/wrriter/service/FloatingWidgetService.kt`
+- [x] T037 [US9] Implement draggable overlay action button in `app/src/main/java/com/rushi/wrriter/service/FloatingWidgetService.kt`
+- [x] T038 [US9] Implement floating Quick Write dialog and float recording popup in `app/src/main/java/com/rushi/wrriter/service/FloatingWidgetService.kt`
 
 ---
 

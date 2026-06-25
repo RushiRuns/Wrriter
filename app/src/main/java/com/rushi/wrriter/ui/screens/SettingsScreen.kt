@@ -1,5 +1,9 @@
 package com.rushi.wrriter.ui.screens
 
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
+import android.os.Build
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -19,6 +23,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rushi.wrriter.data.PreferencesManager
+import com.rushi.wrriter.service.FloatingWidgetService
 import com.rushi.wrriter.network.SyncthingClient
 import com.rushi.wrriter.network.SyncthingDevice
 import com.rushi.wrriter.network.SyncthingStatus
@@ -38,6 +43,36 @@ fun SettingsScreen(
 
     // Settings States
     val vaultUri = preferencesManager.vaultUriFlow.collectAsState(initial = "").value ?: ""
+
+    var isOverlayEnabled by remember {
+        mutableStateOf(FloatingWidgetService.isServiceRunning)
+    }
+
+    val toggleOverlayService = { enabled: Boolean ->
+        if (enabled) {
+            if (Settings.canDrawOverlays(context)) {
+                val intent = Intent(context, FloatingWidgetService::class.java)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(intent)
+                } else {
+                    context.startService(intent)
+                }
+                isOverlayEnabled = true
+            } else {
+                Toast.makeText(context, "Please grant overlay permission for Wrriter", Toast.LENGTH_LONG).show()
+                val intent = Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:${context.packageName}")
+                )
+                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                context.startActivity(intent)
+                isOverlayEnabled = false
+            }
+        } else {
+            context.stopService(Intent(context, FloatingWidgetService::class.java))
+            isOverlayEnabled = false
+        }
+    }
 
     // Syncthing Input States
     val initialIp = preferencesManager.syncthingIpFlow.collectAsState(initial = "http://192.168.1.100").value
@@ -149,6 +184,49 @@ fun SettingsScreen(
                         ) {
                             Text("Change Vault Directory", fontSize = 12.sp)
                         }
+                    }
+                }
+            }
+
+            // Assistive Touch Overlay Card
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF121212))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Assistive Touch Overlay",
+                                color = Color(0xFFF97316),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "System-wide floating overlay button for quick note taking and voice recording.",
+                                color = Color(0xFF64748B),
+                                fontSize = 12.sp
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Switch(
+                            checked = isOverlayEnabled,
+                            onCheckedChange = { toggleOverlayService(it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.Black,
+                                checkedTrackColor = Color(0xFFF97316),
+                                uncheckedThumbColor = Color(0xFF64748B),
+                                uncheckedTrackColor = Color(0xFF1E293B)
+                            )
+                        )
                     }
                 }
             }

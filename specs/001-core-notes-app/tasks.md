@@ -23,9 +23,9 @@
 
 **⚠️ CRITICAL**: No user story implementation can begin until these foundational modules are complete.
 
-- [ ] T003 Setup settings preferences storage in `app/src/main/java/com/rushi/wrriter/data/PreferencesManager.kt`
-- [ ] T004 [P] Create note metadata schemas in `app/src/main/java/com/rushi/wrriter/data/NoteMetadata.kt`
-- [ ] T005 Implement core directory check and SAF folder cache in `app/src/main/java/com/rushi/wrriter/data/VaultManager.kt`
+- [x] T003 Setup settings preferences storage in `app/src/main/java/com/rushi/wrriter/data/PreferencesManager.kt`
+- [x] T004 [P] Create note metadata schemas in `app/src/main/java/com/rushi/wrriter/data/NoteMetadata.kt`
+- [x] T005 Implement core directory check and SAF folder cache in `app/src/main/java/com/rushi/wrriter/data/VaultManager.kt`
 
 **Checkpoint**: Foundation ready - user story implementation can now begin.
 

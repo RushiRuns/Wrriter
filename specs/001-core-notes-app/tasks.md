@@ -37,11 +37,11 @@
 
 **Independent Test**: Perform clean launch, select vault directory, submit a text dump, verify file is created in `/Inbox`.
 
-- [ ] T006 [US1] Create directory selector interface in `app/src/main/java/com/rushi/wrriter/ui/screens/OnboardingScreen.kt`
-- [ ] T007 [US1] Implement note creation and lists loading in `app/src/main/java/com/rushi/wrriter/data/VaultManager.kt`
-- [ ] T008 [US1] Create Inbox lists layout UI in `app/src/main/java/com/rushi/wrriter/ui/screens/InboxScreen.kt`
-- [ ] T009 [US1] Implement Quick Dump text submit bar in `app/src/main/java/com/rushi/wrriter/ui/screens/InboxScreen.kt`
-- [ ] T010 [US1] Implement audio recorder toggle for quick voice capture in `app/src/main/java/com/rushi/wrriter/ui/screens/InboxScreen.kt`
+- [x] T006 [US1] Create directory selector interface in `app/src/main/java/com/rushi/wrriter/ui/screens/OnboardingScreen.kt`
+- [x] T007 [US1] Implement note creation and lists loading in `app/src/main/java/com/rushi/wrriter/data/VaultManager.kt`
+- [x] T008 [US1] Create Inbox lists layout UI in `app/src/main/java/com/rushi/wrriter/ui/screens/InboxScreen.kt`
+- [x] T009 [US1] Implement Quick Dump text submit bar in `app/src/main/java/com/rushi/wrriter/ui/screens/InboxScreen.kt`
+- [x] T010 [US1] Implement audio recorder toggle for quick voice capture in `app/src/main/java/com/rushi/wrriter/ui/screens/InboxScreen.kt`
 
 **Checkpoint**: Onboarding and Inbox capture are fully functional.
 

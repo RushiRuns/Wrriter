@@ -63,6 +63,43 @@ function requestSave() {
     }
 }
 
+/**
+ * Inserts a drawing or voice attachment at the current cursor position.
+ */
+function insertAttachment(src, alt) {
+    editor.focus();
+    let selection = window.getSelection();
+    if (!selection.rangeCount) return;
+    let range = selection.getRangeAt(0);
+    range.deleteContents();
+
+    let fullSrc = src;
+    if (src.startsWith("Attachments/")) {
+        const fileName = src.substring("Attachments/".length);
+        fullSrc = "https://appassets.androidplatform.net/attachments/" + fileName;
+    }
+
+    if (src.endsWith(".png") || src.endsWith(".jpg")) {
+        let img = document.createElement("img");
+        img.src = fullSrc;
+        img.alt = alt;
+        img.style.maxWidth = "100%";
+        img.style.borderRadius = "8px";
+        range.insertNode(img);
+        range.setStartAfter(img);
+    } else if (src.endsWith(".m4a")) {
+        let audio = document.createElement("audio");
+        audio.src = fullSrc;
+        audio.controls = true;
+        range.insertNode(audio);
+        range.setStartAfter(audio);
+    }
+    
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+}
+
 // --- Shortcuts Handlers ---
 
 function handleHeadingAndListShortcuts() {
@@ -146,42 +183,6 @@ function getParentBlock(node) {
     return null;
 }
 
-function changeBlockTag(block, newTag) {
-    const text = block.textContent || block.innerText;
-    const cleanText = text.replace(/^#+\s+/, "");
-    
-    const newElement = document.createElement(newTag);
-    newElement.textContent = cleanText;
-    
-    block.parentNode.replaceChild(newElement, block);
-    
-    const range = document.createRange();
-    const selection = window.getSelection();
-    range.selectNodeContents(newElement);
-    range.collapse(false);
-    selection.removeAllRanges();
-    selection.addRange(range);
-}
-
-function convertToListItem(block) {
-    const text = block.textContent || block.innerText;
-    const cleanText = text.replace(/^[*|-]\s+/, "");
-
-    const ul = document.createElement("ul");
-    const li = document.createElement("li");
-    li.textContent = cleanText;
-    ul.appendChild(li);
-
-    block.parentNode.replaceChild(ul, block);
-
-    const range = document.createRange();
-    const selection = window.getSelection();
-    range.selectNodeContents(li);
-    range.collapse(false);
-    selection.removeAllRanges();
-    selection.addRange(range);
-}
-
 // --- Markdown Parsers (Local logic) ---
 
 function markdownToHtml(md) {
@@ -244,7 +245,20 @@ function parseInlineMarkdown(text) {
     // Images: ![alt](src) -> <img src="src" alt="alt" />
     const imgRegex = /!\[([^\]]*)\]\(([^\)]+)\)/g;
     text = text.replace(imgRegex, (match, alt, src) => {
-        return `<img src="${src}" alt="${alt}" style="max-width:100%; border-radius:8px;" />`;
+        let fullSrc = src;
+        if (src.startsWith("Attachments/")) {
+            const fileName = src.substring("Attachments/".length);
+            fullSrc = "https://appassets.androidplatform.net/attachments/" + fileName;
+        }
+        return `<img src="${fullSrc}" alt="${alt}" style="max-width:100%; border-radius:8px;" />`;
+    });
+
+    // Audio: ![Voice Note](src) or [Voice Note](src) -> <audio src="src" controls></audio>
+    const audioRegex = /\[([^\]]*)\]\((Attachments\/[^\)]+\.m4a)\)/g;
+    text = text.replace(audioRegex, (match, alt, src) => {
+        const fileName = src.substring("Attachments/".length);
+        const fullSrc = "https://appassets.androidplatform.net/attachments/" + fileName;
+        return `<audio src="${fullSrc}" controls></audio>`;
     });
 
     return text;
@@ -311,10 +325,57 @@ function getCleanText(element) {
     while (imgs.length > 0) {
         const img = imgs[0];
         const src = img.getAttribute("src");
+        const relativeSrc = src.replace("https://appassets.androidplatform.net/attachments/", "Attachments/");
         const alt = img.getAttribute("alt") || "";
-        const replacement = document.createTextNode(`![${alt}](${src})`);
+        const replacement = document.createTextNode(`![${alt}](${relativeSrc})`);
         img.parentNode.replaceChild(replacement, img);
     }
 
+    // Convert audio back to markdown [alt](src)
+    const audios = tempDiv.getElementsByTagName("audio");
+    while (audios.length > 0) {
+        const audio = audios[0];
+        const src = audio.getAttribute("src");
+        const relativeSrc = src.replace("https://appassets.androidplatform.net/attachments/", "Attachments/");
+        const replacement = document.createTextNode(`[Voice Note](${relativeSrc})`);
+        audio.parentNode.replaceChild(replacement, audio);
+    }
+
     return tempDiv.textContent || tempDiv.innerText || "";
+}
+
+function changeBlockTag(block, newTag) {
+    const text = block.textContent || block.innerText;
+    const cleanText = text.replace(/^#+\s+/, "");
+    
+    const newElement = document.createElement(newTag);
+    newElement.textContent = cleanText;
+    
+    block.parentNode.replaceChild(newElement, block);
+    
+    const range = document.createRange();
+    const selection = window.getSelection();
+    range.selectNodeContents(newElement);
+    range.collapse(false);
+    selection.removeAllRanges();
+    selection.addRange(range);
+}
+
+function convertToListItem(block) {
+    const text = block.textContent || block.innerText;
+    const cleanText = text.replace(/^[*|-]\s+/, "");
+
+    const ul = document.createElement("ul");
+    const li = document.createElement("li");
+    li.textContent = cleanText;
+    ul.appendChild(li);
+
+    block.parentNode.replaceChild(ul, block);
+
+    const range = document.createRange();
+    const selection = window.getSelection();
+    range.selectNodeContents(li);
+    range.collapse(false);
+    selection.removeAllRanges();
+    selection.addRange(range);
 }

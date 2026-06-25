@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -28,9 +29,13 @@ import org.json.JSONObject
 @Composable
 fun EditorScreen(
     vaultManager: VaultManager,
+    vaultUri: String,
     noteUriString: String,
     onBack: () -> Unit,
-    onWikiLinkClicked: (NoteMetadata) -> Unit
+    onWikiLinkClicked: (NoteMetadata) -> Unit,
+    onInsertDrawingRequest: () -> Unit,
+    insertedDrawingPath: String? = null,
+    onInsertedDrawingConsumed: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -49,6 +54,15 @@ fun EditorScreen(
             noteBody = body
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+    }
+
+    // Insert drawings if returned from drawing screen
+    LaunchedEffect(insertedDrawingPath, webViewInstance) {
+        val webView = webViewInstance
+        if (insertedDrawingPath != null && webView != null) {
+            webView.evaluateJavascript("insertAttachment('$insertedDrawingPath', 'Drawing')", null)
+            onInsertedDrawingConsumed()
         }
     }
 
@@ -71,6 +85,14 @@ fun EditorScreen(
                     }
                 },
                 actions = {
+                    // Brush/Drawing Icon
+                    IconButton(onClick = onInsertDrawingRequest) {
+                        Icon(
+                            imageVector = Icons.Default.Brush,
+                            contentDescription = "Insert Drawing",
+                            tint = Color.White
+                        )
+                    }
                     IconButton(
                         onClick = {
                             // Request WebView to compile and save content
@@ -100,6 +122,7 @@ fun EditorScreen(
             if (noteMetadata != null) {
                 WebViewContainer(
                     markdown = noteBody,
+                    vaultUri = vaultUri,
                     onSave = { md ->
                         coroutineScope.launch {
                             val meta = noteMetadata
@@ -158,6 +181,7 @@ fun EditorScreen(
 @Composable
 fun WebViewContainer(
     markdown: String,
+    vaultUri: String,
     onSave: (String) -> Unit,
     onWikiLinkClicked: (String) -> Unit,
     onKeyPress: () -> Unit,
@@ -174,31 +198,28 @@ fun WebViewContainer(
                     allowFileAccess = false
                     allowContentAccess = false
                 }
-                
-                webViewClient = object : WebViewClient() {
-                    override fun onPageFinished(view: WebView?, url: String?) {
-                        super.onPageFinished(view, url)
-                        
-                        // Pass note content and visual config
-                        val options = JSONObject().apply {
-                            put("theme", "oled")
-                            put("font", "default")
-                            put("texture", "none") // Texture styling choices
-                            put("spellcheck", true)
-                            put("tabMode", "2spaces")
-                        }
-                        
-                        val escapedMd = escapeStringForJs(markdown)
-                        evaluateJavascript(
-                            "loadNoteContent('$escapedMd', '${options.toString()}')",
-                            null
-                        )
-                    }
-                }
 
-                // Secure Local Assets Loading via AssetLoader
+                // Secure Local Assets and dynamic attachments Loading
                 val assetLoader = WebViewAssetLoader.Builder()
                     .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(ctx))
+                    .addPathHandler("/attachments/", object : WebViewAssetLoader.PathHandler {
+                        override fun handle(path: String): WebResourceResponse? {
+                            return try {
+                                val rootUri = Uri.parse(vaultUri)
+                                val rootDir = DocumentFile.fromTreeUri(ctx, rootUri)
+                                val attachmentsDir = rootDir?.findFile("Attachments")
+                                val targetFile = attachmentsDir?.findFile(path)
+                                if (targetFile != null) {
+                                    val inputStream = ctx.contentResolver.openInputStream(targetFile.uri)
+                                    val mimeType = ctx.contentResolver.getType(targetFile.uri) ?: "image/png"
+                                    WebResourceResponse(mimeType, "UTF-8", inputStream)
+                                } else null
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                                null
+                            }
+                        }
+                    })
                     .build()
 
                 webViewClient = object : WebViewClientCompat() {

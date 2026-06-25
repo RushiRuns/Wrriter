@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import com.rushi.wrriter.data.PreferencesManager
 import com.rushi.wrriter.data.VaultManager
+import com.rushi.wrriter.ui.screens.DrawingPadScreen
 import com.rushi.wrriter.ui.screens.EditorScreen
 import com.rushi.wrriter.ui.screens.InboxScreen
 import com.rushi.wrriter.ui.screens.OnboardingScreen
@@ -41,6 +42,8 @@ class MainActivity : ComponentActivity() {
                     // State observers
                     val vaultUriState = preferencesManager.vaultUriFlow.collectAsState(initial = null)
                     var activeNoteUri by remember { mutableStateOf<String?>(null) }
+                    var showDrawingPad by remember { mutableStateOf(false) }
+                    var insertedDrawingPath by remember { mutableStateOf<String?>(null) }
                     
                     val vaultUri = vaultUriState.value
 
@@ -64,25 +67,45 @@ class MainActivity : ComponentActivity() {
                             }
                         )
                     } else {
-                        // Routing between Inbox and Editor
-                        val currentNoteUri = activeNoteUri
-                        if (currentNoteUri != null) {
-                            EditorScreen(
-                                vaultManager = vaultManager,
-                                noteUriString = currentNoteUri,
-                                onBack = { activeNoteUri = null },
-                                onWikiLinkClicked = { targetNote ->
-                                    activeNoteUri = targetNote.uriString
-                                }
-                            )
-                        } else {
-                            InboxScreen(
-                                vaultManager = vaultManager,
-                                vaultUri = vaultUri,
-                                onNoteSelected = { note ->
-                                    activeNoteUri = note.uriString
-                                }
-                            )
+                        // Routing states
+                        when {
+                            showDrawingPad -> {
+                                DrawingPadScreen(
+                                    vaultUri = vaultUri,
+                                    onBack = { showDrawingPad = false },
+                                    onDrawingSaved = { path ->
+                                        insertedDrawingPath = path
+                                        showDrawingPad = false
+                                    }
+                                )
+                            }
+                            activeNoteUri != null -> {
+                                EditorScreen(
+                                    vaultManager = vaultManager,
+                                    vaultUri = vaultUri,
+                                    noteUriString = activeNoteUri!!,
+                                    onBack = { activeNoteUri = null },
+                                    onWikiLinkClicked = { targetNote ->
+                                        activeNoteUri = targetNote.uriString
+                                    },
+                                    onInsertDrawingRequest = {
+                                        showDrawingPad = true
+                                    },
+                                    insertedDrawingPath = insertedDrawingPath,
+                                    onInsertedDrawingConsumed = {
+                                        insertedDrawingPath = null
+                                    }
+                                )
+                            }
+                            else -> {
+                                InboxScreen(
+                                    vaultManager = vaultManager,
+                                    vaultUri = vaultUri,
+                                    onNoteSelected = { note ->
+                                        activeNoteUri = note.uriString
+                                    }
+                                )
+                            }
                         }
                     }
                 }

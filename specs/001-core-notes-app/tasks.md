@@ -85,9 +85,9 @@
 
 **Independent Test**: Open sketch canvas, save, verify drawing embeds in editor and PNG exists in `/Attachments`.
 
-- [ ] T021 [US4] Create drawing screen canvas UI in `app/src/main/java/com/rushi/wrriter/ui/screens/DrawingPadScreen.kt`
-- [ ] T022 [US4] Implement drawing exporter to `Attachments/` folder in `app/src/main/java/com/rushi/wrriter/ui/screens/DrawingPadScreen.kt`
-- [ ] T023 [US4] Implement media elements insertion and visual styling in `app/src/main/assets/editor.js`
+- [x] T021 [US4] Create drawing screen canvas UI in `app/src/main/java/com/rushi/wrriter/ui/screens/DrawingPadScreen.kt`
+- [x] T022 [US4] Implement drawing exporter to `Attachments/` folder in `app/src/main/java/com/rushi/wrriter/ui/screens/DrawingPadScreen.kt`
+- [x] T023 [US4] Implement media elements insertion and visual styling in `app/src/main/assets/editor.js`
 
 ---
 

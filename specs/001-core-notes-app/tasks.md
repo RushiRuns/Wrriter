@@ -133,9 +133,9 @@
 
 **Independent Test**: Configure PC settings, check status shows Connected and active devices list.
 
-- [ ] T033 [US8] Create network security config XML file in `app/src/main/res/xml/network_security_config.xml`
-- [ ] T034 [US8] Implement OkHttp network client for Syncthing API in `app/src/main/java/com/rushi/wrriter/network/SyncthingClient.kt`
-- [ ] T035 [US8] Integrate Syncthing status board UI in `app/src/main/java/com/rushi/wrriter/ui/screens/SettingsScreen.kt`
+- [x] T033 [US8] Create network security config XML file in `app/src/main/res/xml/network_security_config.xml`
+- [x] T034 [US8] Implement OkHttp network client for Syncthing API in `app/src/main/java/com/rushi/wrriter/network/SyncthingClient.kt`
+- [x] T035 [US8] Integrate Syncthing status board UI in `app/src/main/java/com/rushi/wrriter/ui/screens/SettingsScreen.kt`
 
 ---
 

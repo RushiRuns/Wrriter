@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Assignment
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Inbox
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -31,6 +32,7 @@ import com.rushi.wrriter.ui.screens.InboxScreen
 import com.rushi.wrriter.ui.screens.JournalScreen
 import com.rushi.wrriter.ui.screens.OnboardingScreen
 import com.rushi.wrriter.ui.screens.TasksScreen
+import com.rushi.wrriter.ui.screens.SettingsScreen
 import com.rushi.wrriter.ui.theme.WrriterTheme
 import kotlinx.coroutines.launch
 
@@ -180,6 +182,19 @@ class MainActivity : ComponentActivity() {
                                                     indicatorColor = Color(0xFF1E293B)
                                                 )
                                             )
+                                            NavigationBarItem(
+                                                selected = selectedTab == "settings",
+                                                onClick = { selectedTab = "settings" },
+                                                icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
+                                                label = { Text("Settings") },
+                                                colors = NavigationBarItemDefaults.colors(
+                                                    selectedIconColor = Color(0xFFF97316),
+                                                    selectedTextColor = Color(0xFFF97316),
+                                                    unselectedIconColor = Color(0xFF64748B),
+                                                    unselectedTextColor = Color(0xFF64748B),
+                                                    indicatorColor = Color(0xFF1E293B)
+                                                )
+                                            )
                                         }
                                     },
                                     containerColor = Color.Black
@@ -210,6 +225,16 @@ class MainActivity : ComponentActivity() {
                                                     vaultUri = vaultUri,
                                                     onNoteSelected = { note ->
                                                         activeNoteUri = note.uriString
+                                                    }
+                                                )
+                                            }
+                                            "settings" -> {
+                                                SettingsScreen(
+                                                    preferencesManager = preferencesManager,
+                                                    onNavigateToOnboarding = {
+                                                        coroutineScope.launch {
+                                                            preferencesManager.saveVaultUri("")
+                                                        }
                                                     }
                                                 )
                                             }

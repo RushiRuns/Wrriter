@@ -12,8 +12,8 @@
 
 **Purpose**: Project dependency configurations and system registrations.
 
-- [ ] T001 Configure build dependencies and permissions in `app/build.gradle.kts`
-- [ ] T002 [P] Setup Android Manifest permissions and service declarations in `app/src/main/AndroidManifest.xml`
+- [x] T001 Configure build dependencies and permissions in `app/build.gradle.kts`
+- [x] T002 [P] Setup Android Manifest permissions and service declarations in `app/src/main/AndroidManifest.xml`
 
 ---
 

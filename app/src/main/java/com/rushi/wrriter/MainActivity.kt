@@ -14,8 +14,11 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Assignment
 import androidx.compose.material.icons.filled.BarChart
@@ -168,77 +171,80 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
                                 else -> {
+                                    val isKeyboardOpen = WindowInsets.ime.getBottom(LocalDensity.current) > 0
                                     Scaffold(
                                         bottomBar = {
-                                            NavigationBar(
-                                                containerColor = Color(0xFF121212),
-                                                contentColor = Color.White
-                                            ) {
-                                                NavigationBarItem(
-                                                    selected = selectedTab == "inbox",
-                                                    onClick = { selectedTab = "inbox" },
-                                                    icon = { Icon(Icons.Default.Inbox, contentDescription = "Inbox") },
-                                                    label = { Text("Inbox") },
-                                                    colors = NavigationBarItemDefaults.colors(
-                                                        selectedIconColor = Color(0xFF94A3B8),
-                                                        selectedTextColor = Color(0xFF94A3B8),
-                                                        unselectedIconColor = Color(0xFF64748B),
-                                                        unselectedTextColor = Color(0xFF64748B),
-                                                        indicatorColor = Color(0xFF1E293B)
+                                            if (!isKeyboardOpen) {
+                                                NavigationBar(
+                                                    containerColor = Color(0xFF121212),
+                                                    contentColor = Color.White
+                                                ) {
+                                                    NavigationBarItem(
+                                                        selected = selectedTab == "inbox",
+                                                        onClick = { selectedTab = "inbox" },
+                                                        icon = { Icon(Icons.Default.Inbox, contentDescription = "Inbox") },
+                                                        label = { Text("Inbox") },
+                                                        colors = NavigationBarItemDefaults.colors(
+                                                            selectedIconColor = Color(0xFF94A3B8),
+                                                            selectedTextColor = Color(0xFF94A3B8),
+                                                            unselectedIconColor = Color(0xFF64748B),
+                                                            unselectedTextColor = Color(0xFF64748B),
+                                                            indicatorColor = Color(0xFF1E293B)
+                                                        )
                                                     )
-                                                )
-                                                NavigationBarItem(
-                                                    selected = selectedTab == "journal",
-                                                    onClick = { selectedTab = "journal" },
-                                                    icon = { Icon(Icons.Default.Book, contentDescription = "Journal") },
-                                                    label = { Text("Journal") },
-                                                    colors = NavigationBarItemDefaults.colors(
-                                                        selectedIconColor = Color(0xFF94A3B8),
-                                                        selectedTextColor = Color(0xFF94A3B8),
-                                                        unselectedIconColor = Color(0xFF64748B),
-                                                        unselectedTextColor = Color(0xFF64748B),
-                                                        indicatorColor = Color(0xFF1E293B)
+                                                    NavigationBarItem(
+                                                        selected = selectedTab == "journal",
+                                                        onClick = { selectedTab = "journal" },
+                                                        icon = { Icon(Icons.Default.Book, contentDescription = "Journal") },
+                                                        label = { Text("Journal") },
+                                                        colors = NavigationBarItemDefaults.colors(
+                                                            selectedIconColor = Color(0xFF94A3B8),
+                                                            selectedTextColor = Color(0xFF94A3B8),
+                                                            unselectedIconColor = Color(0xFF64748B),
+                                                            unselectedTextColor = Color(0xFF64748B),
+                                                            indicatorColor = Color(0xFF1E293B)
+                                                        )
                                                     )
-                                                )
-                                                NavigationBarItem(
-                                                    selected = selectedTab == "tasks",
-                                                    onClick = { selectedTab = "tasks" },
-                                                    icon = { Icon(Icons.Default.Assignment, contentDescription = "Tasks") },
-                                                    label = { Text("Tasks") },
-                                                    colors = NavigationBarItemDefaults.colors(
-                                                        selectedIconColor = Color(0xFF94A3B8),
-                                                        selectedTextColor = Color(0xFF94A3B8),
-                                                        unselectedIconColor = Color(0xFF64748B),
-                                                        unselectedTextColor = Color(0xFF64748B),
-                                                        indicatorColor = Color(0xFF1E293B)
+                                                    NavigationBarItem(
+                                                        selected = selectedTab == "tasks",
+                                                        onClick = { selectedTab = "tasks" },
+                                                        icon = { Icon(Icons.Default.Assignment, contentDescription = "Tasks") },
+                                                        label = { Text("Tasks") },
+                                                        colors = NavigationBarItemDefaults.colors(
+                                                            selectedIconColor = Color(0xFF94A3B8),
+                                                            selectedTextColor = Color(0xFF94A3B8),
+                                                            unselectedIconColor = Color(0xFF64748B),
+                                                            unselectedTextColor = Color(0xFF64748B),
+                                                            indicatorColor = Color(0xFF1E293B)
+                                                        )
                                                     )
-                                                )
-                                                NavigationBarItem(
-                                                    selected = selectedTab == "stats",
-                                                    onClick = { selectedTab = "stats" },
-                                                    icon = { Icon(Icons.Default.BarChart, contentDescription = "Stats") },
-                                                    label = { Text("Stats") },
-                                                    colors = NavigationBarItemDefaults.colors(
-                                                        selectedIconColor = Color(0xFF94A3B8),
-                                                        selectedTextColor = Color(0xFF94A3B8),
-                                                        unselectedIconColor = Color(0xFF64748B),
-                                                        unselectedTextColor = Color(0xFF64748B),
-                                                        indicatorColor = Color(0xFF1E293B)
+                                                    NavigationBarItem(
+                                                        selected = selectedTab == "stats",
+                                                        onClick = { selectedTab = "stats" },
+                                                        icon = { Icon(Icons.Default.BarChart, contentDescription = "Stats") },
+                                                        label = { Text("Stats") },
+                                                        colors = NavigationBarItemDefaults.colors(
+                                                            selectedIconColor = Color(0xFF94A3B8),
+                                                            selectedTextColor = Color(0xFF94A3B8),
+                                                            unselectedIconColor = Color(0xFF64748B),
+                                                            unselectedTextColor = Color(0xFF64748B),
+                                                            indicatorColor = Color(0xFF1E293B)
+                                                        )
                                                     )
-                                                )
-                                                NavigationBarItem(
-                                                    selected = selectedTab == "settings",
-                                                    onClick = { selectedTab = "settings" },
-                                                    icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
-                                                    label = { Text("Settings") },
-                                                    colors = NavigationBarItemDefaults.colors(
-                                                        selectedIconColor = Color(0xFF94A3B8),
-                                                        selectedTextColor = Color(0xFF94A3B8),
-                                                        unselectedIconColor = Color(0xFF64748B),
-                                                        unselectedTextColor = Color(0xFF64748B),
-                                                        indicatorColor = Color(0xFF1E293B)
+                                                    NavigationBarItem(
+                                                        selected = selectedTab == "settings",
+                                                        onClick = { selectedTab = "settings" },
+                                                        icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
+                                                        label = { Text("Settings") },
+                                                        colors = NavigationBarItemDefaults.colors(
+                                                            selectedIconColor = Color(0xFF94A3B8),
+                                                            selectedTextColor = Color(0xFF94A3B8),
+                                                            unselectedIconColor = Color(0xFF64748B),
+                                                            unselectedTextColor = Color(0xFF64748B),
+                                                            indicatorColor = Color(0xFF1E293B)
+                                                        )
                                                     )
-                                                )
+                                                }
                                             }
                                         },
                                         containerColor = Color.Black

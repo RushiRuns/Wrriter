@@ -311,6 +311,18 @@ function parseInlineMarkdown(text) {
         return `<span class="wiki-link" data-title="${cleanTitle}">${cleanTitle}</span>`;
     });
 
+    // Audio: ![Voice Note](src) or [Voice Note](src) -> <audio src="src" controls></audio>
+    // Parsed before images to prevent voice notes from matching the general image regex.
+    const audioRegex = /!?\[([^\]]*)\]\((.+?\.(?:m4a|mp3|wav|ogg))\)/gi;
+    text = text.replace(audioRegex, (match, alt, src) => {
+        let fullSrc = src;
+        if (src.startsWith("Attachments/")) {
+            const fileName = src.substring("Attachments/".length);
+            fullSrc = "https://appassets.androidplatform.net/attachments/" + fileName;
+        }
+        return `<audio src="${fullSrc}" controls></audio>`;
+    });
+
     // Images: ![alt](src) -> <img src="src" alt="alt" />
     const imgRegex = /!\[([^\]]*)\]\(([^\)]+)\)/g;
     text = text.replace(imgRegex, (match, alt, src) => {
@@ -320,14 +332,6 @@ function parseInlineMarkdown(text) {
             fullSrc = "https://appassets.androidplatform.net/attachments/" + fileName;
         }
         return `<img src="${fullSrc}" alt="${alt}" style="max-width:100%; border-radius:8px;" />`;
-    });
-
-    // Audio: ![Voice Note](src) or [Voice Note](src) -> <audio src="src" controls></audio>
-    const audioRegex = /\[([^\]]*)\]\((Attachments\/[^\)]+\.m4a)\)/g;
-    text = text.replace(audioRegex, (match, alt, src) => {
-        const fileName = src.substring("Attachments/".length);
-        const fullSrc = "https://appassets.androidplatform.net/attachments/" + fileName;
-        return `<audio src="${fullSrc}" controls></audio>`;
     });
 
     return text;

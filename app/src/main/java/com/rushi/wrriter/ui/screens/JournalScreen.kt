@@ -177,7 +177,7 @@ fun JournalNoteRow(
             Icon(
                 imageVector = Icons.Default.Book,
                 contentDescription = "Journal Entry",
-                tint = Color(0xFFF97316),
+                tint = Color(0xFF94A3B8),
                 modifier = Modifier.size(24.dp)
             )
             Spacer(modifier = Modifier.width(16.dp))

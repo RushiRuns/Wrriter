@@ -166,8 +166,8 @@ class MainActivity : ComponentActivity() {
                                                 icon = { Icon(Icons.Default.Inbox, contentDescription = "Inbox") },
                                                 label = { Text("Inbox") },
                                                 colors = NavigationBarItemDefaults.colors(
-                                                    selectedIconColor = Color(0xFFF97316),
-                                                    selectedTextColor = Color(0xFFF97316),
+                                                    selectedIconColor = Color(0xFF94A3B8),
+                                                    selectedTextColor = Color(0xFF94A3B8),
                                                     unselectedIconColor = Color(0xFF64748B),
                                                     unselectedTextColor = Color(0xFF64748B),
                                                     indicatorColor = Color(0xFF1E293B)
@@ -179,8 +179,8 @@ class MainActivity : ComponentActivity() {
                                                 icon = { Icon(Icons.Default.Book, contentDescription = "Journal") },
                                                 label = { Text("Journal") },
                                                 colors = NavigationBarItemDefaults.colors(
-                                                    selectedIconColor = Color(0xFFF97316),
-                                                    selectedTextColor = Color(0xFFF97316),
+                                                    selectedIconColor = Color(0xFF94A3B8),
+                                                    selectedTextColor = Color(0xFF94A3B8),
                                                     unselectedIconColor = Color(0xFF64748B),
                                                     unselectedTextColor = Color(0xFF64748B),
                                                     indicatorColor = Color(0xFF1E293B)
@@ -192,8 +192,8 @@ class MainActivity : ComponentActivity() {
                                                 icon = { Icon(Icons.Default.Assignment, contentDescription = "Tasks") },
                                                 label = { Text("Tasks") },
                                                 colors = NavigationBarItemDefaults.colors(
-                                                    selectedIconColor = Color(0xFFF97316),
-                                                    selectedTextColor = Color(0xFFF97316),
+                                                    selectedIconColor = Color(0xFF94A3B8),
+                                                    selectedTextColor = Color(0xFF94A3B8),
                                                     unselectedIconColor = Color(0xFF64748B),
                                                     unselectedTextColor = Color(0xFF64748B),
                                                     indicatorColor = Color(0xFF1E293B)
@@ -205,8 +205,8 @@ class MainActivity : ComponentActivity() {
                                                 icon = { Icon(Icons.Default.BarChart, contentDescription = "Stats") },
                                                 label = { Text("Stats") },
                                                 colors = NavigationBarItemDefaults.colors(
-                                                    selectedIconColor = Color(0xFFF97316),
-                                                    selectedTextColor = Color(0xFFF97316),
+                                                    selectedIconColor = Color(0xFF94A3B8),
+                                                    selectedTextColor = Color(0xFF94A3B8),
                                                     unselectedIconColor = Color(0xFF64748B),
                                                     unselectedTextColor = Color(0xFF64748B),
                                                     indicatorColor = Color(0xFF1E293B)
@@ -218,8 +218,8 @@ class MainActivity : ComponentActivity() {
                                                 icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
                                                 label = { Text("Settings") },
                                                 colors = NavigationBarItemDefaults.colors(
-                                                    selectedIconColor = Color(0xFFF97316),
-                                                    selectedTextColor = Color(0xFFF97316),
+                                                    selectedIconColor = Color(0xFF94A3B8),
+                                                    selectedTextColor = Color(0xFF94A3B8),
                                                     unselectedIconColor = Color(0xFF64748B),
                                                     unselectedTextColor = Color(0xFF64748B),
                                                     indicatorColor = Color(0xFF1E293B)

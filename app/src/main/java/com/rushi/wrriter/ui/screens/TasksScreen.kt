@@ -110,7 +110,7 @@ fun TasksScreen(
                 indicator = { tabPositions ->
                     TabRowDefaults.Indicator(
                         modifier = Modifier.tabIndicatorOffset(tabPositions[if (selectedTab == "active") 0 else 1]),
-                        color = Color(0xFFF97316) // Brand Orange
+                        color = Color(0xFF94A3B8) // Brand Slate Grey
                     )
                 }
             ) {
@@ -121,7 +121,7 @@ fun TasksScreen(
                         Text(
                             "Active",
                             fontWeight = FontWeight.Bold,
-                            color = if (selectedTab == "active") Color(0xFFF97316) else Color(0xFF64748B)
+                            color = if (selectedTab == "active") Color(0xFF94A3B8) else Color(0xFF64748B)
                         )
                     }
                 )
@@ -132,7 +132,7 @@ fun TasksScreen(
                         Text(
                             "Completed",
                             fontWeight = FontWeight.Bold,
-                            color = if (selectedTab == "completed") Color(0xFFF97316) else Color(0xFF64748B)
+                            color = if (selectedTab == "completed") Color(0xFF94A3B8) else Color(0xFF64748B)
                         )
                     }
                 )
@@ -146,7 +146,7 @@ fun TasksScreen(
                         .weight(1f),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = Color(0xFFF97316))
+                    CircularProgressIndicator(color = Color(0xFF94A3B8))
                 }
             } else if (filteredTasks.isEmpty()) {
                 Box(
@@ -226,7 +226,7 @@ fun TaskRowItem(
                 checked = task.isCompleted,
                 onCheckedChange = onToggle,
                 colors = CheckboxDefaults.colors(
-                    checkedColor = Color(0xFFF97316),
+                    checkedColor = Color(0xFF94A3B8),
                     uncheckedColor = Color(0xFF475569),
                     checkmarkColor = Color.Black
                 )

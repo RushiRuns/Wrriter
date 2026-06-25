@@ -173,7 +173,7 @@ fun EditorScreen(
                         Icon(
                             imageVector = Icons.Default.Check,
                             contentDescription = "Save",
-                            tint = Color(0xFFF97316) // Brand orange
+                            tint = Color(0xFF94A3B8) // Brand slate grey
                         )
                     }
                 },

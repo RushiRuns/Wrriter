@@ -9,7 +9,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -59,6 +62,8 @@ fun InboxScreen(
     var notesList by remember { mutableStateOf(emptyList<NoteMetadata>()) }
     var dumpText by remember { mutableStateOf("") }
     var searchQuery by remember { mutableStateOf("") }
+    var selectedFolder by remember { mutableStateOf("Inbox") }
+    var showFolderDropdown by remember { mutableStateOf(false) }
     
     // Selection state for toolbar
     var selectedNoteUri by remember { mutableStateOf<String?>(null) }
@@ -92,7 +97,9 @@ fun InboxScreen(
             }
             coroutineScope.launch(Dispatchers.IO) {
                 val list = if (searchQuery.trim().isEmpty()) {
-                    vaultManager.getInboxNotes().sortedByDescending { it.modifiedTime }
+                    vaultManager.getCachedNotes()
+                        .filter { it.filePath.equals(selectedFolder, ignoreCase = true) }
+                        .sortedByDescending { it.modifiedTime }
                 } else {
                     vaultManager.searchNotes(searchQuery)
                 }
@@ -105,7 +112,7 @@ fun InboxScreen(
         }
     }
 
-    LaunchedEffect(vaultUri, searchQuery) {
+    LaunchedEffect(vaultUri, searchQuery, selectedFolder) {
         refreshInbox()
     }
 
@@ -127,12 +134,50 @@ fun InboxScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    text = if (searchQuery.trim().isEmpty()) "Inbox" else "Search Results",
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
+                Box {
+                    Row(
+                        modifier = Modifier.clickable { showFolderDropdown = true },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (searchQuery.trim().isEmpty()) selectedFolder else "Search Results",
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        if (searchQuery.trim().isEmpty()) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Icon(
+                                imageVector = Icons.Default.ArrowDropDown,
+                                contentDescription = "Select Folder",
+                                tint = Color.White,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                    }
+                    
+                    DropdownMenu(
+                        expanded = showFolderDropdown,
+                        onDismissRequest = { showFolderDropdown = false },
+                        modifier = Modifier.background(Color(0xFF121212))
+                    ) {
+                        val allFolders = (listOf("Inbox", "Later", "Read", "Shop", "Watch", "Journal") + existingFolders)
+                            .distinct()
+                            .filter { it.isNotEmpty() && it != "Attachments" }
+                            .sorted()
+                            
+                        allFolders.forEach { folder ->
+                            DropdownMenuItem(
+                                text = { Text(folder, color = Color.White) },
+                                onClick = {
+                                    selectedFolder = folder
+                                    showFolderDropdown = false
+                                    refreshInbox()
+                                }
+                            )
+                        }
+                    }
+                }
                 Text(
                     text = "${notesList.size} notes",
                     fontSize = 14.sp,
@@ -149,6 +194,49 @@ fun InboxScreen(
                     .padding(bottom = 12.dp),
                 placeholderText = "Search titles, tags, or content..."
             )
+
+            // Horizontal Scrollable Folders Chip Row
+            if (searchQuery.trim().isEmpty()) {
+                val allFolders = remember(existingFolders) {
+                    (listOf("Inbox", "Later", "Read", "Shop", "Watch", "Journal") + existingFolders)
+                        .distinct()
+                        .filter { it.isNotEmpty() && it != "Attachments" }
+                        .sortedWith(Comparator { o1, o2 ->
+                            if (o1 == "Inbox") -1 else if (o2 == "Inbox") 1 else o1.compareTo(o2)
+                        })
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 12.dp)
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    allFolders.forEach { folder ->
+                        val isSelected = selectedFolder.equals(folder, ignoreCase = true)
+                        SuggestionChip(
+                            onClick = {
+                                selectedFolder = folder
+                                refreshInbox()
+                            },
+                            label = { Text(folder, fontSize = 12.sp, fontWeight = FontWeight.Bold) },
+                            colors = SuggestionChipDefaults.suggestionChipColors(
+                                containerColor = if (isSelected) Color(0xFF94A3B8) else Color(0xFF121212),
+                                labelColor = if (isSelected) Color.Black else Color.White
+                            ),
+                            border = SuggestionChipDefaults.suggestionChipBorder(
+                                enabled = true,
+                                borderColor = if (isSelected) Color.Transparent else Color(0xFF334155),
+                                borderWidth = 1.dp
+                            ),
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                    }
+                }
+            }
 
             // Notes list
             if (notesList.isEmpty()) {
@@ -271,7 +359,7 @@ fun InboxScreen(
                     keyboardActions = KeyboardActions(
                         onSend = {
                             if (dumpText.trim().isNotEmpty()) {
-                                createDumpNote(context, vaultUri, vaultManager, dumpText)
+                                createDumpNote(context, vaultUri, vaultManager, dumpText, selectedFolder)
                                 dumpText = ""
                                 refreshInbox()
                             }
@@ -286,7 +374,7 @@ fun InboxScreen(
                             // Stop recording and save note
                             audioRecorder.stop()
                             isRecording = false
-                            saveVoiceNote(context, vaultUri, vaultManager, tempAudioFile)
+                            saveVoiceNote(context, vaultUri, vaultManager, tempAudioFile, selectedFolder)
                             refreshInbox()
                         } else {
                             // Check microphone permission
@@ -305,7 +393,7 @@ fun InboxScreen(
                     Icon(
                         imageVector = if (isRecording) Icons.Default.Stop else Icons.Default.Mic,
                         contentDescription = "Voice Capture",
-                        tint = if (isRecording) Color(0xFFEF4444) else Color(0xFFF97316) // Red when recording, orange default
+                        tint = if (isRecording) Color(0xFFEF4444) else Color(0xFF94A3B8) // Red when recording, grey default
                     )
                 }
             }
@@ -345,7 +433,7 @@ fun InboxNoteRow(
             Icon(
                 imageVector = if (isSelected) Icons.Default.Check else Icons.Default.Edit,
                 contentDescription = "Note Status",
-                tint = if (isSelected) Color(0xFFF97316) else Color(0xFF475569),
+                tint = if (isSelected) Color(0xFF94A3B8) else Color(0xFF475569),
                 modifier = Modifier.size(20.dp)
             )
             Spacer(modifier = Modifier.width(16.dp))
@@ -388,7 +476,7 @@ private fun startRecording(context: Context, audioRecorder: AudioRecorder, tempF
     }
 }
 
-private fun saveVoiceNote(context: Context, rootUriString: String, vaultManager: VaultManager, tempFile: File) {
+private fun saveVoiceNote(context: Context, rootUriString: String, vaultManager: VaultManager, tempFile: File, folderName: String) {
     try {
         if (!tempFile.exists() || tempFile.length() == 0L) {
             Toast.makeText(context, "Empty voice recording", Toast.LENGTH_SHORT).show()
@@ -414,16 +502,16 @@ private fun saveVoiceNote(context: Context, rootUriString: String, vaultManager:
         // Create Note referencing the audio file
         val noteTitle = "Voice Note $dateString"
         val markdownBody = "\n\n![Voice Note](Attachments/$audioFileName)\n"
-        vaultManager.createNote(rootUriString, "Inbox", noteTitle, markdownBody)
+        vaultManager.createNote(rootUriString, folderName, noteTitle, markdownBody)
 
-        Toast.makeText(context, "Voice note saved to Inbox", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, "Voice note saved to $folderName", Toast.LENGTH_SHORT).show()
     } catch (e: Exception) {
         e.printStackTrace()
         Toast.makeText(context, "Failed to save voice note", Toast.LENGTH_SHORT).show()
     }
 }
 
-private fun createDumpNote(context: Context, rootUriString: String, vaultManager: VaultManager, text: String) {
+private fun createDumpNote(context: Context, rootUriString: String, vaultManager: VaultManager, text: String, folderName: String) {
     try {
         val words = text.trim().split("\\s+".toRegex())
         val title = if (words.size > 3) {
@@ -431,8 +519,8 @@ private fun createDumpNote(context: Context, rootUriString: String, vaultManager
         } else {
             text.trim()
         }
-        vaultManager.createNote(rootUriString, "Inbox", title, text)
-        Toast.makeText(context, "Note saved to Inbox", Toast.LENGTH_SHORT).show()
+        vaultManager.createNote(rootUriString, folderName, title, text)
+        Toast.makeText(context, "Note saved to $folderName", Toast.LENGTH_SHORT).show()
     } catch (e: Exception) {
         e.printStackTrace()
         Toast.makeText(context, "Failed to save note", Toast.LENGTH_SHORT).show()

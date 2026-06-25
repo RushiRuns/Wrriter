@@ -200,7 +200,7 @@ fun SettingsScreen(
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
                             text = "Vault Workspace",
-                            color = Color(0xFFF97316),
+                            color = Color(0xFF94A3B8),
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp
                         )
@@ -232,6 +232,358 @@ fun SettingsScreen(
                 }
             }
 
+            // Editor Personalization Card
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF121212))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Text(
+                            text = "Editor Personalization",
+                            color = Color(0xFF94A3B8),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+
+                        // Font Style Selection
+                        Column {
+                            Text("Font Family", color = Color(0xFF64748B), fontSize = 12.sp)
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                val fontOptions = listOf("default", "sans-serif", "serif", "monospace")
+                                fontOptions.forEach { option ->
+                                    val isSelected = font == option
+                                    Button(
+                                        onClick = {
+                                            coroutineScope.launch { preferencesManager.saveFont(option) }
+                                        },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = if (isSelected) Color(0xFF94A3B8) else Color(0xFF1E293B),
+                                            contentColor = Color.White
+                                        ),
+                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                        shape = RoundedCornerShape(8.dp),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text(
+                                            text = option.substringBefore("-").replaceFirstChar { it.uppercase() },
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // Texture Selection
+                        Column {
+                            Text("Background Texture", color = Color(0xFF64748B), fontSize = 12.sp)
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                val textureOptions = listOf("none", "paper", "ruled", "grid")
+                                textureOptions.forEach { option ->
+                                    val isSelected = texture == option
+                                    Button(
+                                        onClick = {
+                                            coroutineScope.launch { preferencesManager.saveTexture(option) }
+                                        },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = if (isSelected) Color(0xFF94A3B8) else Color(0xFF1E293B),
+                                            contentColor = Color.White
+                                        ),
+                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                        shape = RoundedCornerShape(8.dp),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text(
+                                            text = option.replaceFirstChar { it.uppercase() },
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // Tab Mode Selection
+                        Column {
+                            Text("Tab Indentation", color = Color(0xFF64748B), fontSize = 12.sp)
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                val tabOptions = listOf("tab", "2spaces", "4spaces")
+                                val displayNames = mapOf("tab" to "Tab", "2spaces" to "2 Spaces", "4spaces" to "4 Spaces")
+                                tabOptions.forEach { option ->
+                                    val isSelected = tabMode == option
+                                    Button(
+                                        onClick = {
+                                            coroutineScope.launch { preferencesManager.saveTabMode(option) }
+                                        },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = if (isSelected) Color(0xFF94A3B8) else Color(0xFF1E293B),
+                                            contentColor = Color.White
+                                        ),
+                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                        shape = RoundedCornerShape(8.dp),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text(
+                                            text = displayNames[option] ?: option,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // Spellcheck Switch
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("System Spellcheck", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                                Text("Toggle Android system-level dictionary spelling wrapper.", color = Color(0xFF64748B), fontSize = 11.sp)
+                            }
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Switch(
+                                checked = spellcheck,
+                                onCheckedChange = { enabled ->
+                                    coroutineScope.launch { preferencesManager.saveSpellcheck(enabled) }
+                                },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = Color.Black,
+                                    checkedTrackColor = Color(0xFF94A3B8),
+                                    uncheckedThumbColor = Color(0xFF64748B),
+                                    uncheckedTrackColor = Color(0xFF1E293B)
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Break Reminders Card
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF121212))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Typing Break Reminders",
+                                    color = Color(0xFF94A3B8),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Remind to take a break after continuous typing.",
+                                    color = Color(0xFF64748B),
+                                    fontSize = 12.sp
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Switch(
+                                checked = breakReminderEnabled,
+                                onCheckedChange = { enabled ->
+                                    coroutineScope.launch { preferencesManager.saveBreakReminderEnabled(enabled) }
+                                },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = Color.Black,
+                                    checkedTrackColor = Color(0xFF94A3B8),
+                                    uncheckedThumbColor = Color(0xFF64748B),
+                                    uncheckedTrackColor = Color(0xFF1E293B)
+                                )
+                            )
+                        }
+
+                        if (breakReminderEnabled) {
+                            Column {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text("Reminder Threshold", color = Color.White, fontSize = 12.sp)
+                                    Text("${breakReminderThreshold} minutes", color = Color(0xFF94A3B8), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Slider(
+                                    value = breakReminderThreshold.toFloat(),
+                                    onValueChange = { value ->
+                                        coroutineScope.launch {
+                                            preferencesManager.saveBreakReminderThreshold(value.toInt())
+                                        }
+                                    },
+                                    valueRange = 5f..180f,
+                                    steps = 34,
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = Color(0xFF94A3B8),
+                                        activeTrackColor = Color(0xFF94A3B8),
+                                        inactiveTrackColor = Color(0xFF1E293B)
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Note Alarms & Reminders Card
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF121212))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = "Note Alarms & Reminders",
+                            color = Color(0xFF94A3B8),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                        Text(
+                            text = "Alarms and reminders are set per-note within the note editor using the bell notification icon.",
+                            color = Color(0xFF64748B),
+                            fontSize = 12.sp
+                        )
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            val hasPermission = remember {
+                                mutableStateOf(
+                                    androidx.core.content.ContextCompat.checkSelfPermission(
+                                        context,
+                                        android.Manifest.permission.POST_NOTIFICATIONS
+                                    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                                )
+                            }
+                            val launcher = rememberLauncherForActivityResult(
+                                contract = ActivityResultContracts.RequestPermission()
+                            ) { isGranted ->
+                                hasPermission.value = isGranted
+                                if (isGranted) {
+                                    Toast.makeText(context, "Notification permission granted", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(context, "Notification permission denied", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = if (hasPermission.value) "Notification Access: Active" else "Notification Access: Disabled",
+                                    color = if (hasPermission.value) Color(0xFF22C55E) else Color(0xFFEF4444),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                if (!hasPermission.value) {
+                                    Button(
+                                        onClick = {
+                                            launcher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                                        },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = Color(0xFF1E293B),
+                                            contentColor = Color.White
+                                        ),
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Text("Grant Permission", fontSize = 11.sp)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Backup & Portability Card
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF121212))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = "Backup & Portability",
+                            color = Color(0xFF94A3B8),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                        Text(
+                            text = "Import external markdown notes or export your entire vault workspace to a backup folder.",
+                            color = Color(0xFF64748B),
+                            fontSize = 12.sp
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Button(
+                                onClick = {
+                                    importLauncher.launch(arrayOf("*/*"))
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFF1E293B),
+                                    contentColor = Color.White
+                                ),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Import Files", fontSize = 13.sp)
+                            }
+                            Button(
+                                onClick = {
+                                    exportLauncher.launch(null)
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFF1E293B),
+                                    contentColor = Color.White
+                                ),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Export Vault", fontSize = 13.sp)
+                            }
+                        }
+                    }
+                }
+            }
+
             // Assistive Touch Overlay Card
             item {
                 Card(
@@ -249,7 +601,7 @@ fun SettingsScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "Assistive Touch Overlay",
-                                color = Color(0xFFF97316),
+                                color = Color(0xFF94A3B8),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp
                             )
@@ -266,7 +618,7 @@ fun SettingsScreen(
                             onCheckedChange = { toggleOverlayService(it) },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.Black,
-                                checkedTrackColor = Color(0xFFF97316),
+                                checkedTrackColor = Color(0xFF94A3B8),
                                 uncheckedThumbColor = Color(0xFF64748B),
                                 uncheckedTrackColor = Color(0xFF1E293B)
                             )
@@ -288,7 +640,7 @@ fun SettingsScreen(
                     ) {
                         Text(
                             text = "Syncthing PC Client Sync",
-                            color = Color(0xFFF97316),
+                            color = Color(0xFF94A3B8),
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp
                         )
@@ -352,7 +704,7 @@ fun SettingsScreen(
                                         checkSyncthingConnection()
                                     }
                                 },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF97316))
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF94A3B8))
                             ) {
                                 Text("Save & Connect")
                             }
@@ -397,7 +749,7 @@ fun SettingsScreen(
                         ) {
                             Text(
                                 text = "Syncthing Status Board",
-                                color = Color(0xFFF97316),
+                                color = Color(0xFF94A3B8),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp
                             )
@@ -520,286 +872,6 @@ fun SettingsScreen(
                                     CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
                                 } else {
                                     Text("Sync Now (Trigger PC Scan)", fontSize = 13.sp)
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Editor Personalization Card
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF121212))
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            Text(
-                                text = "Editor Personalization",
-                                color = Color(0xFFF97316),
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp
-                            )
-
-                            // Font Style Selection
-                            Column {
-                                Text("Font Family", color = Color(0xFF64748B), fontSize = 12.sp)
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    val fontOptions = listOf("default", "sans-serif", "serif", "monospace")
-                                    fontOptions.forEach { option ->
-                                        val isSelected = font == option
-                                        Button(
-                                            onClick = {
-                                                coroutineScope.launch { preferencesManager.saveFont(option) }
-                                            },
-                                            colors = ButtonDefaults.buttonColors(
-                                                containerColor = if (isSelected) Color(0xFFF97316) else Color(0xFF1E293B),
-                                                contentColor = Color.White
-                                            ),
-                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                                            shape = RoundedCornerShape(8.dp),
-                                            modifier = Modifier.weight(1f)
-                                        ) {
-                                            Text(
-                                                text = option.substringBefore("-").replaceFirstChar { it.uppercase() },
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-
-                            // Texture Selection
-                            Column {
-                                Text("Background Texture", color = Color(0xFF64748B), fontSize = 12.sp)
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    val textureOptions = listOf("none", "paper", "ruled", "grid")
-                                    textureOptions.forEach { option ->
-                                        val isSelected = texture == option
-                                        Button(
-                                            onClick = {
-                                                coroutineScope.launch { preferencesManager.saveTexture(option) }
-                                            },
-                                            colors = ButtonDefaults.buttonColors(
-                                                containerColor = if (isSelected) Color(0xFFF97316) else Color(0xFF1E293B),
-                                                contentColor = Color.White
-                                            ),
-                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                                            shape = RoundedCornerShape(8.dp),
-                                            modifier = Modifier.weight(1f)
-                                        ) {
-                                            Text(
-                                                text = option.replaceFirstChar { it.uppercase() },
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-
-                            // Tab Mode Selection
-                            Column {
-                                Text("Tab Indentation", color = Color(0xFF64748B), fontSize = 12.sp)
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    val tabOptions = listOf("tab", "2spaces", "4spaces")
-                                    val displayNames = mapOf("tab" to "Tab", "2spaces" to "2 Spaces", "4spaces" to "4 Spaces")
-                                    tabOptions.forEach { option ->
-                                        val isSelected = tabMode == option
-                                        Button(
-                                            onClick = {
-                                                coroutineScope.launch { preferencesManager.saveTabMode(option) }
-                                            },
-                                            colors = ButtonDefaults.buttonColors(
-                                                containerColor = if (isSelected) Color(0xFFF97316) else Color(0xFF1E293B),
-                                                contentColor = Color.White
-                                            ),
-                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                                            shape = RoundedCornerShape(8.dp),
-                                            modifier = Modifier.weight(1f)
-                                        ) {
-                                            Text(
-                                                text = displayNames[option] ?: option,
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-
-                            // Spellcheck Switch
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text("System Spellcheck", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                                    Text("Toggle Android system-level dictionary spelling wrapper.", color = Color(0xFF64748B), fontSize = 11.sp)
-                                }
-                                Spacer(modifier = Modifier.width(16.dp))
-                                Switch(
-                                    checked = spellcheck,
-                                    onCheckedChange = { enabled ->
-                                        coroutineScope.launch { preferencesManager.saveSpellcheck(enabled) }
-                                    },
-                                    colors = SwitchDefaults.colors(
-                                        checkedThumbColor = Color.Black,
-                                        checkedTrackColor = Color(0xFFF97316),
-                                        uncheckedThumbColor = Color(0xFF64748B),
-                                        uncheckedTrackColor = Color(0xFF1E293B)
-                                    )
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Break Reminders Card
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF121212))
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "Typing Break Reminders",
-                                        color = Color(0xFFF97316),
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 14.sp
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = "Remind to take a break after continuous typing.",
-                                        color = Color(0xFF64748B),
-                                        fontSize = 12.sp
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(16.dp))
-                                Switch(
-                                    checked = breakReminderEnabled,
-                                    onCheckedChange = { enabled ->
-                                        coroutineScope.launch { preferencesManager.saveBreakReminderEnabled(enabled) }
-                                    },
-                                    colors = SwitchDefaults.colors(
-                                        checkedThumbColor = Color.Black,
-                                        checkedTrackColor = Color(0xFFF97316),
-                                        uncheckedThumbColor = Color(0xFF64748B),
-                                        uncheckedTrackColor = Color(0xFF1E293B)
-                                    )
-                                )
-                            }
-
-                            if (breakReminderEnabled) {
-                                Column {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text("Reminder Threshold", color = Color.White, fontSize = 12.sp)
-                                        Text("${breakReminderThreshold} minutes", color = Color(0xFFF97316), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                    }
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Slider(
-                                        value = breakReminderThreshold.toFloat(),
-                                        onValueChange = { value ->
-                                            coroutineScope.launch {
-                                                preferencesManager.saveBreakReminderThreshold(value.toInt())
-                                            }
-                                        },
-                                        valueRange = 5f..180f,
-                                        steps = 34, // intervals of 5 minutes (35 values: 5, 10, 15... 180)
-                                        colors = SliderDefaults.colors(
-                                            thumbColor = Color(0xFFF97316),
-                                            activeTrackColor = Color(0xFFF97316),
-                                            inactiveTrackColor = Color(0xFF1E293B)
-                                        )
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Backup & Portability Card (Import/Export)
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF121212))
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Text(
-                                text = "Backup & Portability",
-                                color = Color(0xFFF97316),
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp
-                            )
-                            Text(
-                                text = "Import external markdown notes or export your entire vault workspace to a backup folder.",
-                                color = Color(0xFF64748B),
-                                fontSize = 12.sp
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                Button(
-                                    onClick = {
-                                        importLauncher.launch(arrayOf("*/*"))
-                                    },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color(0xFF1E293B),
-                                        contentColor = Color.White
-                                    ),
-                                    shape = RoundedCornerShape(8.dp),
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Text("Import Files", fontSize = 13.sp)
-                                }
-                                Button(
-                                    onClick = {
-                                        exportLauncher.launch(null)
-                                    },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color(0xFF1E293B),
-                                        contentColor = Color.White
-                                    ),
-                                    shape = RoundedCornerShape(8.dp),
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Text("Export Vault", fontSize = 13.sp)
                                 }
                             }
                         }

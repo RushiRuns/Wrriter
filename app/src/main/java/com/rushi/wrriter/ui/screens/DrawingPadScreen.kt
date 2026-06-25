@@ -79,7 +79,7 @@ fun DrawingPadScreen(
                             }
                         }
                     ) {
-                        Icon(Icons.Default.Save, "Save", tint = Color(0xFFF97316))
+                        Icon(Icons.Default.Save, "Save", tint = Color(0xFF94A3B8))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF000000))

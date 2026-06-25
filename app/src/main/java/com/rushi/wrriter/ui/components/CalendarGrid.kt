@@ -158,7 +158,7 @@ fun CalendarGrid(
                                         )
                                         .border(
                                             width = 1.dp,
-                                            color = if (hasJournal) Color(0xFFF97316) else Color.Transparent,
+                                            color = if (hasJournal) Color(0xFF94A3B8) else Color.Transparent,
                                             shape = CircleShape
                                         )
                                         .clickable {
@@ -172,7 +172,7 @@ fun CalendarGrid(
                                     ) {
                                         Text(
                                             text = dayCal.get(Calendar.DAY_OF_MONTH).toString(),
-                                            color = if (isToday) Color(0xFFF97316) else Color.White,
+                                            color = if (isToday) Color(0xFF94A3B8) else Color.White,
                                             fontWeight = if (isToday || hasJournal) FontWeight.Bold else FontWeight.Normal,
                                             fontSize = 14.sp
                                         )
@@ -181,7 +181,7 @@ fun CalendarGrid(
                                             Box(
                                                 modifier = Modifier
                                                     .size(4.dp)
-                                                    .background(Color(0xFFF97316), CircleShape)
+                                                    .background(Color(0xFF94A3B8), CircleShape)
                                             )
                                         }
                                     }

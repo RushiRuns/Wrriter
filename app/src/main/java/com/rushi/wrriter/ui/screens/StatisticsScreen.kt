@@ -48,7 +48,7 @@ fun StatisticsScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = Color(0xFFF97316))
+                CircularProgressIndicator(color = Color(0xFF94A3B8))
             }
         } else {
             val currentStats = stats ?: VaultManager.VaultStats(0, 0, 0, 0)
@@ -100,7 +100,7 @@ fun StatisticsScreen(
                                     text = "${currentStats.currentStreak}",
                                     fontSize = 64.sp,
                                     fontWeight = FontWeight.Black,
-                                    color = Color(0xFFF97316) // Brand orange
+                                    color = Color(0xFF94A3B8) // Brand slate grey
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(

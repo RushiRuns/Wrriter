@@ -152,7 +152,7 @@ class FloatingWidgetService : Service() {
         floatingButton = FrameLayout(this).apply {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
-                setColor(0xFFF97316.toInt()) // Brand Orange
+                setColor(0xFF94A3B8.toInt()) // Brand Slate Grey
             }
             val padding = (12 * scale).toInt()
             setPadding(padding, padding, padding, padding)
@@ -349,7 +349,7 @@ class FloatingWidgetService : Service() {
             buttonRow.addView(Button(context).apply {
                 text = "Save Note"
                 setTextColor(Color.BLACK)
-                background = createCardBackground(0xFFF97316.toInt(), 8f)
+                background = createCardBackground(0xFF94A3B8.toInt(), 8f)
                 transformationMethod = null
                 setOnClickListener {
                     val title = titleInput.text.toString().trim()
@@ -409,7 +409,7 @@ class FloatingWidgetService : Service() {
             // Timer display
             val timerText = TextView(context).apply {
                 text = "00:00"
-                setTextColor(0xFFF97316.toInt()) // Orange highlight
+                setTextColor(0xFF94A3B8.toInt()) // Slate grey highlight
                 textSize = 32f
                 fontWeight = FontWeight.Bold
             }

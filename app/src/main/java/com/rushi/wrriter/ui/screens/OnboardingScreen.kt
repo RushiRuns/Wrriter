@@ -59,7 +59,7 @@ fun OnboardingScreen(
                 text = "Wrriter",
                 fontSize = 42.sp,
                 fontWeight = FontWeight.ExtraBold,
-                color = Color(0xFFF97316), // Dynamic minimalist orange highlight
+                color = Color(0xFF94A3B8), // Dynamic minimalist slate grey highlight
                 letterSpacing = 2.sp,
                 textAlign = TextAlign.Center
             )

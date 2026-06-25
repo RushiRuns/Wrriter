@@ -44,7 +44,7 @@ fun InboxToolbar(
         Button(
             onClick = { onMove(lastUsedFolder) },
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFFF97316), // Brand orange
+                containerColor = Color(0xFF94A3B8), // Brand slate grey
                 contentColor = Color.Black
             ),
             shape = RoundedCornerShape(8.dp),
@@ -163,7 +163,7 @@ fun FolderPickerDialog(
                             onFolderSelected(newFolderPath.trim())
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF97316)),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF94A3B8)),
                     shape = RoundedCornerShape(8.dp),
                     modifier = Modifier.align(Alignment.End)
                 ) {

@@ -54,6 +54,33 @@ function loadNoteContent(markdownContent, optionsJson) {
 }
 
 /**
+ * Updates dynamic styling options (theme, texture, font, spellcheck) without reloading content.
+ */
+function updateEditorOptions(optionsJson) {
+    try {
+        const options = JSON.parse(optionsJson);
+        
+        // Apply textures
+        document.body.className = ""; // Reset
+        if (options.texture && options.texture !== "none") {
+            document.body.classList.add("texture-" + options.texture);
+        }
+
+        // Apply typography
+        if (options.font && options.font !== "default") {
+            document.body.style.fontFamily = options.font;
+        } else {
+            document.body.style.fontFamily = "";
+        }
+
+        // Apply spellcheck toggle
+        editor.setAttribute("spellcheck", options.spellcheck ? "true" : "false");
+    } catch (e) {
+        console.error("Error updating options: " + e.message);
+    }
+}
+
+/**
  * Compiles content and posts it back to Kotlin.
  */
 function requestSave() {

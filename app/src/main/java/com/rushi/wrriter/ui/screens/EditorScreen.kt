@@ -377,6 +377,7 @@ fun WebViewContainer(
     onWebViewReady: (WebView) -> Unit
 ) {
     val context = LocalContext.current
+    var isLoaded by remember { mutableStateOf(false) }
 
     AndroidView(
         factory = { ctx ->
@@ -421,18 +422,7 @@ fun WebViewContainer(
 
                     override fun onPageFinished(view: WebView?, url: String?) {
                         super.onPageFinished(view, url)
-                        val options = JSONObject().apply {
-                            put("theme", theme)
-                            put("font", font)
-                            put("texture", texture)
-                            put("spellcheck", spellcheck)
-                            put("tabMode", tabMode)
-                        }
-                        val escapedMd = escapeStringForJs(markdown)
-                        evaluateJavascript(
-                            "loadNoteContent('$escapedMd', '${options.toString()}')",
-                            null
-                        )
+                        isLoaded = true
                     }
                 }
 
@@ -456,6 +446,31 @@ fun WebViewContainer(
 
                 loadUrl("https://appassets.androidplatform.net/assets/editor.html")
                 onWebViewReady(this)
+            }
+        },
+        update = { webView ->
+            if (isLoaded) {
+                val options = JSONObject().apply {
+                    put("theme", theme)
+                    put("font", font)
+                    put("texture", texture)
+                    put("spellcheck", spellcheck)
+                    put("tabMode", tabMode)
+                }
+                val optionsStr = options.toString()
+
+                val lastKey = webView.tag as? Pair<*, *>
+                val currentKey = Pair(markdown, optionsStr)
+
+                if (lastKey != currentKey) {
+                    webView.tag = currentKey
+                    if (lastKey?.first != markdown) {
+                        val escapedMd = escapeStringForJs(markdown)
+                        webView.evaluateJavascript("loadNoteContent('$escapedMd', '$optionsStr')", null)
+                    } else {
+                        webView.evaluateJavascript("updateEditorOptions('$optionsStr')", null)
+                    }
+                }
             }
         },
         modifier = Modifier.fillMaxSize()

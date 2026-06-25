@@ -389,6 +389,9 @@ fun WebViewContainer(
                     allowContentAccess = false
                 }
 
+                // Prevent native WebView white background from showing through
+                setBackgroundColor(android.graphics.Color.BLACK)
+
                 // Secure Local Assets and dynamic attachments Loading
                 val assetLoader = WebViewAssetLoader.Builder()
                     .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(ctx))

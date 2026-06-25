@@ -168,10 +168,10 @@
 
 **Purpose**: Styling, formatting refinements, and unit test validations.
 
-- [ ] T045 Build Compose global OLED Black theme layout in `app/src/main/java/com/rushi/wrriter/ui/theme/Theme.kt`
-- [ ] T046 [P] Add unit tests for YAML frontmatter parses/writes in `app/src/test/java/com/rushi/wrriter/FrontmatterParserTest.kt`
-- [ ] T047 [P] Add unit tests for files directory scanner in `app/src/test/java/com/rushi/wrriter/VaultManagerTest.kt`
-- [ ] T048 [P] Add unit tests for break reminder timing calculations in `app/src/test/java/com/rushi/wrriter/BreakReminderTest.kt`
+- [x] T045 Build Compose global OLED Black theme layout in `app/src/main/java/com/rushi/wrriter/ui/theme/Theme.kt`
+- [x] T046 [P] Add unit tests for YAML frontmatter parses/writes in `app/src/test/java/com/rushi/wrriter/FrontmatterParserTest.kt`
+- [x] T047 [P] Add unit tests for files directory scanner in `app/src/test/java/com/rushi/wrriter/VaultManagerTest.kt`
+- [x] T048 [P] Add unit tests for break reminder timing calculations in `app/src/test/java/com/rushi/wrriter/BreakReminderTest.kt`
 
 ---
 

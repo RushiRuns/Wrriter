@@ -93,6 +93,7 @@ function loadNoteContent(markdownContent, optionsJson) {
 
         // Parse and render content
         editor.innerHTML = markdownToHtml(markdownContent);
+        setupCheckboxListeners();
     } catch (e) {
         editor.innerHTML = "<p>Error loading content: " + e.message + "</p>";
     }
@@ -211,6 +212,8 @@ function handleHeadingAndListShortcuts() {
         changeBlockTag(block, "h3");
     } else if (textBeforeCursor === "* " || textBeforeCursor === "- ") {
         convertToListItem(block);
+    } else if (textBeforeCursor === "[] " || textBeforeCursor === "- [ ] " || textBeforeCursor === "* [ ] ") {
+        convertToChecklistItem(block);
     }
 }
 
@@ -269,6 +272,126 @@ function getParentBlock(node) {
     return null;
 }
 
+// --- Rich Formatting Toolbar Exposed Functions ---
+
+function formatText(command) {
+    document.execCommand(command, false, null);
+    editor.focus();
+}
+
+function insertChecklist() {
+    editor.focus();
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return;
+    const range = selection.getRangeAt(0);
+    const node = range.startContainer;
+    const block = getParentBlock(node);
+    if (block) {
+        convertToChecklistItem(block);
+    }
+}
+
+function convertToChecklistItem(block) {
+    const text = block.textContent || block.innerText;
+    const cleanText = text.replace(/^([-*]\s+\[[ xX]\]|[-*]|#+)\s+/, "");
+
+    const ul = document.createElement("ul");
+    ul.className = "checklist";
+    const li = document.createElement("li");
+    li.className = "task-list-item";
+    
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.addEventListener("change", function() {
+        if (window.EditorBridge) {
+            window.EditorBridge.onKeyPress();
+        }
+    });
+
+    li.appendChild(checkbox);
+    const textNode = document.createTextNode(cleanText || " ");
+    li.appendChild(textNode);
+    ul.appendChild(li);
+
+    block.parentNode.replaceChild(ul, block);
+
+    const range = document.createRange();
+    const selection = window.getSelection();
+    range.selectNodeContents(textNode);
+    range.collapse(false);
+    selection.removeAllRanges();
+    selection.addRange(range);
+}
+
+function setupCheckboxListeners() {
+    const checkboxes = editor.querySelectorAll('li.task-list-item input[type="checkbox"]');
+    checkboxes.forEach(cb => {
+        cb.addEventListener("change", function() {
+            if (window.EditorBridge) {
+                window.EditorBridge.onKeyPress();
+            }
+        });
+    });
+}
+
+function insertHeading() {
+    editor.focus();
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return;
+    const range = selection.getRangeAt(0);
+    const node = range.startContainer;
+    const block = getParentBlock(node);
+    if (!block) return;
+    
+    const tag = block.tagName ? block.tagName.toLowerCase() : "";
+    if (tag === "h1") {
+        changeBlockTag(block, "h2");
+    } else if (tag === "h2") {
+        changeBlockTag(block, "h3");
+    } else if (tag === "h3") {
+        changeBlockTag(block, "p");
+    } else {
+        changeBlockTag(block, "h1");
+    }
+}
+
+function insertWikiLink() {
+    editor.focus();
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return;
+    const range = selection.getRangeAt(0);
+    
+    const span = document.createElement("span");
+    span.className = "wiki-link";
+    span.setAttribute("data-title", "New Note");
+    span.textContent = "New Note";
+    
+    range.deleteContents();
+    range.insertNode(span);
+    
+    const space = document.createTextNode(" ");
+    range.insertNode(space);
+    
+    range.setStartAfter(space);
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+}
+
+function insertTag() {
+    editor.focus();
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return;
+    const range = selection.getRangeAt(0);
+    const textNode = document.createTextNode("#");
+    range.deleteContents();
+    range.insertNode(textNode);
+    range.setStartAfter(textNode);
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+}
+
 // --- Markdown Parsers (Local logic) ---
 
 function markdownToHtml(md) {
@@ -276,11 +399,37 @@ function markdownToHtml(md) {
     const lines = md.split("\n");
     let html = "";
     let inList = false;
+    let inChecklist = false;
 
     for (let line of lines) {
         const trimmed = line.trim();
 
-        // Unordered lists converter
+        // 1. Checklist items
+        const checklistRegex = /^[-*]\s+\[([ xX])\]\s+(.+)$/;
+        const checklistMatch = trimmed.match(checklistRegex);
+        if (checklistMatch) {
+            if (inList) {
+                html += "</ul>";
+                inList = false;
+            }
+            const isChecked = checklistMatch[1].toLowerCase() === "x";
+            let itemText = checklistMatch[2];
+            itemText = parseInlineMarkdown(itemText);
+            if (!inChecklist) {
+                html += '<ul class="checklist">';
+                inChecklist = true;
+            }
+            const checkedAttr = isChecked ? "checked" : "";
+            html += `<li class="task-list-item"><input type="checkbox" ${checkedAttr}> ${itemText}</li>`;
+            continue;
+        } else {
+            if (inChecklist) {
+                html += "</ul>";
+                inChecklist = false;
+            }
+        }
+
+        // 2. Unordered lists
         if (trimmed.startsWith("* ") || trimmed.startsWith("- ")) {
             let itemText = trimmed.substring(2);
             itemText = parseInlineMarkdown(itemText);
@@ -297,7 +446,7 @@ function markdownToHtml(md) {
             }
         }
 
-        // Headers converter
+        // 3. Headers
         if (trimmed.startsWith("# ")) {
             html += "<h1>" + parseInlineMarkdown(trimmed.substring(2)) + "</h1>";
         } else if (trimmed.startsWith("## ")) {
@@ -311,15 +460,23 @@ function markdownToHtml(md) {
         }
     }
     
-    if (inList) {
-        html += "</ul>";
-    }
+    if (inList) html += "</ul>";
+    if (inChecklist) html += "</ul>";
     return html;
 }
 
 function parseInlineMarkdown(text) {
     // Escape HTML tags to prevent injections
     text = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+    // Bold: **text** -> <strong>text</strong>
+    text = text.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+
+    // Italic: *text* -> <em>text</em>
+    text = text.replace(/\*([^*]+)\*/g, "<em>$1</em>");
+
+    // Strikethrough: ~~text~~ -> <s>text</s>
+    text = text.replace(/~~([^~]+)~~/g, "<s>$1</s>");
 
     // Wiki links: [[Note Title]] -> <span class="wiki-link" data-title="Title">Title</span>
     const wikiRegex = /\[\[([^\]]+)\]\]/g;
@@ -329,7 +486,6 @@ function parseInlineMarkdown(text) {
     });
 
     // Audio: ![Voice Note](src) or [Voice Note](src) -> <audio src="src" controls></audio>
-    // Parsed before images to prevent voice notes from matching the general image regex.
     const audioRegex = /!?\[([^\]]*)\]\((.+?\.(?:m4a|mp3|wav|ogg))\)/gi;
     text = text.replace(audioRegex, (match, alt, src) => {
         let fullSrc = src;
@@ -357,7 +513,6 @@ function parseInlineMarkdown(text) {
 function htmlToMarkdown() {
     const nodes = editor.childNodes;
     let markdown = "";
-    let inList = false;
 
     for (let node of nodes) {
         if (node.nodeType === Node.ELEMENT_NODE) {
@@ -372,7 +527,13 @@ function htmlToMarkdown() {
             } else if (tag === "ul") {
                 const lis = node.getElementsByTagName("li");
                 for (let li of lis) {
-                    markdown += "* " + getCleanText(li) + "\n";
+                    if (li.classList.contains("task-list-item")) {
+                        const checkbox = li.querySelector('input[type="checkbox"]');
+                        const isChecked = checkbox && checkbox.checked;
+                        markdown += (isChecked ? "- [x] " : "- [ ] ") + getCleanText(li) + "\n";
+                    } else {
+                        markdown += "* " + getCleanText(li) + "\n";
+                    }
                 }
             } else if (tag === "p") {
                 const innerText = getCleanText(node);
@@ -397,41 +558,51 @@ function htmlToMarkdown() {
     return markdown.trim();
 }
 
+function parseHtmlToMarkdown(node) {
+    if (node.nodeType === Node.TEXT_NODE) {
+        return node.nodeValue;
+    }
+    if (node.nodeType === Node.ELEMENT_NODE) {
+        const tagName = node.tagName.toLowerCase();
+        let innerContent = "";
+        for (let child of node.childNodes) {
+            innerContent += parseHtmlToMarkdown(child);
+        }
+        
+        if (tagName === "strong" || tagName === "b") {
+            return `**${innerContent}**`;
+        } else if (tagName === "em" || tagName === "i") {
+            return `*${innerContent}*`;
+        } else if (tagName === "s" || tagName === "strike" || tagName === "del") {
+            return `~~${innerContent}~~`;
+        } else if (tagName === "span" && node.classList.contains("wiki-link")) {
+            const title = node.getAttribute("data-title");
+            return `[[${title}]]`;
+        } else if (tagName === "img") {
+            const src = node.getAttribute("src");
+            const relativeSrc = src.replace("https://appassets.androidplatform.net/attachments/", "Attachments/");
+            const alt = node.getAttribute("alt") || "";
+            return `![${alt}](${relativeSrc})`;
+        } else if (tagName === "audio") {
+            const src = node.getAttribute("src");
+            const relativeSrc = src.replace("https://appassets.androidplatform.net/attachments/", "Attachments/");
+            return `[Voice Note](${relativeSrc})`;
+        } else if (tagName === "input" && node.getAttribute("type") === "checkbox") {
+            return ""; // Checkbox status handled at block level
+        } else if (tagName === "br") {
+            return "";
+        }
+        return innerContent;
+    }
+    return "";
+}
+
 function getCleanText(element) {
-    const tempDiv = document.createElement("div");
-    tempDiv.innerHTML = element.innerHTML;
-
-    // Convert wiki link spans back to [[Title]]
-    const wikiLinks = tempDiv.getElementsByClassName("wiki-link");
-    while (wikiLinks.length > 0) {
-        const link = wikiLinks[0];
-        const title = link.getAttribute("data-title");
-        const replacement = document.createTextNode(`[[${title}]]`);
-        link.parentNode.replaceChild(replacement, link);
+    let md = "";
+    for (let child of element.childNodes) {
+        md += parseHtmlToMarkdown(child);
     }
-
-    // Convert images back to markdown ![]()
-    const imgs = tempDiv.getElementsByTagName("img");
-    while (imgs.length > 0) {
-        const img = imgs[0];
-        const src = img.getAttribute("src");
-        const relativeSrc = src.replace("https://appassets.androidplatform.net/attachments/", "Attachments/");
-        const alt = img.getAttribute("alt") || "";
-        const replacement = document.createTextNode(`![${alt}](${relativeSrc})`);
-        img.parentNode.replaceChild(replacement, img);
-    }
-
-    // Convert audio back to markdown [alt](src)
-    const audios = tempDiv.getElementsByTagName("audio");
-    while (audios.length > 0) {
-        const audio = audios[0];
-        const src = audio.getAttribute("src");
-        const relativeSrc = src.replace("https://appassets.androidplatform.net/attachments/", "Attachments/");
-        const replacement = document.createTextNode(`[Voice Note](${relativeSrc})`);
-        audio.parentNode.replaceChild(replacement, audio);
-    }
-
-    return tempDiv.textContent || tempDiv.innerText || "";
+    return md;
 }
 
 function changeBlockTag(block, newTag) {

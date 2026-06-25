@@ -126,15 +126,16 @@ fun InboxScreen(
         refreshInbox()
     }
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF000000)) // OLED Black
+            .imePadding()
     ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(bottom = 80.dp) // Leave space for bottom dump input
+                .fillMaxWidth()
+                .weight(1f)
         ) {
             // Header
             Row(
@@ -332,7 +333,6 @@ fun InboxScreen(
         // Bottom Capture Bar
         Box(
             modifier = Modifier
-                .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .background(Color(0xFF000000))
                 .padding(16.dp)

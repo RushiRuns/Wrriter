@@ -6,20 +6,30 @@ import android.net.Uri
 import android.webkit.*
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Redo
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -182,76 +192,103 @@ fun EditorScreen(
                 )
             )
         },
-        modifier = Modifier.fillMaxSize()
     ) { innerPadding ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0xFF000000))
                 .padding(innerPadding)
+                .imePadding()
         ) {
-            if (noteMetadata != null) {
-                WebViewContainer(
-                    markdown = noteBody,
-                    vaultUri = vaultUri,
-                    theme = theme,
-                    font = font,
-                    texture = texture,
-                    spellcheck = spellcheck,
-                    tabMode = tabMode,
-                    onSave = { md ->
-                        coroutineScope.launch {
-                            val meta = noteMetadata
-                            if (meta != null) {
-                                vaultManager.saveNote(
-                                    fileUriString = meta.uriString,
-                                    title = meta.title,
-                                    tags = meta.tags,
-                                    isInbox = meta.isInbox,
-                                    body = md
-                                )
-                                onBack()
-                            }
-                        }
-                    },
-                    onWikiLinkClicked = { title ->
-                        coroutineScope.launch {
-                            val parentUri = DocumentFile.fromSingleUri(context, Uri.parse(noteUriString))?.parentFile?.uri
-                            val targetUri = if (parentUri != null) {
-                                val rootDir = DocumentFile.fromTreeUri(context, parentUri)
-                                val existing = rootDir?.findFile("$title.md")
-                                existing?.uri?.toString()
-                            } else null
-
-                            if (targetUri != null) {
-                                val (meta, _) = vaultManager.loadNote(targetUri)
-                                onWikiLinkClicked(meta)
-                            } else {
-                                // Create new note automatically under the current folder parent directory
-                                val rootDir = DocumentFile.fromSingleUri(context, Uri.parse(noteUriString))?.parentFile
-                                if (rootDir != null) {
-                                    val newNoteMeta = vaultManager.createNote(
-                                        rootUriString = rootDir.parentFile!!.uri.toString(),
-                                        folderName = rootDir.name ?: "Inbox",
-                                        title = title,
-                                        body = ""
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            ) {
+                if (noteMetadata != null) {
+                    WebViewContainer(
+                        markdown = noteBody,
+                        vaultUri = vaultUri,
+                        theme = theme,
+                        font = font,
+                        texture = texture,
+                        spellcheck = spellcheck,
+                        tabMode = tabMode,
+                        onSave = { md ->
+                            coroutineScope.launch {
+                                val meta = noteMetadata
+                                if (meta != null) {
+                                    vaultManager.saveNote(
+                                        fileUriString = meta.uriString,
+                                        title = meta.title,
+                                        tags = meta.tags,
+                                        isInbox = meta.isInbox,
+                                        body = md
                                     )
-                                    onWikiLinkClicked(newNoteMeta)
+                                    onBack()
                                 }
                             }
+                        },
+                        onWikiLinkClicked = { title ->
+                            coroutineScope.launch {
+                                val parentUri = DocumentFile.fromSingleUri(context, Uri.parse(noteUriString))?.parentFile?.uri
+                                val targetUri = if (parentUri != null) {
+                                    val rootDir = DocumentFile.fromTreeUri(context, parentUri)
+                                    val existing = rootDir?.findFile("$title.md")
+                                    existing?.uri?.toString()
+                                } else null
+
+                                if (targetUri != null) {
+                                    val (meta, _) = vaultManager.loadNote(targetUri)
+                                    onWikiLinkClicked(meta)
+                                } else {
+                                    // Create new note automatically under the current folder parent directory
+                                    val rootDir = DocumentFile.fromSingleUri(context, Uri.parse(noteUriString))?.parentFile
+                                    if (rootDir != null) {
+                                        val newNoteMeta = vaultManager.createNote(
+                                            rootUriString = rootDir.parentFile!!.uri.toString(),
+                                            folderName = rootDir.name ?: "Inbox",
+                                            title = title,
+                                            body = ""
+                                        )
+                                        onWikiLinkClicked(newNoteMeta)
+                                    }
+                                }
+                            }
+                        },
+                        onKeyPress = {
+                            val intent = Intent(context, BreakReminderService::class.java).apply {
+                                action = BreakReminderService.ACTION_KEYPRESS
+                            }
+                            context.startService(intent)
+                        },
+                        onWebViewReady = { webView ->
+                            webViewInstance = webView
                         }
-                    },
-                    onKeyPress = {
-                        val intent = Intent(context, BreakReminderService::class.java).apply {
-                            action = BreakReminderService.ACTION_KEYPRESS
-                        }
-                        context.startService(intent)
-                    },
-                    onWebViewReady = { webView ->
-                        webViewInstance = webView
-                    }
-                )
+                    )
+                }
             }
+
+            // Formatting options toolbar placed right above the soft keyboard
+            FormattingBar(
+                onAction = { action ->
+                    val webView = webViewInstance
+                    if (webView != null) {
+                        when (action) {
+                            "undo" -> webView.evaluateJavascript("formatText('undo')", null)
+                            "redo" -> webView.evaluateJavascript("formatText('redo')", null)
+                            "checklist" -> webView.evaluateJavascript("insertChecklist()", null)
+                            "wikiLink" -> webView.evaluateJavascript("insertWikiLink()", null)
+                            "tag" -> webView.evaluateJavascript("insertTag()", null)
+                            "heading" -> webView.evaluateJavascript("insertHeading()", null)
+                            "bold" -> webView.evaluateJavascript("formatText('bold')", null)
+                            "italic" -> webView.evaluateJavascript("formatText('italic')", null)
+                            "strikethrough" -> webView.evaluateJavascript("formatText('strikeThrough')", null)
+                        }
+                    }
+                },
+                onAttachClick = onInsertDrawingRequest
+            )
         }
     }
 
@@ -488,4 +525,111 @@ private fun escapeStringForJs(str: String): String {
         .replace("'", "\\'")
         .replace("\n", "\\n")
         .replace("\r", "\\r")
+}
+
+@Composable
+fun FormattingBar(
+    onAction: (String) -> Unit,
+    onAttachClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFF121212)) // Slate dark container matching theme
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Undo
+        IconButton(onClick = { onAction("undo") }) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.Undo,
+                contentDescription = "Undo",
+                tint = Color.White,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        // Redo
+        IconButton(onClick = { onAction("redo") }) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.Redo,
+                contentDescription = "Redo",
+                tint = Color.White,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        // Checklist
+        IconButton(onClick = { onAction("checklist") }) {
+            Text(
+                text = "[ ]",
+                fontWeight = FontWeight.Bold,
+                fontSize = 15.sp,
+                color = Color.White
+            )
+        }
+        // Wiki Link / Document
+        IconButton(onClick = { onAction("wikiLink") }) {
+            Icon(
+                imageVector = Icons.Default.Description,
+                contentDescription = "Wiki Link",
+                tint = Color.White,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        // Tag
+        IconButton(onClick = { onAction("tag") }) {
+            Icon(
+                imageVector = Icons.Default.Tag,
+                contentDescription = "Insert Tag",
+                tint = Color.White,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        // Paperclip Attachment
+        IconButton(onClick = onAttachClick) {
+            Icon(
+                imageVector = Icons.Default.AttachFile,
+                contentDescription = "Insert Drawing",
+                tint = Color.White,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        // Heading
+        IconButton(onClick = { onAction("heading") }) {
+            Text(
+                text = "H",
+                fontWeight = FontWeight.Bold,
+                fontSize = 17.sp,
+                color = Color.White
+            )
+        }
+        // Bold
+        IconButton(onClick = { onAction("bold") }) {
+            Text(
+                text = "B",
+                fontWeight = FontWeight.Bold,
+                fontSize = 17.sp,
+                color = Color.White
+            )
+        }
+        // Italic
+        IconButton(onClick = { onAction("italic") }) {
+            Text(
+                text = "I",
+                style = TextStyle(fontStyle = FontStyle.Italic),
+                fontSize = 17.sp,
+                color = Color.White
+            )
+        }
+        // Strikethrough
+        IconButton(onClick = { onAction("strikethrough") }) {
+            Text(
+                text = "S",
+                style = TextStyle(textDecoration = TextDecoration.LineThrough),
+                fontSize = 17.sp,
+                color = Color.White
+            )
+        }
+    }
 }

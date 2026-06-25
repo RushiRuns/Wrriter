@@ -147,8 +147,155 @@ class MainActivity : ComponentActivity() {
                         )
                     } else {
                         // Routing states
-                        when {
-                            showDrawingPad -> {
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            when {
+                                activeNoteUri != null -> {
+                                    EditorScreen(
+                                        vaultManager = vaultManager,
+                                        vaultUri = vaultUri,
+                                        noteUriString = activeNoteUri!!,
+                                        onBack = { activeNoteUri = null },
+                                        onWikiLinkClicked = { targetNote ->
+                                            activeNoteUri = targetNote.uriString
+                                        },
+                                        onInsertDrawingRequest = {
+                                            showDrawingPad = true
+                                        },
+                                        insertedDrawingPath = insertedDrawingPath,
+                                        onInsertedDrawingConsumed = {
+                                            insertedDrawingPath = null
+                                        }
+                                    )
+                                }
+                                else -> {
+                                    Scaffold(
+                                        bottomBar = {
+                                            NavigationBar(
+                                                containerColor = Color(0xFF121212),
+                                                contentColor = Color.White
+                                            ) {
+                                                NavigationBarItem(
+                                                    selected = selectedTab == "inbox",
+                                                    onClick = { selectedTab = "inbox" },
+                                                    icon = { Icon(Icons.Default.Inbox, contentDescription = "Inbox") },
+                                                    label = { Text("Inbox") },
+                                                    colors = NavigationBarItemDefaults.colors(
+                                                        selectedIconColor = Color(0xFF94A3B8),
+                                                        selectedTextColor = Color(0xFF94A3B8),
+                                                        unselectedIconColor = Color(0xFF64748B),
+                                                        unselectedTextColor = Color(0xFF64748B),
+                                                        indicatorColor = Color(0xFF1E293B)
+                                                    )
+                                                )
+                                                NavigationBarItem(
+                                                    selected = selectedTab == "journal",
+                                                    onClick = { selectedTab = "journal" },
+                                                    icon = { Icon(Icons.Default.Book, contentDescription = "Journal") },
+                                                    label = { Text("Journal") },
+                                                    colors = NavigationBarItemDefaults.colors(
+                                                        selectedIconColor = Color(0xFF94A3B8),
+                                                        selectedTextColor = Color(0xFF94A3B8),
+                                                        unselectedIconColor = Color(0xFF64748B),
+                                                        unselectedTextColor = Color(0xFF64748B),
+                                                        indicatorColor = Color(0xFF1E293B)
+                                                    )
+                                                )
+                                                NavigationBarItem(
+                                                    selected = selectedTab == "tasks",
+                                                    onClick = { selectedTab = "tasks" },
+                                                    icon = { Icon(Icons.Default.Assignment, contentDescription = "Tasks") },
+                                                    label = { Text("Tasks") },
+                                                    colors = NavigationBarItemDefaults.colors(
+                                                        selectedIconColor = Color(0xFF94A3B8),
+                                                        selectedTextColor = Color(0xFF94A3B8),
+                                                        unselectedIconColor = Color(0xFF64748B),
+                                                        unselectedTextColor = Color(0xFF64748B),
+                                                        indicatorColor = Color(0xFF1E293B)
+                                                    )
+                                                )
+                                                NavigationBarItem(
+                                                    selected = selectedTab == "stats",
+                                                    onClick = { selectedTab = "stats" },
+                                                    icon = { Icon(Icons.Default.BarChart, contentDescription = "Stats") },
+                                                    label = { Text("Stats") },
+                                                    colors = NavigationBarItemDefaults.colors(
+                                                        selectedIconColor = Color(0xFF94A3B8),
+                                                        selectedTextColor = Color(0xFF94A3B8),
+                                                        unselectedIconColor = Color(0xFF64748B),
+                                                        unselectedTextColor = Color(0xFF64748B),
+                                                        indicatorColor = Color(0xFF1E293B)
+                                                    )
+                                                )
+                                                NavigationBarItem(
+                                                    selected = selectedTab == "settings",
+                                                    onClick = { selectedTab = "settings" },
+                                                    icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
+                                                    label = { Text("Settings") },
+                                                    colors = NavigationBarItemDefaults.colors(
+                                                        selectedIconColor = Color(0xFF94A3B8),
+                                                        selectedTextColor = Color(0xFF94A3B8),
+                                                        unselectedIconColor = Color(0xFF64748B),
+                                                        unselectedTextColor = Color(0xFF64748B),
+                                                        indicatorColor = Color(0xFF1E293B)
+                                                    )
+                                                )
+                                            }
+                                        },
+                                        containerColor = Color.Black
+                                    ) { innerPadding ->
+                                        Box(modifier = Modifier.padding(innerPadding)) {
+                                            when (selectedTab) {
+                                                "inbox" -> {
+                                                    InboxScreen(
+                                                        vaultManager = vaultManager,
+                                                        vaultUri = vaultUri,
+                                                        onNoteSelected = { note ->
+                                                            activeNoteUri = note.uriString
+                                                        }
+                                                    )
+                                                }
+                                                "journal" -> {
+                                                    JournalScreen(
+                                                        vaultManager = vaultManager,
+                                                        vaultUri = vaultUri,
+                                                        onNoteSelected = { note ->
+                                                            activeNoteUri = note.uriString
+                                                        }
+                                                    )
+                                                }
+                                                "tasks" -> {
+                                                    TasksScreen(
+                                                        vaultManager = vaultManager,
+                                                        vaultUri = vaultUri,
+                                                        onNoteSelected = { note ->
+                                                            activeNoteUri = note.uriString
+                                                        }
+                                                    )
+                                                }
+                                                "stats" -> {
+                                                    StatisticsScreen(
+                                                        vaultManager = vaultManager,
+                                                        vaultUri = vaultUri
+                                                    )
+                                                }
+                                                "settings" -> {
+                                                    SettingsScreen(
+                                                        preferencesManager = preferencesManager,
+                                                        vaultManager = vaultManager,
+                                                        onNavigateToOnboarding = {
+                                                            coroutineScope.launch {
+                                                                preferencesManager.saveVaultUri("")
+                                                            }
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (showDrawingPad) {
                                 DrawingPadScreen(
                                     vaultUri = vaultUri,
                                     onBack = { showDrawingPad = false },
@@ -157,150 +304,6 @@ class MainActivity : ComponentActivity() {
                                         showDrawingPad = false
                                     }
                                 )
-                            }
-                            activeNoteUri != null -> {
-                                EditorScreen(
-                                    vaultManager = vaultManager,
-                                    vaultUri = vaultUri,
-                                    noteUriString = activeNoteUri!!,
-                                    onBack = { activeNoteUri = null },
-                                    onWikiLinkClicked = { targetNote ->
-                                        activeNoteUri = targetNote.uriString
-                                    },
-                                    onInsertDrawingRequest = {
-                                        showDrawingPad = true
-                                    },
-                                    insertedDrawingPath = insertedDrawingPath,
-                                    onInsertedDrawingConsumed = {
-                                        insertedDrawingPath = null
-                                    }
-                                )
-                            }
-                            else -> {
-                                Scaffold(
-                                    bottomBar = {
-                                        NavigationBar(
-                                            containerColor = Color(0xFF121212),
-                                            contentColor = Color.White
-                                        ) {
-                                            NavigationBarItem(
-                                                selected = selectedTab == "inbox",
-                                                onClick = { selectedTab = "inbox" },
-                                                icon = { Icon(Icons.Default.Inbox, contentDescription = "Inbox") },
-                                                label = { Text("Inbox") },
-                                                colors = NavigationBarItemDefaults.colors(
-                                                    selectedIconColor = Color(0xFF94A3B8),
-                                                    selectedTextColor = Color(0xFF94A3B8),
-                                                    unselectedIconColor = Color(0xFF64748B),
-                                                    unselectedTextColor = Color(0xFF64748B),
-                                                    indicatorColor = Color(0xFF1E293B)
-                                                )
-                                            )
-                                            NavigationBarItem(
-                                                selected = selectedTab == "journal",
-                                                onClick = { selectedTab = "journal" },
-                                                icon = { Icon(Icons.Default.Book, contentDescription = "Journal") },
-                                                label = { Text("Journal") },
-                                                colors = NavigationBarItemDefaults.colors(
-                                                    selectedIconColor = Color(0xFF94A3B8),
-                                                    selectedTextColor = Color(0xFF94A3B8),
-                                                    unselectedIconColor = Color(0xFF64748B),
-                                                    unselectedTextColor = Color(0xFF64748B),
-                                                    indicatorColor = Color(0xFF1E293B)
-                                                )
-                                            )
-                                            NavigationBarItem(
-                                                selected = selectedTab == "tasks",
-                                                onClick = { selectedTab = "tasks" },
-                                                icon = { Icon(Icons.Default.Assignment, contentDescription = "Tasks") },
-                                                label = { Text("Tasks") },
-                                                colors = NavigationBarItemDefaults.colors(
-                                                    selectedIconColor = Color(0xFF94A3B8),
-                                                    selectedTextColor = Color(0xFF94A3B8),
-                                                    unselectedIconColor = Color(0xFF64748B),
-                                                    unselectedTextColor = Color(0xFF64748B),
-                                                    indicatorColor = Color(0xFF1E293B)
-                                                )
-                                            )
-                                            NavigationBarItem(
-                                                selected = selectedTab == "stats",
-                                                onClick = { selectedTab = "stats" },
-                                                icon = { Icon(Icons.Default.BarChart, contentDescription = "Stats") },
-                                                label = { Text("Stats") },
-                                                colors = NavigationBarItemDefaults.colors(
-                                                    selectedIconColor = Color(0xFF94A3B8),
-                                                    selectedTextColor = Color(0xFF94A3B8),
-                                                    unselectedIconColor = Color(0xFF64748B),
-                                                    unselectedTextColor = Color(0xFF64748B),
-                                                    indicatorColor = Color(0xFF1E293B)
-                                                )
-                                            )
-                                            NavigationBarItem(
-                                                selected = selectedTab == "settings",
-                                                onClick = { selectedTab = "settings" },
-                                                icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
-                                                label = { Text("Settings") },
-                                                colors = NavigationBarItemDefaults.colors(
-                                                    selectedIconColor = Color(0xFF94A3B8),
-                                                    selectedTextColor = Color(0xFF94A3B8),
-                                                    unselectedIconColor = Color(0xFF64748B),
-                                                    unselectedTextColor = Color(0xFF64748B),
-                                                    indicatorColor = Color(0xFF1E293B)
-                                                )
-                                            )
-                                        }
-                                    },
-                                    containerColor = Color.Black
-                                ) { innerPadding ->
-                                    Box(modifier = Modifier.padding(innerPadding)) {
-                                        when (selectedTab) {
-                                            "inbox" -> {
-                                                InboxScreen(
-                                                    vaultManager = vaultManager,
-                                                    vaultUri = vaultUri,
-                                                    onNoteSelected = { note ->
-                                                        activeNoteUri = note.uriString
-                                                    }
-                                                )
-                                            }
-                                            "journal" -> {
-                                                JournalScreen(
-                                                    vaultManager = vaultManager,
-                                                    vaultUri = vaultUri,
-                                                    onNoteSelected = { note ->
-                                                        activeNoteUri = note.uriString
-                                                    }
-                                                )
-                                            }
-                                            "tasks" -> {
-                                                TasksScreen(
-                                                    vaultManager = vaultManager,
-                                                    vaultUri = vaultUri,
-                                                    onNoteSelected = { note ->
-                                                        activeNoteUri = note.uriString
-                                                    }
-                                                )
-                                            }
-                                            "stats" -> {
-                                                StatisticsScreen(
-                                                    vaultManager = vaultManager,
-                                                    vaultUri = vaultUri
-                                                )
-                                            }
-                                            "settings" -> {
-                                                SettingsScreen(
-                                                    preferencesManager = preferencesManager,
-                                                    vaultManager = vaultManager,
-                                                    onNavigateToOnboarding = {
-                                                        coroutineScope.launch {
-                                                            preferencesManager.saveVaultUri("")
-                                                        }
-                                                    }
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
                             }
                         }
                     }

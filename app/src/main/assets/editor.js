@@ -132,41 +132,58 @@ function requestSave() {
     }
 }
 
-/**
- * Inserts a drawing or voice attachment at the current cursor position.
- */
 function insertAttachment(src, alt) {
     editor.focus();
     let selection = window.getSelection();
-    if (!selection.rangeCount) return;
-    let range = selection.getRangeAt(0);
-    range.deleteContents();
-
+    
     let fullSrc = src;
     if (src.startsWith("Attachments/")) {
         const fileName = src.substring("Attachments/".length);
         fullSrc = "https://appassets.androidplatform.net/attachments/" + fileName;
     }
 
+    let element;
     if (src.endsWith(".png") || src.endsWith(".jpg")) {
-        let img = document.createElement("img");
-        img.src = fullSrc;
-        img.alt = alt;
-        img.style.maxWidth = "100%";
-        img.style.borderRadius = "8px";
-        range.insertNode(img);
-        range.setStartAfter(img);
+        element = document.createElement("img");
+        element.src = fullSrc;
+        element.alt = alt;
+        element.style.maxWidth = "100%";
+        element.style.borderRadius = "8px";
+        element.style.display = "block";
+        element.style.margin = "12px auto";
     } else if (src.endsWith(".m4a")) {
-        let audio = document.createElement("audio");
-        audio.src = fullSrc;
-        audio.controls = true;
-        range.insertNode(audio);
-        range.setStartAfter(audio);
+        element = document.createElement("audio");
+        element.src = fullSrc;
+        element.controls = true;
+        element.style.display = "block";
+        element.style.margin = "12px 0";
     }
-    
-    range.collapse(true);
-    selection.removeAllRanges();
-    selection.addRange(range);
+
+    if (!element) return;
+
+    if (selection.rangeCount > 0) {
+        try {
+            let range = selection.getRangeAt(0);
+            range.deleteContents();
+            range.insertNode(element);
+            
+            // Insert a newline after the element to make it easy to continue typing
+            const br = document.createElement("br");
+            range.insertNode(br);
+            
+            range.setStartAfter(br);
+            range.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(range);
+        } catch (e) {
+            // Fallback to append if range insertion fails
+            editor.appendChild(element);
+            editor.appendChild(document.createElement("br"));
+        }
+    } else {
+        editor.appendChild(element);
+        editor.appendChild(document.createElement("br"));
+    }
 }
 
 // --- Shortcuts Handlers ---

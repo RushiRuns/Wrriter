@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import com.rushi.wrriter.data.PreferencesManager
 import com.rushi.wrriter.data.VaultManager
+import com.rushi.wrriter.ui.screens.EditorScreen
 import com.rushi.wrriter.ui.screens.InboxScreen
 import com.rushi.wrriter.ui.screens.OnboardingScreen
 import com.rushi.wrriter.ui.theme.WrriterTheme
@@ -36,7 +37,10 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val coroutineScope = rememberCoroutineScope()
+                    
+                    // State observers
                     val vaultUriState = preferencesManager.vaultUriFlow.collectAsState(initial = null)
+                    var activeNoteUri by remember { mutableStateOf<String?>(null) }
                     
                     val vaultUri = vaultUriState.value
 
@@ -60,19 +64,26 @@ class MainActivity : ComponentActivity() {
                             }
                         )
                     } else {
-                        // Inbox default landing screen
-                        InboxScreen(
-                            vaultManager = vaultManager,
-                            vaultUri = vaultUri,
-                            onNoteSelected = { note ->
-                                Toast.makeText(
-                                    applicationContext,
-                                    "Note tapped: ${note.title}",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                                // Navigation to editor will be implemented in US2 (Phase 4)
-                            }
-                        )
+                        // Routing between Inbox and Editor
+                        val currentNoteUri = activeNoteUri
+                        if (currentNoteUri != null) {
+                            EditorScreen(
+                                vaultManager = vaultManager,
+                                noteUriString = currentNoteUri,
+                                onBack = { activeNoteUri = null },
+                                onWikiLinkClicked = { targetNote ->
+                                    activeNoteUri = targetNote.uriString
+                                }
+                            )
+                        } else {
+                            InboxScreen(
+                                vaultManager = vaultManager,
+                                vaultUri = vaultUri,
+                                onNoteSelected = { note ->
+                                    activeNoteUri = note.uriString
+                                }
+                            )
+                        }
                     }
                 }
             }

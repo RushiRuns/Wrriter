@@ -53,12 +53,12 @@
 
 **Independent Test**: Open editor, enter `# Hello`, verify symbol hides. Enter `[[Link]]` and tap it to verify navigation.
 
-- [ ] T011 [US2] Create editor HTML page canvas in `app/src/main/assets/editor.html`
-- [ ] T012 [P] [US2] Write JavaScript markdown compilation and bridges in `app/src/main/assets/editor.js`
-- [ ] T013 [P] [US2] Write stylesheet for hidden Markdown formatting tags in `app/src/main/assets/editor.css`
-- [ ] T014 [US2] Create WebView Compose wrapper in `app/src/main/java/com/rushi/wrriter/ui/screens/EditorScreen.kt`
-- [ ] T015 [US2] Implement JS-Kotlin `@JavascriptInterface` bridge in `app/src/main/java/com/rushi/wrriter/ui/screens/EditorScreen.kt`
-- [ ] T016 [US2] Implement `[[Wiki Link]]` path resolution and note creator in `app/src/main/java/com/rushi/wrriter/data/VaultManager.kt`
+- [x] T011 [US2] Create editor HTML page canvas in `app/src/main/assets/editor.html`
+- [x] T012 [P] [US2] Write JavaScript markdown compilation and bridges in `app/src/main/assets/editor.js`
+- [x] T013 [P] [US2] Write stylesheet for hidden Markdown formatting tags in `app/src/main/assets/editor.css`
+- [x] T014 [US2] Create WebView Compose wrapper in `app/src/main/java/com/rushi/wrriter/ui/screens/EditorScreen.kt`
+- [x] T015 [US2] Implement JS-Kotlin `@JavascriptInterface` bridge in `app/src/main/java/com/rushi/wrriter/ui/screens/EditorScreen.kt`
+- [x] T016 [US2] Implement `[[Wiki Link]]` path resolution and note creator in `app/src/main/java/com/rushi/wrriter/data/VaultManager.kt`
 
 **Checkpoint**: WYSIWYG writing and internal wiki-links are fully functional.
 

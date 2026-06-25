@@ -1,6 +1,7 @@
 package com.rushi.wrriter
 
 import android.content.Context
+import android.content.Intent
 import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.os.Build
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Assignment
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Settings
@@ -33,6 +35,7 @@ import com.rushi.wrriter.ui.screens.JournalScreen
 import com.rushi.wrriter.ui.screens.OnboardingScreen
 import com.rushi.wrriter.ui.screens.TasksScreen
 import com.rushi.wrriter.ui.screens.SettingsScreen
+import com.rushi.wrriter.ui.screens.StatisticsScreen
 import com.rushi.wrriter.ui.theme.WrriterTheme
 import kotlinx.coroutines.launch
 
@@ -43,6 +46,7 @@ class MainActivity : ComponentActivity() {
     private var sensorManager: SensorManager? = null
     private var shakeDetector: ShakeDetector? = null
     private var onShakeCallback: (() -> Unit)? = null
+    private val openNoteUriState = mutableStateOf<String?>(null)
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,6 +54,11 @@ class MainActivity : ComponentActivity() {
         
         preferencesManager = PreferencesManager(applicationContext)
         vaultManager = VaultManager(applicationContext)
+
+        val noteUri = intent?.getStringExtra("open_note_uri")
+        if (!noteUri.isNullOrEmpty()) {
+            openNoteUriState.value = noteUri
+        }
 
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         shakeDetector = ShakeDetector {
@@ -73,6 +82,14 @@ class MainActivity : ComponentActivity() {
                     var selectedTab by remember { mutableStateOf("inbox") }
                     
                     val vaultUri = vaultUriState.value
+
+                    val incomingNoteUri = openNoteUriState.value
+                    LaunchedEffect(incomingNoteUri) {
+                        if (incomingNoteUri != null) {
+                            activeNoteUri = incomingNoteUri
+                            openNoteUriState.value = null // Consume
+                        }
+                    }
 
                     onShakeCallback = {
                         val notes = vaultManager.getCachedNotes()
@@ -183,6 +200,19 @@ class MainActivity : ComponentActivity() {
                                                 )
                                             )
                                             NavigationBarItem(
+                                                selected = selectedTab == "stats",
+                                                onClick = { selectedTab = "stats" },
+                                                icon = { Icon(Icons.Default.BarChart, contentDescription = "Stats") },
+                                                label = { Text("Stats") },
+                                                colors = NavigationBarItemDefaults.colors(
+                                                    selectedIconColor = Color(0xFFF97316),
+                                                    selectedTextColor = Color(0xFFF97316),
+                                                    unselectedIconColor = Color(0xFF64748B),
+                                                    unselectedTextColor = Color(0xFF64748B),
+                                                    indicatorColor = Color(0xFF1E293B)
+                                                )
+                                            )
+                                            NavigationBarItem(
                                                 selected = selectedTab == "settings",
                                                 onClick = { selectedTab = "settings" },
                                                 icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
@@ -228,9 +258,16 @@ class MainActivity : ComponentActivity() {
                                                     }
                                                 )
                                             }
+                                            "stats" -> {
+                                                StatisticsScreen(
+                                                    vaultManager = vaultManager,
+                                                    vaultUri = vaultUri
+                                                )
+                                            }
                                             "settings" -> {
                                                 SettingsScreen(
                                                     preferencesManager = preferencesManager,
+                                                    vaultManager = vaultManager,
                                                     onNavigateToOnboarding = {
                                                         coroutineScope.launch {
                                                             preferencesManager.saveVaultUri("")
@@ -261,6 +298,15 @@ class MainActivity : ComponentActivity() {
         super.onPause()
         if (shakeDetector != null) {
             sensorManager?.unregisterListener(shakeDetector)
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        val noteUri = intent.getStringExtra("open_note_uri")
+        if (!noteUri.isNullOrEmpty()) {
+            openNoteUriState.value = noteUri
         }
     }
 

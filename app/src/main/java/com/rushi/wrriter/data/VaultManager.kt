@@ -662,4 +662,186 @@ class VaultManager(private val context: Context) {
         }
         return result
     }
+
+    /**
+     * Imports markdown files into the Inbox folder.
+     */
+    fun importNotes(rootUriString: String, sourceUris: List<Uri>): Int {
+        var importedCount = 0
+        try {
+            val rootUri = Uri.parse(rootUriString)
+            val rootDir = DocumentFile.fromTreeUri(context, rootUri) ?: return 0
+            val inboxDir = rootDir.findFile("Inbox") ?: rootDir.createDirectory("Inbox") ?: return 0
+
+            for (sourceUri in sourceUris) {
+                try {
+                    val sourceFile = DocumentFile.fromSingleUri(context, sourceUri) ?: continue
+                    val originalName = sourceFile.name ?: "Imported_${System.currentTimeMillis()}.md"
+                    val safeName = if (originalName.endsWith(".md")) originalName else "$originalName.md"
+                    
+                    val inputStream = contentResolver.openInputStream(sourceUri) ?: continue
+                    val rawText = inputStream.use { it.readBytes() }
+                    
+                    val destFile = inboxDir.createFile("text/markdown", safeName) ?: continue
+                    val outputStream = contentResolver.openOutputStream(destFile.uri) ?: continue
+                    outputStream.use { it.write(rawText) }
+                    
+                    try {
+                        val metadata = loadMetadata(destFile, "Inbox")
+                        synchronized(noteCache) {
+                            noteCache[destFile.uri.toString()] = metadata
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                    
+                    importedCount++
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return importedCount
+    }
+
+    /**
+     * Exports the entire vault folder structure to a user-selected backup folder on the device.
+     */
+    fun exportVault(rootUriString: String, targetFolderUri: Uri): Boolean {
+        try {
+            val srcRootUri = Uri.parse(rootUriString)
+            val srcRootDir = DocumentFile.fromTreeUri(context, srcRootUri) ?: return false
+            val destRootDir = DocumentFile.fromTreeUri(context, targetFolderUri) ?: return false
+            
+            if (!srcRootDir.exists() || !destRootDir.exists()) return false
+            
+            val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+            val backupFolderName = "Wrriter_Backup_$timeStamp"
+            val backupDestDir = destRootDir.createDirectory(backupFolderName) ?: return false
+
+            copyDirectoryRecursively(srcRootDir, backupDestDir)
+            return true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return false
+        }
+    }
+
+    private fun copyDirectoryRecursively(sourceDir: DocumentFile, destDir: DocumentFile) {
+        val files = sourceDir.listFiles()
+        for (file in files) {
+            if (file.isDirectory) {
+                val subDirName = file.name ?: continue
+                val subDestDir = destDir.createDirectory(subDirName) ?: continue
+                copyDirectoryRecursively(file, subDestDir)
+            } else if (file.isFile) {
+                val fileName = file.name ?: continue
+                val mimeType = file.type ?: "application/octet-stream"
+                val destFile = destDir.createFile(mimeType, fileName) ?: continue
+                
+                try {
+                    contentResolver.openInputStream(file.uri).use { inputStream ->
+                        contentResolver.openOutputStream(destFile.uri).use { outputStream ->
+                            if (inputStream != null && outputStream != null) {
+                                inputStream.copyTo(outputStream)
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+    }
+
+    data class VaultStats(
+        val totalNotes: Int,
+        val totalWords: Int,
+        val currentStreak: Int,
+        val longestStreak: Int
+    )
+
+    /**
+     * Calculates streak and totals statistics for all cached notes.
+     */
+    fun getVaultStats(): VaultStats {
+        val notes = getCachedNotes()
+        val totalNotes = notes.size
+        val totalWords = notes.sumOf { it.wordCount }
+        
+        if (notes.isEmpty()) {
+            return VaultStats(0, 0, 0, 0)
+        }
+
+        val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val dateStrings = notes.map { sdf.format(Date(it.modifiedTime)) }.toSet()
+        
+        val datesList = dateStrings.mapNotNull { dateStr ->
+            try {
+                sdf.parse(dateStr)
+            } catch (e: Exception) {
+                null
+            }
+        }.sorted()
+
+        if (datesList.isEmpty()) {
+            return VaultStats(totalNotes, totalWords, 0, 0)
+        }
+
+        var longestStreak = 0
+        var currentStreak = 0
+        
+        var tempStreak = 1
+        for (i in 1 until datesList.size) {
+            val prev = datesList[i - 1]
+            val curr = datesList[i]
+            
+            val diffMs = curr.time - prev.time
+            val diffDays = (diffMs / (24 * 60 * 60 * 1000L)).toInt()
+            
+            if (diffDays == 1) {
+                tempStreak++
+            } else if (diffDays > 1) {
+                if (tempStreak > longestStreak) {
+                    longestStreak = tempStreak
+                }
+                tempStreak = 1
+            }
+        }
+        if (tempStreak > longestStreak) {
+            longestStreak = tempStreak
+        }
+
+        val todayStr = sdf.format(Date())
+        val yesterdayCal = Calendar.getInstance().apply { add(Calendar.DATE, -1) }
+        val yesterdayStr = sdf.format(yesterdayCal.time)
+        
+        if (dateStrings.contains(todayStr) || dateStrings.contains(yesterdayStr)) {
+            val checkDate = if (dateStrings.contains(todayStr)) Date() else yesterdayCal.time
+            var streakCount = 0
+            val checkCal = Calendar.getInstance()
+            checkCal.time = checkDate
+            
+            while (true) {
+                val formatted = sdf.format(checkCal.time)
+                if (dateStrings.contains(formatted)) {
+                    streakCount++
+                    checkCal.add(Calendar.DATE, -1)
+                } else {
+                    break
+                }
+            }
+            currentStreak = streakCount
+        }
+
+        return VaultStats(
+            totalNotes = totalNotes,
+            totalWords = totalWords,
+            currentStreak = currentStreak,
+            longestStreak = longestStreak
+        )
+    }
 }
+

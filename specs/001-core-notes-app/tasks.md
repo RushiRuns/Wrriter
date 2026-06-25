@@ -155,12 +155,12 @@
 
 **Goal**: Configure font styles, editor backgrounds, streaks calculations, and typing alarms.
 
-- [ ] T039 [US10] Add textures patterns (paper grain CSS, ruled grid line SVG) in `app/src/main/assets/editor.css` and `app/src/main/assets/editor.js`
-- [ ] T040 [US10] Implement WebView bridge keystroke callback listener in `app/src/main/java/com/rushi/wrriter/ui/screens/EditorScreen.kt`
-- [ ] T041 [US10] Build continuous writing time tracker and alarms service in `app/src/main/java/com/rushi/wrriter/service/BreakReminderService.kt`
-- [ ] T042 [US10] Implement SAF-based vault import and export copiers in `app/src/main/java/com/rushi/wrriter/data/VaultManager.kt`
-- [ ] T043 [US10] Implement stats analyzer (streak days, notes, words) in `app/src/main/java/com/rushi/wrriter/ui/screens/StatisticsScreen.kt`
-- [ ] T044 [US10] Build note-level AlarmManager notifications scheduler in `app/src/main/java/com/rushi/wrriter/receiver/AlarmReceiver.kt`
+- [x] T039 [US10] Add textures patterns (paper grain CSS, ruled grid line SVG) in `app/src/main/assets/editor.css` and `app/src/main/assets/editor.js`
+- [x] T040 [US10] Implement WebView bridge keystroke callback listener in `app/src/main/java/com/rushi/wrriter/ui/screens/EditorScreen.kt`
+- [x] T041 [US10] Build continuous writing time tracker and alarms service in `app/src/main/java/com/rushi/wrriter/service/BreakReminderService.kt`
+- [x] T042 [US10] Implement SAF-based vault import and export copiers in `app/src/main/java/com/rushi/wrriter/data/VaultManager.kt`
+- [x] T043 [US10] Implement stats analyzer (streak days, notes, words) in `app/src/main/java/com/rushi/wrriter/ui/screens/StatisticsScreen.kt`
+- [x] T044 [US10] Build note-level AlarmManager notifications scheduler in `app/src/main/java/com/rushi/wrriter/receiver/AlarmReceiver.kt`
 
 ---
 

@@ -1,14 +1,17 @@
 package com.rushi.wrriter.ui.screens
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.net.Uri
 import android.webkit.*
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -21,6 +24,8 @@ import androidx.webkit.WebViewAssetLoader
 import androidx.webkit.WebViewClientCompat
 import com.rushi.wrriter.data.NoteMetadata
 import com.rushi.wrriter.data.VaultManager
+import com.rushi.wrriter.data.PreferencesManager
+import com.rushi.wrriter.service.BreakReminderService
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.json.JSONObject
@@ -40,10 +45,18 @@ fun EditorScreen(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     
+    val preferencesManager = remember { PreferencesManager(context) }
+    val theme = preferencesManager.themeFlow.collectAsState(initial = "oled").value
+    val font = preferencesManager.fontFlow.collectAsState(initial = "default").value
+    val texture = preferencesManager.textureFlow.collectAsState(initial = "none").value
+    val spellcheck = preferencesManager.spellcheckFlow.collectAsState(initial = true).value
+    val tabMode = preferencesManager.tabModeFlow.collectAsState(initial = "2spaces").value
+
     var noteTitle by remember { mutableStateOf("") }
     var noteBody by remember { mutableStateOf("") }
     var noteMetadata by remember { mutableStateOf<NoteMetadata?>(null) }
     var webViewInstance by remember { mutableStateOf<WebView?>(null) }
+    var showReminderMenu by remember { mutableStateOf(false) }
     
     // Load note content and metadata
     LaunchedEffect(noteUriString) {
@@ -66,6 +79,15 @@ fun EditorScreen(
         }
     }
 
+    DisposableEffect(Unit) {
+        onDispose {
+            val intent = Intent(context, BreakReminderService::class.java).apply {
+                action = BreakReminderService.ACTION_EDITOR_CLOSED
+            }
+            context.startService(intent)
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -85,6 +107,55 @@ fun EditorScreen(
                     }
                 },
                 actions = {
+                    // Set Reminder Icon
+                    IconButton(onClick = { showReminderMenu = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Notifications,
+                            contentDescription = "Set Reminder",
+                            tint = Color.White
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = showReminderMenu,
+                        onDismissRequest = { showReminderMenu = false },
+                        modifier = Modifier.background(Color(0xFF121212))
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Remind in 5 mins", color = Color.White) },
+                            onClick = {
+                                showReminderMenu = false
+                                val triggerTime = System.currentTimeMillis() + 5 * 60 * 1000L
+                                com.rushi.wrriter.receiver.AlarmReceiver.scheduleAlarm(context, noteUriString, noteTitle, triggerTime)
+                                Toast.makeText(context, "Reminder set for 5 minutes", Toast.LENGTH_SHORT).show()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Remind in 1 hour", color = Color.White) },
+                            onClick = {
+                                showReminderMenu = false
+                                val triggerTime = System.currentTimeMillis() + 60 * 60 * 1000L
+                                com.rushi.wrriter.receiver.AlarmReceiver.scheduleAlarm(context, noteUriString, noteTitle, triggerTime)
+                                Toast.makeText(context, "Reminder set for 1 hour", Toast.LENGTH_SHORT).show()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Remind in 1 day", color = Color.White) },
+                            onClick = {
+                                showReminderMenu = false
+                                val triggerTime = System.currentTimeMillis() + 24 * 60 * 60 * 1000L
+                                com.rushi.wrriter.receiver.AlarmReceiver.scheduleAlarm(context, noteUriString, noteTitle, triggerTime)
+                                Toast.makeText(context, "Reminder set for 1 day", Toast.LENGTH_SHORT).show()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Cancel Reminder", color = Color.White) },
+                            onClick = {
+                                showReminderMenu = false
+                                com.rushi.wrriter.receiver.AlarmReceiver.cancelAlarm(context, noteUriString)
+                                Toast.makeText(context, "Reminder cancelled", Toast.LENGTH_SHORT).show()
+                            }
+                        )
+                    }
                     // Brush/Drawing Icon
                     IconButton(onClick = onInsertDrawingRequest) {
                         Icon(
@@ -123,6 +194,11 @@ fun EditorScreen(
                 WebViewContainer(
                     markdown = noteBody,
                     vaultUri = vaultUri,
+                    theme = theme,
+                    font = font,
+                    texture = texture,
+                    spellcheck = spellcheck,
+                    tabMode = tabMode,
                     onSave = { md ->
                         coroutineScope.launch {
                             val meta = noteMetadata
@@ -166,7 +242,10 @@ fun EditorScreen(
                         }
                     },
                     onKeyPress = {
-                        // Keypress recorded (used for break timers later)
+                        val intent = Intent(context, BreakReminderService::class.java).apply {
+                            action = BreakReminderService.ACTION_KEYPRESS
+                        }
+                        context.startService(intent)
                     },
                     onWebViewReady = { webView ->
                         webViewInstance = webView
@@ -182,6 +261,11 @@ fun EditorScreen(
 fun WebViewContainer(
     markdown: String,
     vaultUri: String,
+    theme: String,
+    font: String,
+    texture: String,
+    spellcheck: Boolean,
+    tabMode: String,
     onSave: (String) -> Unit,
     onWikiLinkClicked: (String) -> Unit,
     onKeyPress: () -> Unit,
@@ -233,11 +317,11 @@ fun WebViewContainer(
                     override fun onPageFinished(view: WebView?, url: String?) {
                         super.onPageFinished(view, url)
                         val options = JSONObject().apply {
-                            put("theme", "oled")
-                            put("font", "default")
-                            put("texture", "none")
-                            put("spellcheck", true)
-                            put("tabMode", "2spaces")
+                            put("theme", theme)
+                            put("font", font)
+                            put("texture", texture)
+                            put("spellcheck", spellcheck)
+                            put("tabMode", tabMode)
                         }
                         val escapedMd = escapeStringForJs(markdown)
                         evaluateJavascript(

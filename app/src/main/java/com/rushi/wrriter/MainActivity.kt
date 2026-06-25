@@ -10,6 +10,7 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
@@ -81,6 +82,18 @@ class MainActivity : ComponentActivity() {
                     var showDrawingPad by remember { mutableStateOf(false) }
                     var insertedDrawingPath by remember { mutableStateOf<String?>(null) }
                     var selectedTab by remember { mutableStateOf("inbox") }
+
+                    BackHandler(enabled = activeNoteUri != null) {
+                        activeNoteUri = null
+                    }
+
+                    BackHandler(enabled = showDrawingPad) {
+                        showDrawingPad = false
+                    }
+
+                    BackHandler(enabled = selectedTab != "inbox" && activeNoteUri == null && !showDrawingPad) {
+                        selectedTab = "inbox"
+                    }
                     
                     val vaultUri = vaultUriState.value
 

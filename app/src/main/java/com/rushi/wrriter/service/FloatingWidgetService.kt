@@ -246,6 +246,20 @@ class FloatingWidgetService : Service() {
                 showVoiceRecorderDialog()
             })
 
+            // Open Notes App Button
+            addView(createMenuButton("Open Notes App") {
+                removeViewSafely(menuCard)
+                menuCard = null
+                createFloatingButton()
+                
+                val launchIntent = packageManager.getLaunchIntentForPackage(packageName)?.apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                }
+                if (launchIntent != null) {
+                    startActivity(launchIntent)
+                }
+            })
+
             Spacer(this, 8)
 
             // Close Menu Button

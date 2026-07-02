@@ -1,5 +1,8 @@
 package com.rushi.wrriter.service
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
+import android.animation.ValueAnimator
 import android.app.*
 import android.content.Context
 import android.content.Intent
@@ -14,6 +17,8 @@ import android.os.Looper
 import android.provider.DocumentsContract
 import android.text.InputType
 import android.view.*
+import android.view.animation.DecelerateInterpolator
+import android.view.animation.OvershootInterpolator
 import android.widget.*
 import androidx.core.app.NotificationCompat
 import androidx.documentfile.provider.DocumentFile
@@ -52,6 +57,13 @@ class FloatingWidgetService : Service() {
     private var isRecording = false
 
     private val mainHandler = Handler(Looper.getMainLooper())
+
+    // Animation and Idle state tracking
+    private var isIdle = false
+    private val idleHandler = Handler(Looper.getMainLooper())
+    private val idleRunnable = Runnable { fadeAndDock() }
+    private var snapAnimator: ValueAnimator? = null
+    private var dockAnimator: ValueAnimator? = null
 
     companion object {
         private const val NOTIFICATION_ID = 1002
@@ -94,6 +106,9 @@ class FloatingWidgetService : Service() {
         removeViewSafely(quickWriteDialog)
         removeViewSafely(voiceRecorderDialog)
         stopRecordingTimer()
+        cancelIdleTimer()
+        snapAnimator?.cancel()
+        dockAnimator?.cancel()
         if (isRecording) {
             try {
                 audioRecorder.stop()
@@ -150,22 +165,30 @@ class FloatingWidgetService : Service() {
     private fun createFloatingButton() {
         val scale = resources.displayMetrics.density
         floatingButton = FrameLayout(this).apply {
+            alpha = if (isIdle) 0.3f else 1.0f
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
-                setColor(0xFF94A3B8.toInt()) // Brand Slate Grey
+                // Dark glassmorphic background
+                setColor(0xCC0C0C0E.toInt())
+                // Thin slate-silver border
+                setStroke((1.2f * scale).toInt(), 0xFF475569.toInt())
             }
             val padding = (12 * scale).toInt()
             setPadding(padding, padding, padding, padding)
 
             val icon = ImageView(context).apply {
                 setImageResource(android.R.drawable.ic_menu_edit)
-                setColorFilter(Color.BLACK)
+                setColorFilter(0xFFE2E8F0.toInt()) // Soft silver
             }
             addView(icon, FrameLayout.LayoutParams(
                 (24 * scale).toInt(),
                 (24 * scale).toInt(),
                 Gravity.CENTER
             ))
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                elevation = 6f * scale
+            }
         }
 
         var initialX = 0
@@ -177,6 +200,20 @@ class FloatingWidgetService : Service() {
         floatingButton?.setOnTouchListener { _, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
+                    cancelIdleTimer()
+                    snapAnimator?.cancel()
+                    
+                    // Tactile down scaling feedback
+                    floatingButton?.animate()
+                        ?.scaleX(0.9f)
+                        ?.scaleY(0.9f)
+                        ?.setDuration(100)
+                        ?.start()
+
+                    if (isIdle) {
+                        wakeUp()
+                    }
+
                     initialX = buttonParams.x
                     initialY = buttonParams.y
                     initialTouchX = event.rawX
@@ -192,14 +229,40 @@ class FloatingWidgetService : Service() {
                         isMoving = true
                     }
 
-                    buttonParams.x = initialX + deltaX
-                    buttonParams.y = initialY + deltaY
-                    windowManager?.updateViewLayout(floatingButton, buttonParams)
+                    if (isMoving) {
+                        buttonParams.x = initialX + deltaX
+                        buttonParams.y = initialY + deltaY
+                        
+                        // Keep within vertical bounds of screen
+                        val displayMetrics = resources.displayMetrics
+                        val buttonHeight = floatingButton?.height ?: (48 * scale).toInt()
+                        val margin = (16 * scale).toInt()
+                        val maxY = displayMetrics.heightPixels - buttonHeight - margin
+                        buttonParams.y = buttonParams.y.coerceIn(margin, maxY)
+                        
+                        windowManager?.updateViewLayout(floatingButton, buttonParams)
+                    }
                     true
                 }
                 MotionEvent.ACTION_UP -> {
+                    // Tactile release bounce scaling feedback
+                    floatingButton?.animate()
+                        ?.scaleX(1.0f)
+                        ?.scaleY(1.0f)
+                        ?.setDuration(150)
+                        ?.setInterpolator(OvershootInterpolator())
+                        ?.start()
+
                     if (!isMoving) {
-                        showMenuCard()
+                        if (isIdle) {
+                            wakeUp {
+                                showMenuCard()
+                            }
+                        } else {
+                            showMenuCard()
+                        }
+                    } else {
+                        snapToEdge()
                     }
                     true
                 }
@@ -208,6 +271,140 @@ class FloatingWidgetService : Service() {
         }
 
         windowManager?.addView(floatingButton, buttonParams)
+        resetIdleTimer()
+    }
+
+    private fun snapToEdge() {
+        val view = floatingButton ?: return
+        val scale = resources.displayMetrics.density
+        val buttonWidth = view.width.takeIf { it > 0 } ?: (48 * scale).toInt()
+        val displayMetrics = resources.displayMetrics
+        val screenWidth = displayMetrics.widthPixels
+
+        val currentX = buttonParams.x
+        val targetX = if (currentX + buttonWidth / 2 < screenWidth / 2) {
+            0
+        } else {
+            screenWidth - buttonWidth
+        }
+
+        snapAnimator?.cancel()
+        snapAnimator = ValueAnimator.ofInt(currentX, targetX).apply {
+            duration = 300
+            interpolator = DecelerateInterpolator()
+            addUpdateListener { animator ->
+                buttonParams.x = animator.animatedValue as Int
+                try {
+                    windowManager?.updateViewLayout(view, buttonParams)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+            addListener(object : AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: Animator) {
+                    resetIdleTimer()
+                }
+            })
+            start()
+        }
+    }
+
+    private fun fadeAndDock() {
+        val view = floatingButton ?: return
+        if (isIdle) return
+        isIdle = true
+
+        val scale = resources.displayMetrics.density
+        val buttonWidth = view.width.takeIf { it > 0 } ?: (48 * scale).toInt()
+        val displayMetrics = resources.displayMetrics
+        val screenWidth = displayMetrics.widthPixels
+
+        val startX = buttonParams.x
+        val targetX = if (startX + buttonWidth / 2 < screenWidth / 2) {
+            -buttonWidth / 2
+        } else {
+            screenWidth - buttonWidth / 2
+        }
+
+        dockAnimator?.cancel()
+
+        val startAlpha = view.alpha
+        val targetAlpha = 0.3f
+
+        dockAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 400
+            interpolator = DecelerateInterpolator()
+            addUpdateListener { animator ->
+                val fraction = animator.animatedValue as Float
+                buttonParams.x = (startX + (targetX - startX) * fraction).toInt()
+                view.alpha = startAlpha + (targetAlpha - startAlpha) * fraction
+                try {
+                    windowManager?.updateViewLayout(view, buttonParams)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+            start()
+        }
+    }
+
+    private fun wakeUp(onComplete: () -> Unit = {}) {
+        val view = floatingButton ?: return
+        if (!isIdle) {
+            onComplete()
+            return
+        }
+        isIdle = false
+
+        val scale = resources.displayMetrics.density
+        val buttonWidth = view.width.takeIf { it > 0 } ?: (48 * scale).toInt()
+        val displayMetrics = resources.displayMetrics
+        val screenWidth = displayMetrics.widthPixels
+
+        val startX = buttonParams.x
+        val targetX = if (startX + buttonWidth / 2 < screenWidth / 2) {
+            0
+        } else {
+            screenWidth - buttonWidth
+        }
+
+        dockAnimator?.cancel()
+
+        val startAlpha = view.alpha
+        val targetAlpha = 1.0f
+
+        dockAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 250
+            interpolator = OvershootInterpolator(1.2f)
+            addUpdateListener { animator ->
+                val fraction = animator.animatedValue as Float
+                buttonParams.x = (startX + (targetX - startX) * fraction).toInt()
+                view.alpha = startAlpha + (targetAlpha - startAlpha) * fraction
+                try {
+                    windowManager?.updateViewLayout(view, buttonParams)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+            addListener(object : AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: Animator) {
+                    resetIdleTimer()
+                    onComplete()
+                }
+            })
+            start()
+        }
+    }
+
+    private fun cancelIdleTimer() {
+        idleHandler.removeCallbacks(idleRunnable)
+    }
+
+    private fun resetIdleTimer() {
+        cancelIdleTimer()
+        if (!isIdle) {
+            idleHandler.postDelayed(idleRunnable, 4000)
+        }
     }
 
     private fun showMenuCard() {
@@ -236,7 +433,21 @@ class FloatingWidgetService : Service() {
             addView(createMenuButton("Quick Write Note") {
                 removeViewSafely(menuCard)
                 menuCard = null
-                showQuickWriteDialog()
+                showQuickWriteDialog("Inbox")
+            })
+
+            // Open Read Note Button
+            addView(createMenuButton("Open Read Note") {
+                removeViewSafely(menuCard)
+                menuCard = null
+                showQuickWriteDialog("Read")
+            })
+
+            // Open Watch Note Button
+            addView(createMenuButton("Open Watch Note") {
+                removeViewSafely(menuCard)
+                menuCard = null
+                showQuickWriteDialog("Watch")
             })
 
             // Record Voice Button
@@ -244,20 +455,6 @@ class FloatingWidgetService : Service() {
                 removeViewSafely(menuCard)
                 menuCard = null
                 showVoiceRecorderDialog()
-            })
-
-            // Open Notes App Button
-            addView(createMenuButton("Open Notes App") {
-                removeViewSafely(menuCard)
-                menuCard = null
-                createFloatingButton()
-                
-                val launchIntent = packageManager.getLaunchIntentForPackage(packageName)?.apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                }
-                if (launchIntent != null) {
-                    startActivity(launchIntent)
-                }
             })
 
             Spacer(this, 8)
@@ -290,7 +487,7 @@ class FloatingWidgetService : Service() {
         windowManager?.addView(menuCard, menuParams)
     }
 
-    private fun showQuickWriteDialog() {
+    private fun showQuickWriteDialog(folderName: String = "Inbox") {
         if (quickWriteDialog != null) return
         val scale = resources.displayMetrics.density
         
@@ -301,7 +498,11 @@ class FloatingWidgetService : Service() {
             setPadding(pad, pad, pad, pad)
 
             addView(TextView(context).apply {
-                text = "Quick Write"
+                text = when (folderName) {
+                    "Read" -> "Quick Read Note"
+                    "Watch" -> "Quick Watch Note"
+                    else -> "Quick Write"
+                }
                 setTextColor(Color.WHITE)
                 textSize = 18f
                 fontWeight = FontWeight.Bold
@@ -369,7 +570,7 @@ class FloatingWidgetService : Service() {
                     val title = titleInput.text.toString().trim()
                     val body = bodyInput.text.toString().trim()
                     if (body.isNotEmpty()) {
-                        saveNoteToInbox(title.ifEmpty { "Quick Dump" }, body)
+                        saveNoteToFolder(folderName, title.ifEmpty { "Quick Dump" }, body)
                         removeViewSafely(quickWriteDialog)
                         quickWriteDialog = null
                         createFloatingButton()
@@ -510,7 +711,7 @@ class FloatingWidgetService : Service() {
         }
     }
 
-    private fun saveNoteToInbox(title: String, body: String) {
+    private fun saveNoteToFolder(folderName: String, title: String, body: String) {
         serviceScope.launch {
             try {
                 val vaultUri = preferencesManager.vaultUriFlow.first()
@@ -522,12 +723,12 @@ class FloatingWidgetService : Service() {
                 }
                 
                 withContext(Dispatchers.IO) {
-                    vaultManager.createNote(vaultUri, "Inbox", title, body)
+                    vaultManager.createNote(vaultUri, folderName, title, body)
                     vaultManager.rebuildCache(vaultUri)
                 }
 
                 mainHandler.post {
-                    Toast.makeText(this@FloatingWidgetService, "Note saved to Inbox", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@FloatingWidgetService, "Note saved to $folderName", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 e.printStackTrace()

@@ -124,7 +124,16 @@ fun SettingsScreen(
     
     var ipInput by remember(initialIp) { mutableStateOf(initialIp) }
     var portInput by remember(initialPort) { mutableStateOf(initialPort.toString()) }
-    var apiKeyInput by remember { mutableStateOf(preferencesManager.getSyncthingApiKey()) }
+    var apiKeyInput by remember { mutableStateOf("") }
+
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) {
+            val key = preferencesManager.getSyncthingApiKey()
+            withContext(Dispatchers.Main) {
+                apiKeyInput = key
+            }
+        }
+    }
 
     // Syncthing API Status States
     var connectionStatus by remember { mutableStateOf("Disconnected") } // Connected, Disconnected, Checking...
@@ -160,11 +169,6 @@ fun SettingsScreen(
             systemStatus = null
             devicesList = emptyList()
         }
-    }
-
-    // Auto-check connection on screen load
-    LaunchedEffect(initialIp, initialPort) {
-        checkSyncthingConnection()
     }
 
     Box(

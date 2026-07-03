@@ -11,6 +11,10 @@ import java.io.OutputStream
 import java.text.SimpleDateFormat
 import java.util.*
 
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+
 class VaultManager(private val context: Context) {
 
     private val contentResolver: ContentResolver = context.contentResolver
@@ -20,6 +24,9 @@ class VaultManager(private val context: Context) {
 
     // ISO 8601 Date formatter
     private val isoFormatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.getDefault())
+
+    private val _isIndexReady = MutableStateFlow(false)
+    val isIndexReady: StateFlow<Boolean> = _isIndexReady.asStateFlow()
 
     /**
      * Initializes default folders under the root vault URI.
@@ -48,15 +55,22 @@ class VaultManager(private val context: Context) {
      * Rebuilds the in-memory cache of note metadata by scanning all files in the vault.
      */
     fun rebuildCache(rootUriString: String) {
+        _isIndexReady.value = false
+        val rootUri = Uri.parse(rootUriString)
+        val rootDir = DocumentFile.fromTreeUri(context, rootUri) ?: run {
+            _isIndexReady.value = true
+            return
+        }
+        val tempCache = mutableMapOf<String, NoteMetadata>()
+        scanDirectory(rootDir, "", rootUri, tempCache)
         synchronized(noteCache) {
             noteCache.clear()
-            val rootUri = Uri.parse(rootUriString)
-            val rootDir = DocumentFile.fromTreeUri(context, rootUri) ?: return
-            scanDirectory(rootDir, "", rootUri)
+            noteCache.putAll(tempCache)
         }
+        _isIndexReady.value = true
     }
 
-    private fun scanDirectory(dir: DocumentFile, relativePath: String, rootUri: Uri) {
+    private fun scanDirectory(dir: DocumentFile, relativePath: String, rootUri: Uri, tempCache: MutableMap<String, NoteMetadata>) {
         val files = dir.listFiles()
         for (file in files) {
             if (file.isDirectory) {
@@ -64,11 +78,11 @@ class VaultManager(private val context: Context) {
                 // Exclude Attachments from note scanning
                 if (folderName == "Attachments") continue
                 val nextRelativePath = if (relativePath.isEmpty()) folderName else "$relativePath/$folderName"
-                scanDirectory(file, nextRelativePath, rootUri)
+                scanDirectory(file, nextRelativePath, rootUri, tempCache)
             } else if (file.isFile && file.name?.endsWith(".md") == true) {
                 try {
                     val metadata = loadMetadata(file, relativePath)
-                    noteCache[file.uri.toString()] = metadata
+                    tempCache[file.uri.toString()] = metadata
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }

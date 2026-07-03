@@ -51,12 +51,11 @@ fun JournalScreen(
         }
     }
 
-    LaunchedEffect(vaultUri) {
-        coroutineScope.launch(Dispatchers.IO) {
-            vaultManager.rebuildCache(vaultUri)
-            withContext(Dispatchers.Main) {
-                refreshJournal()
-            }
+    val isIndexReady by vaultManager.isIndexReady.collectAsState()
+
+    LaunchedEffect(isIndexReady) {
+        if (isIndexReady) {
+            refreshJournal()
         }
     }
 
@@ -65,86 +64,101 @@ fun JournalScreen(
             .fillMaxSize()
             .background(Color(0xFF000000)) // OLED Black
     ) {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(top = 24.dp, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Header
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Daily Journal",
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Text(
-                        text = "${journalNotes.size} entries",
-                        fontSize = 14.sp,
-                        color = Color(0xFF64748B)
-                    )
-                }
+        if (!isIndexReady) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = Color(0xFF94A3B8))
             }
-
-            // Calendar Card
-            item {
-                CalendarGrid(
-                    existingJournalDates = existingDates,
-                    onDateSelected = { dateString ->
-                        try {
-                            val note = vaultManager.getOrCreateDailyJournalNote(vaultUri, dateString)
-                            onNoteSelected(note)
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                            Toast.makeText(context, "Failed to load/create journal note", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                )
-            }
-
-            // Subheader
-            item {
-                Text(
-                    text = "Journal Entries",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
-            }
-
-            // Entries List
-            if (journalNotes.isEmpty()) {
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+                contentPadding = PaddingValues(top = 24.dp, bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Header
                 item {
-                    Box(
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(150.dp),
-                        contentAlignment = Alignment.Center
+                            .padding(bottom = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "No entries yet. Select a date above to start writing.",
+                            text = "Daily Journal",
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        Text(
+                            text = "${journalNotes.size} entries",
                             fontSize = 14.sp,
-                            color = Color(0xFF475569),
-                            modifier = Modifier.padding(16.dp)
+                            color = Color(0xFF64748B)
                         )
                     }
                 }
-            } else {
-                items(journalNotes, key = { it.uriString }) { note ->
-                    JournalNoteRow(
-                        note = note,
-                        onClick = { onNoteSelected(note) }
+
+                // Calendar Card
+                item {
+                    CalendarGrid(
+                        existingJournalDates = existingDates,
+                        onDateSelected = { dateString ->
+                            coroutineScope.launch(Dispatchers.IO) {
+                                try {
+                                    val note = vaultManager.getOrCreateDailyJournalNote(vaultUri, dateString)
+                                    withContext(Dispatchers.Main) {
+                                        onNoteSelected(note)
+                                    }
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(context, "Failed to load/create journal note", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                        }
                     )
+                }
+
+                // Subheader
+                item {
+                    Text(
+                        text = "Journal Entries",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
+
+                // Entries List
+                if (journalNotes.isEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(150.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "No entries yet. Select a date above to start writing.",
+                                fontSize = 14.sp,
+                                color = Color(0xFF475569),
+                                modifier = Modifier.padding(16.dp)
+                            )
+                        }
+                    }
+                } else {
+                    items(journalNotes, key = { it.uriString }) { note ->
+                        JournalNoteRow(
+                            note = note,
+                            onClick = { onNoteSelected(note) }
+                        )
+                    }
                 }
             }
         }

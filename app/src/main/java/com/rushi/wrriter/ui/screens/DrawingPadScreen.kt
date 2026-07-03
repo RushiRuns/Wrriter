@@ -30,6 +30,10 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
+
 data class StrokePath(
     val path: Path,
     val points: List<Offset> // Retain coordinates for Bitmap reconstruction
@@ -43,6 +47,7 @@ fun DrawingPadScreen(
     onDrawingSaved: (String) -> Unit
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     
     val paths = remember { mutableStateListOf<StrokePath>() }
     var currentPathPoints = remember { mutableStateListOf<Offset>() }
@@ -67,15 +72,20 @@ fun DrawingPadScreen(
                                 Toast.makeText(context, "Canvas is empty", Toast.LENGTH_SHORT).show()
                                 return@IconButton
                             }
-                            // Save drawing
-                            val fileName = saveDrawingToVault(
-                                context = context,
-                                vaultUriString = vaultUri,
-                                paths = paths,
-                                size = canvasSize
-                            )
-                            if (fileName != null) {
-                                onDrawingSaved(fileName)
+                            val pathsCopy = paths.toList()
+                            val sizeCopy = canvasSize
+                            coroutineScope.launch(Dispatchers.IO) {
+                                val fileName = saveDrawingToVault(
+                                    context = context,
+                                    vaultUriString = vaultUri,
+                                    paths = pathsCopy,
+                                    size = sizeCopy
+                                )
+                                withContext(Dispatchers.Main) {
+                                    if (fileName != null) {
+                                        onDrawingSaved(fileName)
+                                    }
+                                }
                             }
                         }
                     ) {
@@ -150,7 +160,7 @@ fun DrawingPadScreen(
     }
 }
 
-private fun saveDrawingToVault(
+private suspend fun saveDrawingToVault(
     context: Context,
     vaultUriString: String,
     paths: List<StrokePath>,
@@ -210,11 +220,20 @@ private fun saveDrawingToVault(
         tempFile.delete()
         bitmap.recycle()
 
-        Toast.makeText(context, "Drawing saved to Attachments", Toast.LENGTH_SHORT).show()
+        withContext(Dispatchers.Main) {
+            Toast.makeText(context, "Drawing saved to Attachments", Toast.LENGTH_SHORT).show()
+        }
         return "Attachments/$pngFileName"
     } catch (e: Exception) {
         e.printStackTrace()
-        Toast.makeText(context, "Failed to save drawing", Toast.LENGTH_SHORT).show()
+        try {
+            android.util.Log.e("DrawingPadScreen", "Error saving drawing", e)
+        } catch (t: Throwable) {}
+        try {
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, "Failed to save drawing", Toast.LENGTH_SHORT).show()
+            }
+        } catch (t: Throwable) {}
         return null
     }
 }

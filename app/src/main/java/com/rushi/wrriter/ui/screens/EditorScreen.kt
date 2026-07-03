@@ -42,6 +42,8 @@ import com.rushi.wrriter.data.PreferencesManager
 import com.rushi.wrriter.service.BreakReminderService
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -112,7 +114,9 @@ fun EditorScreen(
     // Load note content and metadata
     LaunchedEffect(noteUriString) {
         try {
-            val (meta, body) = vaultManager.loadNote(noteUriString)
+            val (meta, body) = withContext(Dispatchers.IO) {
+                vaultManager.loadNote(noteUriString)
+            }
             noteMetadata = meta
             noteTitle = meta.title
             noteBody = body
@@ -215,7 +219,7 @@ fun EditorScreen(
                         spellcheck = spellcheck,
                         tabMode = tabMode,
                         onSave = { md ->
-                            coroutineScope.launch {
+                            coroutineScope.launch(Dispatchers.IO) {
                                 val meta = noteMetadata
                                 if (meta != null) {
                                     vaultManager.saveNote(
@@ -225,12 +229,14 @@ fun EditorScreen(
                                         isInbox = meta.isInbox,
                                         body = md
                                     )
-                                    onBack()
+                                    withContext(Dispatchers.Main) {
+                                        onBack()
+                                    }
                                 }
                             }
                         },
                         onWikiLinkClicked = { title ->
-                            coroutineScope.launch {
+                            coroutineScope.launch(Dispatchers.IO) {
                                 val parentUri = DocumentFile.fromSingleUri(context, Uri.parse(noteUriString))?.parentFile?.uri
                                 val targetUri = if (parentUri != null) {
                                     val rootDir = DocumentFile.fromTreeUri(context, parentUri)
@@ -240,7 +246,9 @@ fun EditorScreen(
 
                                 if (targetUri != null) {
                                     val (meta, _) = vaultManager.loadNote(targetUri)
-                                    onWikiLinkClicked(meta)
+                                    withContext(Dispatchers.Main) {
+                                        onWikiLinkClicked(meta)
+                                    }
                                 } else {
                                     // Create new note automatically under the current folder parent directory
                                     val rootDir = DocumentFile.fromSingleUri(context, Uri.parse(noteUriString))?.parentFile
@@ -251,7 +259,9 @@ fun EditorScreen(
                                             title = title,
                                             body = ""
                                         )
-                                        onWikiLinkClicked(newNoteMeta)
+                                        withContext(Dispatchers.Main) {
+                                            onWikiLinkClicked(newNoteMeta)
+                                        }
                                     }
                                 }
                             }
@@ -428,9 +438,6 @@ fun WebViewContainer(
 
                 // Prevent native WebView white background from showing through
                 setBackgroundColor(android.graphics.Color.BLACK)
-
-                // Clear cache to ensure updated JS/CSS assets are always loaded fresh from APK
-                clearCache(true)
 
                 // Secure Local Assets and dynamic attachments Loading
                 val assetLoader = WebViewAssetLoader.Builder()

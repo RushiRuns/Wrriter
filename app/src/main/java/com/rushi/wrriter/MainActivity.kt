@@ -43,6 +43,7 @@ import com.rushi.wrriter.ui.screens.StatisticsScreen
 import com.rushi.wrriter.ui.theme.WrriterTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
 
@@ -111,7 +112,7 @@ class MainActivity : ComponentActivity() {
                     // Trigger cache rebuild on Dispatchers.IO when vaultUri is loaded/changed
                     LaunchedEffect(vaultUri) {
                         if (!vaultUri.isNullOrEmpty()) {
-                            coroutineScope.launch(Dispatchers.IO) {
+                            withContext(Dispatchers.IO) {
                                 vaultManager.rebuildCache(vaultUri)
                             }
                         }
@@ -133,17 +134,19 @@ class MainActivity : ComponentActivity() {
                         // Onboarding first launch
                         OnboardingScreen(
                             onVaultSelected = { selectedUri ->
-                                coroutineScope.launch {
+                                coroutineScope.launch(Dispatchers.IO) {
                                     val success = vaultManager.initializeDefaultFolders(selectedUri)
                                     if (success) {
                                         preferencesManager.saveVaultUri(selectedUri)
                                         vaultManager.rebuildCache(selectedUri)
                                     } else {
-                                        Toast.makeText(
-                                            applicationContext,
-                                            "Failed to initialize vault folders in selected directory",
-                                            Toast.LENGTH_LONG
-                                        ).show()
+                                        withContext(Dispatchers.Main) {
+                                            Toast.makeText(
+                                                applicationContext,
+                                                "Failed to initialize vault folders in selected directory",
+                                                Toast.LENGTH_LONG
+                                            ).show()
+                                        }
                                     }
                                 }
                             }

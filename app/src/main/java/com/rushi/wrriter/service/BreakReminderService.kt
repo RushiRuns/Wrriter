@@ -29,6 +29,9 @@ class BreakReminderService : Service() {
     private var lastKeyPressTime: Long = 0
     private var sessionStartTime: Long = 0
 
+    private var cachedEnabled: Boolean = true
+    private var cachedThresholdMinutes: Int = 60
+
     companion object {
         const val ACTION_KEYPRESS = "com.rushi.wrriter.ACTION_KEYPRESS"
         const val ACTION_EDITOR_CLOSED = "com.rushi.wrriter.ACTION_EDITOR_CLOSED"
@@ -42,6 +45,16 @@ class BreakReminderService : Service() {
     override fun onCreate() {
         super.onCreate()
         preferencesManager = PreferencesManager(applicationContext)
+        serviceScope.launch {
+            preferencesManager.breakReminderEnabledFlow.collect { enabled ->
+                cachedEnabled = enabled
+            }
+        }
+        serviceScope.launch {
+            preferencesManager.breakReminderThresholdFlow.collect { threshold ->
+                cachedThresholdMinutes = threshold
+            }
+        }
         createNotificationChannel()
     }
 
@@ -61,36 +74,33 @@ class BreakReminderService : Service() {
     }
 
     private fun handleKeyPress() {
-        serviceScope.launch {
-            val enabled = preferencesManager.breakReminderEnabledFlow.first()
-            if (!enabled) return@launch
+        if (!cachedEnabled) return
 
-            val thresholdMinutes = preferencesManager.breakReminderThresholdFlow.first()
-            val now = System.currentTimeMillis()
+        val thresholdMinutes = cachedThresholdMinutes
+        val now = System.currentTimeMillis()
 
-            if (sessionStartTime == 0L) {
-                sessionStartTime = now
-                lastKeyPressTime = now
-                return@launch
-            }
-
-            val gap = now - lastKeyPressTime
-
-            // If idle for more than 2 minutes, the continuous typing session is broken
-            if (gap > 2 * 60 * 1000) {
-                sessionStartTime = now
-            }
-
+        if (sessionStartTime == 0L) {
+            sessionStartTime = now
             lastKeyPressTime = now
+            return
+        }
 
-            val elapsed = now - sessionStartTime
-            val thresholdMs = thresholdMinutes * 60 * 1000L
+        val gap = now - lastKeyPressTime
 
-            if (elapsed >= thresholdMs) {
-                fireBreakNotification()
-                // Reset session to prevent spamming
-                sessionStartTime = now
-            }
+        // If idle for more than 2 minutes, the continuous typing session is broken
+        if (gap > 2 * 60 * 1000) {
+            sessionStartTime = now
+        }
+
+        lastKeyPressTime = now
+
+        val elapsed = now - sessionStartTime
+        val thresholdMs = thresholdMinutes * 60 * 1000L
+
+        if (elapsed >= thresholdMs) {
+            fireBreakNotification()
+            // Reset session to prevent spamming
+            sessionStartTime = now
         }
     }
 

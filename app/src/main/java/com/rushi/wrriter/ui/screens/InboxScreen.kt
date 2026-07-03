@@ -40,6 +40,7 @@ import com.rushi.wrriter.data.PreferencesManager
 import com.rushi.wrriter.data.VaultManager
 import com.rushi.wrriter.ui.components.InboxToolbar
 import com.rushi.wrriter.ui.components.SearchBar
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -62,8 +63,16 @@ fun InboxScreen(
     var notesList by remember { mutableStateOf(emptyList<NoteMetadata>()) }
     var dumpText by remember { mutableStateOf("") }
     var searchQuery by remember { mutableStateOf("") }
+    var debouncedSearchQuery by remember { mutableStateOf("") }
     var selectedFolder by remember { mutableStateOf("Inbox") }
     var showFolderDropdown by remember { mutableStateOf(false) }
+
+    val isIndexReady by vaultManager.isIndexReady.collectAsState()
+
+    LaunchedEffect(searchQuery) {
+        kotlinx.coroutines.delay(300)
+        debouncedSearchQuery = searchQuery
+    }
     
     // Selection state for toolbar
     var selectedNoteUri by remember { mutableStateOf<String?>(null) }
@@ -95,12 +104,12 @@ fun InboxScreen(
                 lastUsedFolder = preferencesManager.lastUsedFolderFlow.first()
             }
             coroutineScope.launch(Dispatchers.IO) {
-                val list = if (searchQuery.trim().isEmpty()) {
+                val list = if (debouncedSearchQuery.trim().isEmpty()) {
                     vaultManager.getCachedNotes()
                         .filter { it.filePath.equals(selectedFolder, ignoreCase = true) }
                         .sortedByDescending { it.modifiedTime }
                 } else {
-                    vaultManager.searchNotes(searchQuery)
+                    vaultManager.searchNotes(debouncedSearchQuery)
                 }
                 withContext(Dispatchers.Main) {
                     notesList = list
@@ -111,19 +120,11 @@ fun InboxScreen(
         }
     }
 
-    // Trigger full background disk rescan only when vault URI changes (e.g. app startup or settings path change)
-    LaunchedEffect(vaultUri) {
-        coroutineScope.launch(Dispatchers.IO) {
-            vaultManager.rebuildCache(vaultUri)
-            withContext(Dispatchers.Main) {
-                refreshInbox()
-            }
+    // Fast memory-cache-only refresh when query or folder chip selection changes, or index is ready
+    LaunchedEffect(debouncedSearchQuery, selectedFolder, isIndexReady) {
+        if (isIndexReady) {
+            refreshInbox()
         }
-    }
-
-    // Fast memory-cache-only refresh when query or folder chip selection changes
-    LaunchedEffect(searchQuery, selectedFolder) {
-        refreshInbox()
     }
 
     Column(
@@ -151,12 +152,12 @@ fun InboxScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = if (searchQuery.trim().isEmpty()) selectedFolder else "Search Results",
+                            text = if (debouncedSearchQuery.trim().isEmpty()) selectedFolder else "Search Results",
                             fontSize = 28.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
                         )
-                        if (searchQuery.trim().isEmpty()) {
+                        if (debouncedSearchQuery.trim().isEmpty()) {
                             Spacer(modifier = Modifier.width(6.dp))
                             Icon(
                                 imageVector = Icons.Default.ArrowDropDown,
@@ -207,7 +208,7 @@ fun InboxScreen(
             )
 
             // Horizontal Scrollable Folders Chip Row
-            if (searchQuery.trim().isEmpty()) {
+            if (debouncedSearchQuery.trim().isEmpty()) {
                 val allFolders = remember(existingFolders) {
                     (listOf("Inbox", "Later", "Read", "Shop", "Watch", "Journal") + existingFolders)
                         .distinct()
@@ -249,8 +250,17 @@ fun InboxScreen(
                 }
             }
 
-            // Notes list
-            if (notesList.isEmpty()) {
+            // Notes list or loader
+            if (!isIndexReady) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = Color(0xFF94A3B8))
+                }
+            } else if (notesList.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -258,7 +268,7 @@ fun InboxScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (searchQuery.trim().isEmpty()) "Clean slate. Dump your thoughts below." else "No notes match your search.",
+                        text = if (debouncedSearchQuery.trim().isEmpty()) "Clean slate. Dump your thoughts below." else "No notes match your search.",
                         fontSize = 14.sp,
                         color = Color(0xFF475569) // Muted text
                     )
@@ -369,9 +379,11 @@ fun InboxScreen(
                     keyboardActions = KeyboardActions(
                         onSend = {
                             if (dumpText.trim().isNotEmpty()) {
-                                createDumpNote(context, vaultUri, vaultManager, dumpText, selectedFolder)
+                                val textToSave = dumpText
                                 dumpText = ""
-                                refreshInbox()
+                                createDumpNote(context, vaultUri, vaultManager, textToSave, selectedFolder, coroutineScope, onComplete = {
+                                    refreshInbox()
+                                })
                             }
                         }
                     ),
@@ -384,8 +396,9 @@ fun InboxScreen(
                             // Stop recording and save note
                             audioRecorder.stop()
                             isRecording = false
-                            saveVoiceNote(context, vaultUri, vaultManager, tempAudioFile, selectedFolder)
-                            refreshInbox()
+                            saveVoiceNote(context, vaultUri, vaultManager, tempAudioFile, selectedFolder, coroutineScope, onComplete = {
+                                refreshInbox()
+                            })
                         } else {
                             // Check microphone permission
                             val audioPermission = ContextCompat.checkSelfPermission(
@@ -486,53 +499,85 @@ private fun startRecording(context: Context, audioRecorder: AudioRecorder, tempF
     }
 }
 
-private fun saveVoiceNote(context: Context, rootUriString: String, vaultManager: VaultManager, tempFile: File, folderName: String) {
-    try {
-        if (!tempFile.exists() || tempFile.length() == 0L) {
-            Toast.makeText(context, "Empty voice recording", Toast.LENGTH_SHORT).show()
-            return
-        }
+private fun saveVoiceNote(
+    context: Context,
+    rootUriString: String,
+    vaultManager: VaultManager,
+    tempFile: java.io.File,
+    folderName: String,
+    coroutineScope: CoroutineScope,
+    onComplete: () -> Unit
+) {
+    coroutineScope.launch(Dispatchers.IO) {
+        try {
+            if (!tempFile.exists() || tempFile.length() == 0L) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "Empty voice recording", Toast.LENGTH_SHORT).show()
+                }
+                return@launch
+            }
 
-        val rootUri = Uri.parse(rootUriString)
-        val rootDir = DocumentFile.fromTreeUri(context, rootUri) ?: return
-        val attachmentsDir = rootDir.findFile("Attachments") ?: rootDir.createDirectory("Attachments") ?: return
+            val rootUri = Uri.parse(rootUriString)
+            val rootDir = DocumentFile.fromTreeUri(context, rootUri) ?: return@launch
+            val attachmentsDir = rootDir.findFile("Attachments") ?: rootDir.createDirectory("Attachments") ?: return@launch
 
-        // Save audio to SAF Attachments
-        val dateString = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-        val audioFileName = "Voice_$dateString.m4a"
-        val audioFile = attachmentsDir.createFile("audio/mp4", audioFileName) ?: return
+            // Save audio to SAF Attachments
+            val dateString = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+            val audioFileName = "Voice_$dateString.m4a"
+            val audioFile = attachmentsDir.createFile("audio/mp4", audioFileName) ?: return@launch
 
-        context.contentResolver.openOutputStream(audioFile.uri)?.use { output ->
-            tempFile.inputStream().use { input ->
-                input.copyTo(output)
+            context.contentResolver.openOutputStream(audioFile.uri)?.use { output ->
+                tempFile.inputStream().use { input ->
+                    input.copyTo(output)
+                }
+            }
+            tempFile.delete()
+
+            // Create Note referencing the audio file
+            val noteTitle = "Voice Note $dateString"
+            val markdownBody = "\n\n![Voice Note](Attachments/$audioFileName)\n"
+            vaultManager.createNote(rootUriString, folderName, noteTitle, markdownBody)
+
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, "Voice note saved to $folderName", Toast.LENGTH_SHORT).show()
+                onComplete()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, "Failed to save voice note", Toast.LENGTH_SHORT).show()
             }
         }
-        tempFile.delete()
-
-        // Create Note referencing the audio file
-        val noteTitle = "Voice Note $dateString"
-        val markdownBody = "\n\n![Voice Note](Attachments/$audioFileName)\n"
-        vaultManager.createNote(rootUriString, folderName, noteTitle, markdownBody)
-
-        Toast.makeText(context, "Voice note saved to $folderName", Toast.LENGTH_SHORT).show()
-    } catch (e: Exception) {
-        e.printStackTrace()
-        Toast.makeText(context, "Failed to save voice note", Toast.LENGTH_SHORT).show()
     }
 }
 
-private fun createDumpNote(context: Context, rootUriString: String, vaultManager: VaultManager, text: String, folderName: String) {
-    try {
-        val words = text.trim().split("\\s+".toRegex())
-        val title = if (words.size > 3) {
-            words.take(3).joinToString(" ") + "..."
-        } else {
-            text.trim()
+private fun createDumpNote(
+    context: Context,
+    rootUriString: String,
+    vaultManager: VaultManager,
+    text: String,
+    folderName: String,
+    coroutineScope: CoroutineScope,
+    onComplete: () -> Unit
+) {
+    coroutineScope.launch(Dispatchers.IO) {
+        try {
+            val words = text.trim().split("\\s+".toRegex())
+            val title = if (words.size > 3) {
+                words.take(3).joinToString(" ") + "..."
+            } else {
+                text.trim()
+            }
+            vaultManager.createNote(rootUriString, folderName, title, text)
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, "Note saved to $folderName", Toast.LENGTH_SHORT).show()
+                onComplete()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, "Failed to save note", Toast.LENGTH_SHORT).show()
+            }
         }
-        vaultManager.createNote(rootUriString, folderName, title, text)
-        Toast.makeText(context, "Note saved to $folderName", Toast.LENGTH_SHORT).show()
-    } catch (e: Exception) {
-        e.printStackTrace()
-        Toast.makeText(context, "Failed to save note", Toast.LENGTH_SHORT).show()
     }
 }

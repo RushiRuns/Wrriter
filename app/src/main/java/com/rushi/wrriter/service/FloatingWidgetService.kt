@@ -724,7 +724,6 @@ class FloatingWidgetService : Service() {
                 
                 withContext(Dispatchers.IO) {
                     vaultManager.createNote(vaultUri, folderName, title, body)
-                    vaultManager.rebuildCache(vaultUri)
                 }
 
                 mainHandler.post {
@@ -774,7 +773,6 @@ class FloatingWidgetService : Service() {
                     val noteTitle = "Voice Note $dateString"
                     val markdownBody = "\n\n![Voice Note](Attachments/$audioFileName)\n"
                     vaultManager.createNote(vaultUriString, "Inbox", noteTitle, markdownBody)
-                    vaultManager.rebuildCache(vaultUriString)
                 }
 
                 mainHandler.post {

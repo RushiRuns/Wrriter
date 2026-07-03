@@ -41,11 +41,12 @@ fun TasksScreen(
     var selectedTab by remember { mutableStateOf("active") } // "active" or "completed"
     var isLoading by remember { mutableStateOf(true) }
 
+    val isIndexReady by vaultManager.isIndexReady.collectAsState()
+
     val refreshTasks = {
         isLoading = true
         coroutineScope.launch(Dispatchers.IO) {
             try {
-                vaultManager.rebuildCache(vaultUri)
                 val allNotes = vaultManager.getCachedNotes()
                 val taskNotes = allNotes.filter { it.filePath == "Tasks" || it.filePath == "Tasks/Completed" }
                 withContext(Dispatchers.Main) {
@@ -61,8 +62,12 @@ fun TasksScreen(
         }
     }
 
-    LaunchedEffect(vaultUri) {
-        refreshTasks()
+    LaunchedEffect(isIndexReady) {
+        if (isIndexReady) {
+            refreshTasks()
+        } else {
+            isLoading = true
+        }
     }
 
     val filteredTasks = remember(tasksList, selectedTab) {

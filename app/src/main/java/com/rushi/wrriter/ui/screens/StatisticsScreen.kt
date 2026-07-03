@@ -24,17 +24,20 @@ fun StatisticsScreen(
 ) {
     var stats by remember { mutableStateOf<VaultManager.VaultStats?>(null) }
     var isLoading by remember { mutableStateOf(true) }
+    val isIndexReady by vaultManager.isIndexReady.collectAsState()
 
-    LaunchedEffect(vaultUri) {
-        isLoading = true
-        withContext(Dispatchers.IO) {
-            // Rebuild cache to ensure we have the absolute latest stats
-            vaultManager.rebuildCache(vaultUri)
-            val computedStats = vaultManager.getVaultStats()
-            withContext(Dispatchers.Main) {
-                stats = computedStats
-                isLoading = false
+    LaunchedEffect(isIndexReady) {
+        if (isIndexReady) {
+            isLoading = true
+            withContext(Dispatchers.IO) {
+                val computedStats = vaultManager.getVaultStats()
+                withContext(Dispatchers.Main) {
+                    stats = computedStats
+                    isLoading = false
+                }
             }
+        } else {
+            isLoading = true
         }
     }
 

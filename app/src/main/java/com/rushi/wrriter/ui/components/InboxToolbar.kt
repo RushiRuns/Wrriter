@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.rushi.wrriter.data.NoteMetadata
+import com.rushi.wrriter.data.baseFolder
 
 @Composable
 fun InboxToolbar(
@@ -43,22 +44,25 @@ fun InboxToolbar(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        val currentBaseFolder = note.baseFolder
         // Orange Shortcut button: Moves note to last used folder
-        Button(
-            onClick = { onMove(lastUsedFolder) },
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF94A3B8), // Brand slate grey
-                contentColor = Color.Black
-            ),
-            shape = RoundedCornerShape(8.dp),
-            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-            modifier = Modifier.padding(end = 4.dp)
-        ) {
-            Text(
-                text = "→ $lastUsedFolder",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold
-            )
+        if (lastUsedFolder != currentBaseFolder) {
+            Button(
+                onClick = { onMove(lastUsedFolder) },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF94A3B8), // Brand slate grey
+                    contentColor = Color.Black
+                ),
+                shape = RoundedCornerShape(8.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                modifier = Modifier.padding(end = 4.dp)
+            ) {
+                Text(
+                    text = "→ $lastUsedFolder",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
 
         // Folder Icon: Custom Folder Selector
@@ -67,33 +71,45 @@ fun InboxToolbar(
         }
 
         // Clock Icon: /Later
-        IconButton(onClick = { onMove("Later") }) {
-            Icon(Icons.Default.Schedule, "Move to Later", tint = Color.White)
+        if (currentBaseFolder != "Later") {
+            IconButton(onClick = { onMove("Later") }) {
+                Icon(Icons.Default.Schedule, "Move to Later", tint = Color.White)
+            }
         }
 
         // Book Icon: /Read
-        IconButton(onClick = { onMove("Read") }) {
-            Icon(Icons.Default.Book, "Move to Read", tint = Color.White)
+        if (currentBaseFolder != "Read") {
+            IconButton(onClick = { onMove("Read") }) {
+                Icon(Icons.Default.Book, "Move to Read", tint = Color.White)
+            }
         }
 
         // Shopping Cart Icon: /Shop
-        IconButton(onClick = { onMove("Shop") }) {
-            Icon(Icons.Default.ShoppingCart, "Move to Shop", tint = Color.White)
+        if (currentBaseFolder != "Shop") {
+            IconButton(onClick = { onMove("Shop") }) {
+                Icon(Icons.Default.ShoppingCart, "Move to Shop", tint = Color.White)
+            }
         }
 
         // TV Icon: /Watch
-        IconButton(onClick = { onMove("Watch") }) {
-            Icon(Icons.Default.Tv, "Move to Watch", tint = Color.White)
+        if (currentBaseFolder != "Watch") {
+            IconButton(onClick = { onMove("Watch") }) {
+                Icon(Icons.Default.Tv, "Move to Watch", tint = Color.White)
+            }
         }
 
         // Heart Icon: /Journal
-        IconButton(onClick = { onMove("Journal") }) {
-            Icon(Icons.Default.Favorite, "Move to Journal", tint = Color.White)
+        if (currentBaseFolder != "Journal") {
+            IconButton(onClick = { onMove("Journal") }) {
+                Icon(Icons.Default.Favorite, "Move to Journal", tint = Color.White)
+            }
         }
 
         // Tasks Icon: /Tasks
-        IconButton(onClick = { onMove("Tasks") }) {
-            Icon(Icons.Default.Assignment, "Move to Tasks", tint = Color.White)
+        if (currentBaseFolder != "Tasks") {
+            IconButton(onClick = { onMove("Tasks") }) {
+                Icon(Icons.Default.Assignment, "Move to Tasks", tint = Color.White)
+            }
         }
 
         // Trash Icon: Delete
@@ -104,6 +120,7 @@ fun InboxToolbar(
 
     if (showFolderDialog) {
         FolderPickerDialog(
+            note = note,
             existingFolders = existingFolders,
             onFolderSelected = { folder ->
                 onMove(folder)
@@ -116,15 +133,17 @@ fun InboxToolbar(
 
 @Composable
 fun FolderPickerDialog(
+    note: NoteMetadata,
     existingFolders: List<String>,
     onFolderSelected: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
     var newFolderPath by remember { mutableStateOf("") }
     
-    // Filter folders to display (excluding Attachments and defaults)
+    // Filter folders to display (excluding Attachments and defaults, and the current folder)
     val filteredFolders = existingFolders.filter { 
-        it !in listOf("Inbox", "Later", "Read", "Shop", "Watch", "Journal", "Tasks", "Tasks/Completed", "Attachments")
+        it !in listOf("Inbox", "Later", "Read", "Shop", "Watch", "Journal", "Tasks", "Tasks/Completed", "Attachments") &&
+        it != note.baseFolder
     }.distinct()
 
     Dialog(onDismissRequest = onDismiss) {

@@ -22,6 +22,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rushi.wrriter.data.NoteMetadata
+import com.rushi.wrriter.data.displayTitle
 import com.rushi.wrriter.data.VaultManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -242,7 +243,7 @@ fun TaskRowItem(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = note.title,
+                    text = note.displayTitle,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Medium,
                     color = if (isCompleted) Color(0xFF64748B) else Color.White,

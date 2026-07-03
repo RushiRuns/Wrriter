@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -36,6 +37,9 @@ import androidx.core.content.ContextCompat
 import androidx.documentfile.provider.DocumentFile
 import com.rushi.wrriter.data.AudioRecorder
 import com.rushi.wrriter.data.NoteMetadata
+import com.rushi.wrriter.data.baseFolder
+import com.rushi.wrriter.data.isCompleted
+import com.rushi.wrriter.data.displayTitle
 import com.rushi.wrriter.data.PreferencesManager
 import com.rushi.wrriter.data.VaultManager
 import com.rushi.wrriter.ui.components.InboxToolbar
@@ -99,17 +103,18 @@ fun InboxScreen(
     // Refresh inbox lists and configs from memory cache (instant, zero disk I/O)
     val refreshInbox = {
         try {
-            existingFolders = vaultManager.getCachedNotes().map { it.filePath }.distinct()
+            existingFolders = vaultManager.getCachedNotes().map { it.baseFolder }.distinct()
             coroutineScope.launch {
                 lastUsedFolder = preferencesManager.lastUsedFolderFlow.first()
             }
             coroutineScope.launch(Dispatchers.IO) {
                 val list = if (debouncedSearchQuery.trim().isEmpty()) {
                     vaultManager.getCachedNotes()
-                        .filter { it.filePath.equals(selectedFolder, ignoreCase = true) }
-                        .sortedByDescending { it.modifiedTime }
+                        .filter { it.baseFolder.equals(selectedFolder, ignoreCase = true) }
+                        .sortedWith(compareBy<NoteMetadata> { it.isCompleted }.thenByDescending { it.modifiedTime })
                 } else {
                     vaultManager.searchNotes(debouncedSearchQuery)
+                        .sortedWith(compareBy<NoteMetadata> { it.isCompleted }.thenByDescending { it.modifiedTime })
                 }
                 withContext(Dispatchers.Main) {
                     notesList = list
@@ -175,7 +180,15 @@ fun InboxScreen(
                     ) {
                         val allFolders = (listOf("Inbox", "Later", "Read", "Shop", "Watch", "Journal") + existingFolders)
                             .distinct()
-                            .filter { it.isNotEmpty() && it != "Attachments" && it != "Tasks" && it != "Tasks/Completed" }
+                            .filter { 
+                                it.isNotEmpty() && 
+                                it != "Attachments" && 
+                                it != "Tasks" && 
+                                it != "Tasks/Completed" && 
+                                !it.endsWith("/Completed") && 
+                                !it.startsWith(".") && 
+                                !it.contains("/.")
+                            }
                             .sorted()
                             
                         allFolders.forEach { folder ->
@@ -190,8 +203,10 @@ fun InboxScreen(
                         }
                     }
                 }
+                val activeCount = notesList.count { !it.isCompleted }
+                val completedCount = notesList.count { it.isCompleted }
                 Text(
-                    text = "${notesList.size} notes",
+                    text = if (completedCount > 0) "$activeCount active · $completedCount done" else "$activeCount notes",
                     fontSize = 14.sp,
                     color = Color(0xFF64748B) // Muted slate
                 )
@@ -212,7 +227,15 @@ fun InboxScreen(
                 val allFolders = remember(existingFolders) {
                     (listOf("Inbox", "Later", "Read", "Shop", "Watch", "Journal") + existingFolders)
                         .distinct()
-                        .filter { it.isNotEmpty() && it != "Attachments" && it != "Tasks" && it != "Tasks/Completed" }
+                        .filter { 
+                            it.isNotEmpty() && 
+                            it != "Attachments" && 
+                            it != "Tasks" && 
+                            it != "Tasks/Completed" && 
+                            !it.endsWith("/Completed") && 
+                            !it.startsWith(".") && 
+                            !it.contains("/.")
+                        }
                         .sortedWith(Comparator { o1, o2 ->
                             if (o1 == "Inbox") -1 else if (o2 == "Inbox") 1 else o1.compareTo(o2)
                         })
@@ -285,9 +308,50 @@ fun InboxScreen(
                         val isSelected = selectedNoteUri == note.uriString
                         
                         Column {
+                            val showCheckbox = note.baseFolder != "Inbox" && note.baseFolder != "Journal" && !note.baseFolder.startsWith("Journal/")
                             InboxNoteRow(
                                 note = note,
                                 isSelected = isSelected,
+                                showCheckbox = showCheckbox,
+                                isCompleted = note.isCompleted,
+                                onToggleCompleted = { isChecked ->
+                                    coroutineScope.launch(Dispatchers.IO) {
+                                        try {
+                                            if (note.baseFolder == "Tasks") {
+                                                val targetFolder = if (isChecked) {
+                                                    if (note.filePath.endsWith("/Completed")) note.filePath else "${note.filePath}/Completed"
+                                                } else {
+                                                    if (note.filePath.endsWith("/Completed")) note.filePath.removeSuffix("/Completed") else note.filePath
+                                                }
+                                                vaultManager.moveNote(note, targetFolder, vaultUri)
+                                            } else {
+                                                val cleanName = note.fileName.removeSuffix(".md")
+                                                val newFileName = if (isChecked) {
+                                                    if (cleanName.startsWith("~~") && cleanName.endsWith("~~")) {
+                                                        note.fileName
+                                                    } else {
+                                                        "~~${cleanName}~~.md"
+                                                    }
+                                                } else {
+                                                    if (cleanName.startsWith("~~") && cleanName.endsWith("~~")) {
+                                                        cleanName.removePrefix("~~").removeSuffix("~~") + ".md"
+                                                    } else {
+                                                        note.fileName
+                                                    }
+                                                }
+                                                if (newFileName != note.fileName) {
+                                                    vaultManager.renameNote(note, newFileName)
+                                                }
+                                            }
+                                            refreshInbox()
+                                        } catch (e: Exception) {
+                                            e.printStackTrace()
+                                            withContext(Dispatchers.Main) {
+                                                Toast.makeText(context, "Failed to update note status", Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                    }
+                                },
                                 onClick = {
                                     if (selectedNoteUri != null) {
                                         // Dismiss selection if clicking elsewhere
@@ -429,6 +493,9 @@ fun InboxScreen(
 fun InboxNoteRow(
     note: NoteMetadata,
     isSelected: Boolean,
+    showCheckbox: Boolean,
+    isCompleted: Boolean,
+    onToggleCompleted: (Boolean) -> Unit,
     onClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
@@ -453,27 +520,41 @@ fun InboxNoteRow(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = if (isSelected) Icons.Default.Check else Icons.Default.Edit,
-                contentDescription = "Note Status",
-                tint = if (isSelected) Color(0xFF94A3B8) else Color(0xFF475569),
-                modifier = Modifier.size(20.dp)
-            )
+            if (showCheckbox) {
+                Checkbox(
+                    checked = isCompleted,
+                    onCheckedChange = onToggleCompleted,
+                    colors = CheckboxDefaults.colors(
+                        checkedColor = Color(0xFF94A3B8),
+                        uncheckedColor = Color(0xFF475569),
+                        checkmarkColor = Color.Black
+                    ),
+                    modifier = Modifier.size(20.dp)
+                )
+            } else {
+                Icon(
+                    imageVector = if (isSelected) Icons.Default.Check else Icons.Default.Edit,
+                    contentDescription = "Note Status",
+                    tint = if (isSelected) Color(0xFF94A3B8) else Color(0xFF475569),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
             Spacer(modifier = Modifier.width(16.dp))
             Column(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = note.title,
+                    text = note.displayTitle,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White,
+                    color = if (showCheckbox && isCompleted) Color(0xFF64748B) else Color.White,
+                    textDecoration = if (showCheckbox && isCompleted) TextDecoration.LineThrough else TextDecoration.None,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = note.filePath,
+                    text = note.baseFolder,
                     fontSize = 12.sp,
                     color = Color(0xFF64748B)
                 )

@@ -75,8 +75,8 @@ class VaultManager(private val context: Context) {
         for (file in files) {
             if (file.isDirectory) {
                 val folderName = file.name ?: continue
-                // Exclude Attachments from note scanning
-                if (folderName == "Attachments") continue
+                // Exclude Attachments and hidden directories (starting with ".") from note scanning
+                if (folderName == "Attachments" || folderName.startsWith(".")) continue
                 val nextRelativePath = if (relativePath.isEmpty()) folderName else "$relativePath/$folderName"
                 scanDirectory(file, nextRelativePath, rootUri, tempCache)
             } else if (file.isFile && file.name?.endsWith(".md") == true) {
@@ -209,8 +209,7 @@ class VaultManager(private val context: Context) {
         val rootUri = Uri.parse(rootUriString)
         val rootDir = DocumentFile.fromTreeUri(context, rootUri) ?: throw Exception("Root vault invalid")
         
-        val folder = rootDir.findFile(folderName) ?: rootDir.createDirectory(folderName)
-        ?: throw Exception("Failed to access folder $folderName")
+        val folder = resolveOrCreateFolder(rootDir, folderName)
 
         val safeTitle = title.replace("[\\\\/:*?\"<>|]".toRegex(), "_")
         val fileName = "$safeTitle.md"
@@ -251,8 +250,8 @@ class VaultManager(private val context: Context) {
         
         val fileUri = Uri.parse(note.uriString)
         val file = DocumentFile.fromSingleUri(context, fileUri) ?: throw Exception("Note file not found")
-        val currentFolder = rootDir.findFile(note.filePath) ?: throw Exception("Current folder not found")
-        val targetFolder = rootDir.findFile(targetFolderName) ?: rootDir.createDirectory(targetFolderName)
+        val currentFolder = resolveFolder(rootDir, note.filePath) ?: throw Exception("Current folder not found")
+        val targetFolder = resolveOrCreateFolder(rootDir, targetFolderName)
         ?: throw Exception("Target folder could not be accessed")
 
         val sourceDocumentUri = file.uri
@@ -305,6 +304,70 @@ class VaultManager(private val context: Context) {
             }
         }
         return deleted
+    }
+
+    private fun resolveFolder(parent: DocumentFile, path: String): DocumentFile? {
+        if (path.isEmpty()) return parent
+        val segments = path.split("/")
+        var current: DocumentFile = parent
+        for (segment in segments) {
+            if (segment.isEmpty()) continue
+            current = current.findFile(segment) ?: return null
+        }
+        return current
+    }
+
+    private fun resolveOrCreateFolder(parent: DocumentFile, path: String): DocumentFile {
+        if (path.isEmpty()) return parent
+        val segments = path.split("/")
+        var current: DocumentFile = parent
+        for (segment in segments) {
+            if (segment.isEmpty()) continue
+            current = current.findFile(segment) ?: current.createDirectory(segment)
+                ?: throw Exception("Failed to resolve or create subdirectory: $segment")
+        }
+        return current
+    }
+
+    /**
+     * Renames a note file using SAF.
+     */
+    fun renameNote(note: NoteMetadata, newFileName: String): NoteMetadata {
+        val fileUri = Uri.parse(note.uriString)
+        
+        val newUri = DocumentsContract.renameDocument(
+            contentResolver,
+            fileUri,
+            newFileName
+        ) ?: throw Exception("Failed to rename file via documents contract")
+
+        val cleanTitle = newFileName.removeSuffix(".md").removePrefix("~~").removeSuffix("~~")
+        val updatedMetadata = note.copy(
+            uriString = newUri.toString(),
+            fileName = newFileName,
+            title = cleanTitle
+        )
+
+        // Rewrite frontmatter to keep title and cache in sync
+        try {
+            val (_, body) = loadNote(newUri.toString())
+            saveNote(
+                fileUriString = newUri.toString(),
+                title = cleanTitle,
+                tags = updatedMetadata.tags,
+                isInbox = updatedMetadata.isInbox,
+                body = body
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        synchronized(noteCache) {
+            noteCache.remove(note.uriString)
+            noteCache[newUri.toString()] = updatedMetadata
+        }
+
+        return updatedMetadata
     }
 
     // --- Helpers for Frontmatter Parsing and Serialization ---
@@ -748,6 +811,8 @@ class VaultManager(private val context: Context) {
         for (file in files) {
             if (file.isDirectory) {
                 val subDirName = file.name ?: continue
+                // Skip hidden directories (starting with ".")
+                if (subDirName.startsWith(".")) continue
                 val subDestDir = destDir.createDirectory(subDirName) ?: continue
                 copyDirectoryRecursively(file, subDestDir)
             } else if (file.isFile) {

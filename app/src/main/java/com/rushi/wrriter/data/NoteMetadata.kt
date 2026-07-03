@@ -27,3 +27,19 @@ data class TaskItem(
     val rawText: String          // Original raw markdown line text
 )
 
+val NoteMetadata.isCompleted: Boolean
+    get() = filePath.endsWith("/Completed") || fileName.startsWith("~~") && fileName.endsWith("~~.md") || title.startsWith("~~") && title.endsWith("~~")
+
+val NoteMetadata.baseFolder: String
+    get() = if (filePath.endsWith("/Completed")) filePath.removeSuffix("/Completed") else filePath
+
+val NoteMetadata.displayTitle: String
+    get() {
+        var clean = title
+        if (clean.startsWith("~~") && clean.endsWith("~~")) {
+            clean = clean.removePrefix("~~").removeSuffix("~~")
+        }
+        return clean
+    }
+
+

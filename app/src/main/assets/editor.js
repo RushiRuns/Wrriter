@@ -13,12 +13,24 @@ editor.addEventListener("keyup", function(e) {
     }
 });
 
-// Intercept click actions on wiki link spans
+// Intercept click actions on links
 document.addEventListener("click", function(e) {
-    if (e.target && e.target.classList.contains("wiki-link")) {
-        const title = e.target.getAttribute("data-title");
+    const target = e.target;
+    if (!target) return;
+
+    if (target.classList.contains("wiki-link")) {
+        const title = target.getAttribute("data-title");
         if (window.EditorBridge) {
             window.EditorBridge.onLinkClicked(title);
+        }
+    } else {
+        const anchor = target.closest("a.external-link");
+        if (anchor) {
+            e.preventDefault();
+            const href = anchor.getAttribute("href");
+            if (href && window.EditorBridge && window.EditorBridge.onExternalLinkClicked) {
+                window.EditorBridge.onExternalLinkClicked(href);
+            }
         }
     }
 });
@@ -507,6 +519,22 @@ function parseInlineMarkdown(text) {
         return `<img src="${fullSrc}" alt="${alt}" style="max-width:100%; border-radius:8px;" />`;
     });
 
+    // Markdown links: [Google](https://google.com) -> <a href="url" class="external-link">Google</a>
+    const mdLinkRegex = /\[([^\]]+)\]\(((?:https?:\/\/|www\.|mailto:|tel:)[^\s\)]+)\)/g;
+    text = text.replace(mdLinkRegex, (match, linkText, url) => {
+        let href = url.startsWith("www.") ? "https://" + url : url;
+        return `<a href="${href}" class="external-link">${linkText}</a>`;
+    });
+
+    // Bare URLs (auto-linking): https://google.com -> <a href="url" class="external-link bare-url" target="_blank">url</a>
+    const bareUrlRegex = /(<[^>]+>)|((?:https?:\/\/|www\.)[^\s<>\(\)]*[^.,?!;:\s<>\(\)])/g;
+    text = text.replace(bareUrlRegex, (match, g1, g2) => {
+        if (g1) return g1;
+        let url = g2;
+        let href = url.startsWith("www.") ? "https://" + url : url;
+        return `<a href="${href}" class="external-link bare-url" target="_blank">${url}</a>`;
+    });
+
     return text;
 }
 
@@ -578,6 +606,13 @@ function parseHtmlToMarkdown(node) {
         } else if (tagName === "span" && node.classList.contains("wiki-link")) {
             const title = node.getAttribute("data-title");
             return `[[${title}]]`;
+        } else if (tagName === "a") {
+            const href = node.getAttribute("href") || "";
+            if (node.classList.contains("bare-url")) {
+                return innerContent;
+            } else {
+                return `[${innerContent}](${href})`;
+            }
         } else if (tagName === "img") {
             const src = node.getAttribute("src");
             const relativeSrc = src.replace("https://appassets.androidplatform.net/attachments/", "Attachments/");

@@ -63,6 +63,14 @@ p {
     cursor: pointer;
 }
 
+/* External Links */
+.external-link {
+    color: #60A5FA; /* Premium light blue for dark mode/OLED */
+    text-decoration: underline;
+    font-weight: 500;
+    cursor: pointer;
+}
+
 /* Lists */
 ul {
     padding-left: 24px;

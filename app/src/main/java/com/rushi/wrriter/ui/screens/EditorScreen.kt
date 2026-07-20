@@ -489,6 +489,22 @@ fun WebViewContainer(
                     }
 
                     @JavascriptInterface
+                    fun onExternalLinkClicked(url: String) {
+                        val handler = android.os.Handler(android.os.Looper.getMainLooper())
+                        handler.post {
+                            try {
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                                Toast.makeText(context, "No app found to open link", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+
+                    @JavascriptInterface
                     fun onKeyPress() {
                         onKeyPress()
                     }

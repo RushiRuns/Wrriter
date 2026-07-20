@@ -822,22 +822,25 @@ class VaultManager(private val context: Context) {
      * Searches all cached notes for matching query terms in title, tags, or body content.
      */
     fun searchNotes(query: String): List<NoteMetadata> {
-        val result = mutableListOf<NoteMetadata>()
-        val notes = getCachedNotes()
-        if (query.trim().isEmpty()) return notes
-
         val lowerQuery = query.trim().lowercase()
+        if (lowerQuery.isEmpty()) return getCachedNotes()
+
+        val notes = getCachedNotes()
+
+        // Stage 1: instant in-memory search on title + tags (0 disk I/O)
+        val fastResults = notes.filter { note ->
+            note.title.lowercase().contains(lowerQuery) ||
+            note.tags.any { it.lowercase().contains(lowerQuery) }
+        }
+
+        // Stage 2: only fall back to body search if fast path returns nothing
+        // AND the query is at least 3 chars (avoids trivial disk scans)
+        if (fastResults.isNotEmpty() || lowerQuery.length < 3) return fastResults
+
+        val slowResults = mutableListOf<NoteMetadata>()
+        val fastUris = fastResults.map { it.uriString }.toSet()
         for (note in notes) {
-            if (note.title.lowercase().contains(lowerQuery)) {
-                result.add(note)
-                continue
-            }
-
-            if (note.tags.any { it.lowercase().contains(lowerQuery) }) {
-                result.add(note)
-                continue
-            }
-
+            if (note.uriString in fastUris) continue
             try {
                 val fileUri = Uri.parse(note.uriString)
                 val inputStream = contentResolver.openInputStream(fileUri) ?: continue
@@ -845,13 +848,13 @@ class VaultManager(private val context: Context) {
                 val text = reader.use { it.readText() }
                 val (_, body) = parseFrontmatter(text)
                 if (body.lowercase().contains(lowerQuery)) {
-                    result.add(note)
+                    slowResults.add(note)
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
         }
-        return result
+        return fastResults + slowResults
     }
 
     /**

@@ -2,6 +2,7 @@ package com.rushi.wrriter
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.os.Build
@@ -41,7 +42,12 @@ import com.rushi.wrriter.ui.screens.TasksScreen
 import com.rushi.wrriter.ui.screens.SettingsScreen
 import com.rushi.wrriter.ui.screens.StatisticsScreen
 import com.rushi.wrriter.ui.theme.WrriterTheme
+import android.database.ContentObserver
+import android.os.Handler
+import android.os.Looper
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -114,6 +120,38 @@ class MainActivity : ComponentActivity() {
                         if (!vaultUri.isNullOrEmpty()) {
                             withContext(Dispatchers.IO) {
                                 vaultManager.rebuildCache(vaultUri)
+                            }
+                        }
+                    }
+
+                    var observerJob by remember { mutableStateOf<Job?>(null) }
+
+                    DisposableEffect(vaultUri) {
+                        if (vaultUri.isNullOrEmpty()) {
+                            onDispose {}
+                        } else {
+                            val contentObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
+                                override fun onChange(selfChange: Boolean, uri: Uri?) {
+                                    super.onChange(selfChange, uri)
+                                    observerJob?.cancel()
+                                    observerJob = coroutineScope.launch(Dispatchers.IO) {
+                                        delay(1000) // 1-second debounce
+                                        vaultManager.rebuildCache(vaultUri)
+                                    }
+                                }
+                            }
+                            try {
+                                contentResolver.registerContentObserver(
+                                    Uri.parse(vaultUri),
+                                    true,
+                                    contentObserver
+                                )
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                            onDispose {
+                                contentResolver.unregisterContentObserver(contentObserver)
+                                observerJob?.cancel()
                             }
                         }
                     }

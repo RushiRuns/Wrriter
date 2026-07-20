@@ -317,31 +317,22 @@ fun InboxScreen(
                                 onToggleCompleted = { isChecked ->
                                     coroutineScope.launch(Dispatchers.IO) {
                                         try {
-                                            if (note.baseFolder == "Tasks") {
-                                                val targetFolder = if (isChecked) {
-                                                    if (note.filePath.endsWith("/Completed")) note.filePath else "${note.filePath}/Completed"
+                                            val cleanName = note.fileName.removeSuffix(".md")
+                                            val newFileName = if (isChecked) {
+                                                if (cleanName.startsWith("~~") && cleanName.endsWith("~~")) {
+                                                    note.fileName
                                                 } else {
-                                                    if (note.filePath.endsWith("/Completed")) note.filePath.removeSuffix("/Completed") else note.filePath
+                                                    "~~${cleanName}~~.md"
                                                 }
-                                                vaultManager.moveNote(note, targetFolder, vaultUri)
                                             } else {
-                                                val cleanName = note.fileName.removeSuffix(".md")
-                                                val newFileName = if (isChecked) {
-                                                    if (cleanName.startsWith("~~") && cleanName.endsWith("~~")) {
-                                                        note.fileName
-                                                    } else {
-                                                        "~~${cleanName}~~.md"
-                                                    }
+                                                if (cleanName.startsWith("~~") && cleanName.endsWith("~~")) {
+                                                    cleanName.removePrefix("~~").removeSuffix("~~") + ".md"
                                                 } else {
-                                                    if (cleanName.startsWith("~~") && cleanName.endsWith("~~")) {
-                                                        cleanName.removePrefix("~~").removeSuffix("~~") + ".md"
-                                                    } else {
-                                                        note.fileName
-                                                    }
+                                                    note.fileName
                                                 }
-                                                if (newFileName != note.fileName) {
-                                                    vaultManager.renameNote(note, newFileName)
-                                                }
+                                            }
+                                            if (newFileName != note.fileName) {
+                                                vaultManager.renameNote(note, newFileName)
                                             }
                                             refreshInbox()
                                         } catch (e: Exception) {

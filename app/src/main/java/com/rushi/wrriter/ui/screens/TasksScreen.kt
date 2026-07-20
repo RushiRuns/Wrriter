@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rushi.wrriter.data.NoteMetadata
 import com.rushi.wrriter.data.displayTitle
+import com.rushi.wrriter.data.isCompleted
 import com.rushi.wrriter.data.VaultManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -49,7 +50,7 @@ fun TasksScreen(
         coroutineScope.launch(Dispatchers.IO) {
             try {
                 val allNotes = vaultManager.getCachedNotes()
-                val taskNotes = allNotes.filter { it.filePath == "Tasks" || it.filePath == "Tasks/Completed" }
+                val taskNotes = allNotes.filter { it.filePath == "Tasks" }
                 withContext(Dispatchers.Main) {
                     tasksList = taskNotes
                     isLoading = false
@@ -73,9 +74,9 @@ fun TasksScreen(
 
     val filteredTasks = remember(tasksList, selectedTab) {
         if (selectedTab == "active") {
-            tasksList.filter { it.filePath == "Tasks" }
+            tasksList.filter { !it.isCompleted }
         } else {
-            tasksList.filter { it.filePath == "Tasks/Completed" }
+            tasksList.filter { it.isCompleted }
         }
     }
 
@@ -181,12 +182,27 @@ fun TasksScreen(
                             onToggle = { isChecked ->
                                 coroutineScope.launch(Dispatchers.IO) {
                                     try {
-                                        val targetFolder = if (isChecked) "Tasks/Completed" else "Tasks"
-                                        vaultManager.moveNote(note, targetFolder, vaultUri)
+                                        val cleanName = note.fileName.removeSuffix(".md")
+                                        val newFileName = if (isChecked) {
+                                            if (cleanName.startsWith("~~") && cleanName.endsWith("~~")) {
+                                                note.fileName
+                                            } else {
+                                                "~~${cleanName}~~.md"
+                                            }
+                                        } else {
+                                            if (cleanName.startsWith("~~") && cleanName.endsWith("~~")) {
+                                                cleanName.removePrefix("~~").removeSuffix("~~") + ".md"
+                                            } else {
+                                                note.fileName
+                                            }
+                                        }
+                                        if (newFileName != note.fileName) {
+                                            vaultManager.renameNote(note, newFileName)
+                                        }
                                         
                                         // Refresh
                                         val allNotes = vaultManager.getCachedNotes()
-                                        val taskNotes = allNotes.filter { it.filePath == "Tasks" || it.filePath == "Tasks/Completed" }
+                                        val taskNotes = allNotes.filter { it.filePath == "Tasks" }
                                         withContext(Dispatchers.Main) {
                                             tasksList = taskNotes
                                         }

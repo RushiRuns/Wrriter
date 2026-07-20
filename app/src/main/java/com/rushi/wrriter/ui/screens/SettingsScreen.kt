@@ -37,6 +37,7 @@ import kotlinx.coroutines.withContext
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
+    modifier: Modifier = Modifier,
     preferencesManager: PreferencesManager,
     vaultManager: VaultManager,
     onNavigateToOnboarding: () -> Unit
@@ -172,8 +173,7 @@ fun SettingsScreen(
     }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
+        modifier = modifier
             .background(Color(0xFF000000)) // OLED Black
     ) {
         LazyColumn(

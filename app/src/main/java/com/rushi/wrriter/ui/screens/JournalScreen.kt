@@ -31,6 +31,7 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun JournalScreen(
+    modifier: Modifier = Modifier,
     vaultManager: VaultManager,
     vaultUri: String,
     onNoteSelected: (NoteMetadata) -> Unit
@@ -60,8 +61,7 @@ fun JournalScreen(
     }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
+        modifier = modifier
             .background(Color(0xFF000000)) // OLED Black
     ) {
         if (!isIndexReady) {

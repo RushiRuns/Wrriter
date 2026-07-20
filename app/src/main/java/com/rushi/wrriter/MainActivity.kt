@@ -19,6 +19,9 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Assignment
@@ -125,17 +128,6 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    // Trigger cache rebuild on tab selection to refresh sync status
-                    LaunchedEffect(selectedTab) {
-                        if (!vaultUri.isNullOrEmpty()) {
-                            withContext(Dispatchers.IO) {
-                                if (System.currentTimeMillis() - vaultManager.lastRebuildTime > 5000) {
-                                    vaultManager.rebuildCache(vaultUri)
-                                }
-                            }
-                        }
-                    }
-
                     // Trigger cache rebuild on app resume to refresh sync status
                     val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
                     DisposableEffect(lifecycleOwner, vaultUri) {
@@ -143,7 +135,7 @@ class MainActivity : ComponentActivity() {
                             if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
                                 if (!vaultUri.isNullOrEmpty()) {
                                     coroutineScope.launch(Dispatchers.IO) {
-                                        if (System.currentTimeMillis() - vaultManager.lastRebuildTime > 30000) {
+                                        if (System.currentTimeMillis() - vaultManager.lastRebuildTime > 300000) {
                                             vaultManager.rebuildCache(vaultUri)
                                         }
                                     }
@@ -229,6 +221,7 @@ class MainActivity : ComponentActivity() {
                                     EditorScreen(
                                         vaultManager = vaultManager,
                                         vaultUri = vaultUri,
+                                        preferencesManager = preferencesManager,
                                         noteUriString = activeNoteUri!!,
                                         onBack = { activeNoteUri = null },
                                         onWikiLinkClicked = { targetNote ->
@@ -322,54 +315,58 @@ class MainActivity : ComponentActivity() {
                                         },
                                         containerColor = Color.Black
                                     ) { innerPadding ->
-                                        Box(modifier = Modifier.padding(innerPadding)) {
-                                            when (selectedTab) {
-                                                "inbox" -> {
-                                                    InboxScreen(
-                                                        vaultManager = vaultManager,
-                                                        vaultUri = vaultUri,
-                                                        onNoteSelected = { note ->
-                                                            activeNoteUri = note.uriString
-                                                        }
-                                                    )
-                                                }
-                                                "journal" -> {
-                                                    JournalScreen(
-                                                        vaultManager = vaultManager,
-                                                        vaultUri = vaultUri,
-                                                        onNoteSelected = { note ->
-                                                            activeNoteUri = note.uriString
-                                                        }
-                                                    )
-                                                }
-                                                "tasks" -> {
-                                                    TasksScreen(
-                                                        vaultManager = vaultManager,
-                                                        vaultUri = vaultUri,
-                                                        onNoteSelected = { note ->
-                                                            activeNoteUri = note.uriString
-                                                        }
-                                                    )
-                                                }
-                                                "stats" -> {
-                                                    StatisticsScreen(
-                                                        vaultManager = vaultManager,
-                                                        vaultUri = vaultUri
-                                                    )
-                                                }
-                                                "settings" -> {
-                                                    SettingsScreen(
-                                                        preferencesManager = preferencesManager,
-                                                        vaultManager = vaultManager,
-                                                        onNavigateToOnboarding = {
-                                                            coroutineScope.launch {
-                                                                preferencesManager.saveVaultUri("")
-                                                            }
-                                                        }
-                                                    )
-                                                }
-                                            }
-                                        }
+                                         Box(
+                                             modifier = Modifier
+                                                 .fillMaxSize()
+                                                 .padding(innerPadding)
+                                         ) {
+                                             val hiddenModifier = Modifier.size(0.dp).clipToBounds()
+
+                                             InboxScreen(
+                                                 modifier = if (selectedTab == "inbox") Modifier.fillMaxSize() else hiddenModifier,
+                                                 vaultManager = vaultManager,
+                                                 vaultUri = vaultUri,
+                                                 preferencesManager = preferencesManager,
+                                                 onNoteSelected = { note ->
+                                                     activeNoteUri = note.uriString
+                                                 }
+                                             )
+
+                                             JournalScreen(
+                                                 modifier = if (selectedTab == "journal") Modifier.fillMaxSize() else hiddenModifier,
+                                                 vaultManager = vaultManager,
+                                                 vaultUri = vaultUri,
+                                                 onNoteSelected = { note ->
+                                                     activeNoteUri = note.uriString
+                                                 }
+                                             )
+
+                                             TasksScreen(
+                                                 modifier = if (selectedTab == "tasks") Modifier.fillMaxSize() else hiddenModifier,
+                                                 vaultManager = vaultManager,
+                                                 vaultUri = vaultUri,
+                                                 onNoteSelected = { note ->
+                                                     activeNoteUri = note.uriString
+                                                 }
+                                             )
+
+                                             StatisticsScreen(
+                                                 modifier = if (selectedTab == "stats") Modifier.fillMaxSize() else hiddenModifier,
+                                                 vaultManager = vaultManager,
+                                                 vaultUri = vaultUri
+                                             )
+
+                                             SettingsScreen(
+                                                 modifier = if (selectedTab == "settings") Modifier.fillMaxSize() else hiddenModifier,
+                                                 preferencesManager = preferencesManager,
+                                                 vaultManager = vaultManager,
+                                                 onNavigateToOnboarding = {
+                                                     coroutineScope.launch {
+                                                         preferencesManager.saveVaultUri("")
+                                                     }
+                                                 }
+                                             )
+                                         }
                                     }
                                 }
                             }

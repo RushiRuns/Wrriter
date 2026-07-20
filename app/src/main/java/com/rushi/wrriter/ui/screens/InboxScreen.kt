@@ -56,13 +56,14 @@ import java.util.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InboxScreen(
+    modifier: Modifier = Modifier,
     vaultManager: VaultManager,
     vaultUri: String,
+    preferencesManager: PreferencesManager,
     onNoteSelected: (NoteMetadata) -> Unit
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    val preferencesManager = remember { PreferencesManager(context) }
 
     var notesList by remember { mutableStateOf(emptyList<NoteMetadata>()) }
     var dumpText by remember { mutableStateOf("") }
@@ -133,8 +134,7 @@ fun InboxScreen(
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
+        modifier = modifier
             .background(Color(0xFF000000)) // OLED Black
             .imePadding()
     ) {

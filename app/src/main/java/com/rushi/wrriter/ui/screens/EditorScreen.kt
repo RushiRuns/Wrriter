@@ -51,6 +51,7 @@ import org.json.JSONObject
 fun EditorScreen(
     vaultManager: VaultManager,
     vaultUri: String,
+    preferencesManager: PreferencesManager,
     noteUriString: String,
     onBack: () -> Unit,
     onWikiLinkClicked: (NoteMetadata) -> Unit,
@@ -60,8 +61,6 @@ fun EditorScreen(
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    
-    val preferencesManager = remember { PreferencesManager(context) }
     val theme = preferencesManager.themeFlow.collectAsState(initial = "oled").value
     val font = preferencesManager.fontFlow.collectAsState(initial = "default").value
     val texture = preferencesManager.textureFlow.collectAsState(initial = "none").value

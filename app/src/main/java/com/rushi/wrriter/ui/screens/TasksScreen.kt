@@ -35,6 +35,7 @@ import kotlinx.coroutines.withContext
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TasksScreen(
+    modifier: Modifier = Modifier,
     vaultManager: VaultManager,
     vaultUri: String,
     onNoteSelected: (NoteMetadata) -> Unit
@@ -86,8 +87,7 @@ fun TasksScreen(
     }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
+        modifier = modifier
             .background(Color(0xFF000000)) // OLED Black
     ) {
         Column(

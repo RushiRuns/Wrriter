@@ -317,23 +317,7 @@ fun InboxScreen(
                                 onToggleCompleted = { isChecked ->
                                     coroutineScope.launch(Dispatchers.IO) {
                                         try {
-                                            val cleanName = note.fileName.removeSuffix(".md")
-                                            val newFileName = if (isChecked) {
-                                                if (cleanName.startsWith("~~") && cleanName.endsWith("~~")) {
-                                                    note.fileName
-                                                } else {
-                                                    "~~${cleanName}~~.md"
-                                                }
-                                            } else {
-                                                if (cleanName.startsWith("~~") && cleanName.endsWith("~~")) {
-                                                    cleanName.removePrefix("~~").removeSuffix("~~") + ".md"
-                                                } else {
-                                                    note.fileName
-                                                }
-                                            }
-                                            if (newFileName != note.fileName) {
-                                                vaultManager.renameNote(note, newFileName)
-                                            }
+                                            vaultManager.toggleNoteComplete(note, isChecked)
                                             refreshInbox()
                                         } catch (e: Exception) {
                                             e.printStackTrace()

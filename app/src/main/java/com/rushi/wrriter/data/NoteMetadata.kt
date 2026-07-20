@@ -12,7 +12,9 @@ data class NoteMetadata(
     val createdTime: Long,      // Creation date timestamp in milliseconds
     val modifiedTime: Long,     // Modification date timestamp in milliseconds
     val isInbox: Boolean,       // Flag indicating if the file resides in the "/Inbox" folder
-    val wordCount: Int          // Total word count computed on read/index
+    val wordCount: Int,         // Total word count computed on read/index
+    val completed: Boolean = false, // Completion status from frontmatter
+    val completedAt: Long? = null  // Completion timestamp from frontmatter
 )
 
 /**
@@ -28,7 +30,7 @@ data class TaskItem(
 )
 
 val NoteMetadata.isCompleted: Boolean
-    get() = filePath.endsWith("/Completed") || fileName.startsWith("~~") && fileName.endsWith("~~.md") || title.startsWith("~~") && title.endsWith("~~")
+    get() = completed || filePath.endsWith("/Completed") || fileName.startsWith("~~") && fileName.endsWith("~~.md") || title.startsWith("~~") && title.endsWith("~~")
 
 val NoteMetadata.baseFolder: String
     get() = if (filePath.endsWith("/Completed")) filePath.removeSuffix("/Completed") else filePath

@@ -124,6 +124,37 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
+                    // Trigger cache rebuild on tab selection to refresh sync status
+                    LaunchedEffect(selectedTab) {
+                        if (!vaultUri.isNullOrEmpty()) {
+                            withContext(Dispatchers.IO) {
+                                if (System.currentTimeMillis() - vaultManager.lastRebuildTime > 5000) {
+                                    vaultManager.rebuildCache(vaultUri)
+                                }
+                            }
+                        }
+                    }
+
+                    // Trigger cache rebuild on app resume to refresh sync status
+                    val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+                    DisposableEffect(lifecycleOwner, vaultUri) {
+                        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+                            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                                if (!vaultUri.isNullOrEmpty()) {
+                                    coroutineScope.launch(Dispatchers.IO) {
+                                        if (System.currentTimeMillis() - vaultManager.lastRebuildTime > 30000) {
+                                            vaultManager.rebuildCache(vaultUri)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        lifecycleOwner.lifecycle.addObserver(observer)
+                        onDispose {
+                            lifecycleOwner.lifecycle.removeObserver(observer)
+                        }
+                    }
+
                     var observerJob by remember { mutableStateOf<Job?>(null) }
 
                     DisposableEffect(vaultUri) {

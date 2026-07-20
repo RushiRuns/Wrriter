@@ -24,6 +24,11 @@ class VaultManager(private val context: Context) {
 
     // ISO 8601 Date formatter
     private val isoFormatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.getDefault())
+    private val isoMillisFormatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", Locale.getDefault())
+
+    @Volatile
+    var lastRebuildTime: Long = 0L
+        private set
 
     private val _isIndexReady = MutableStateFlow(false)
     val isIndexReady: StateFlow<Boolean> = _isIndexReady.asStateFlow()
@@ -67,6 +72,7 @@ class VaultManager(private val context: Context) {
             noteCache.clear()
             noteCache.putAll(tempCache)
         }
+        lastRebuildTime = System.currentTimeMillis()
         _isIndexReady.value = true
     }
 
@@ -131,6 +137,9 @@ class VaultManager(private val context: Context) {
         val createdStr = frontmatterMap["created"] as? String
         val modifiedStr = frontmatterMap["modified"] as? String
         val isInbox = frontmatterMap["inbox"] as? Boolean ?: (relativePath == "Inbox")
+        val completed = frontmatterMap["completed"] as? Boolean ?: false
+        val completedAtStr = frontmatterMap["completed_at"] as? String
+        val completedAt = completedAtStr?.let { parseIsoDate(it) }
 
         val createdTime = createdStr?.let { parseIsoDate(it) } ?: file.lastModified()
         val modifiedTime = modifiedStr?.let { parseIsoDate(it) } ?: file.lastModified()
@@ -145,6 +154,8 @@ class VaultManager(private val context: Context) {
             createdTime = createdTime,
             modifiedTime = modifiedTime,
             isInbox = isInbox,
+            completed = completed,
+            completedAt = completedAt,
             wordCount = wordCount
         )
 
@@ -164,7 +175,9 @@ class VaultManager(private val context: Context) {
         title: String,
         tags: List<String>,
         isInbox: Boolean,
-        body: String
+        body: String,
+        completed: Boolean? = null,
+        completedAt: Long? = null
     ): NoteMetadata {
         val fileUri = Uri.parse(fileUriString)
         val file = DocumentFile.fromSingleUri(context, fileUri) ?: throw Exception("File not found")
@@ -173,6 +186,16 @@ class VaultManager(private val context: Context) {
         val createdTime = existingMetadata?.createdTime ?: System.currentTimeMillis()
         val modifiedTime = System.currentTimeMillis()
         val relativePath = existingMetadata?.filePath ?: ""
+        val actualCompleted = completed ?: existingMetadata?.completed ?: false
+        val actualCompletedAt = if (completed != null) {
+            if (completed) {
+                completedAt ?: existingMetadata?.completedAt ?: System.currentTimeMillis()
+            } else {
+                null
+            }
+        } else {
+            existingMetadata?.completedAt
+        }
 
         val metadata = NoteMetadata(
             uriString = fileUriString,
@@ -183,6 +206,8 @@ class VaultManager(private val context: Context) {
             createdTime = createdTime,
             modifiedTime = modifiedTime,
             isInbox = isInbox,
+            completed = actualCompleted,
+            completedAt = actualCompletedAt,
             wordCount = countWords(body)
         )
 
@@ -227,6 +252,8 @@ class VaultManager(private val context: Context) {
             createdTime = createdTime,
             modifiedTime = createdTime,
             isInbox = (folderName == "Inbox"),
+            completed = false,
+            completedAt = null,
             wordCount = countWords(body)
         )
 
@@ -280,7 +307,9 @@ class VaultManager(private val context: Context) {
             title = updatedMetadata.title,
             tags = updatedMetadata.tags,
             isInbox = updatedMetadata.isInbox,
-            body = body
+            body = body,
+            completed = note.completed,
+            completedAt = note.completedAt
         )
 
         synchronized(noteCache) {
@@ -304,6 +333,22 @@ class VaultManager(private val context: Context) {
             }
         }
         return deleted
+    }
+
+    /**
+     * Toggles the completed status of a note by rewriting its YAML frontmatter.
+     */
+    fun toggleNoteComplete(note: NoteMetadata, completed: Boolean): NoteMetadata {
+        val (_, body) = loadNote(note.uriString)
+        val updated = saveNote(
+            fileUriString = note.uriString,
+            title = note.title,
+            tags = note.tags,
+            isInbox = note.isInbox,
+            body = body,
+            completed = completed
+        )
+        return updated
     }
 
     private fun resolveFolder(parent: DocumentFile, path: String): DocumentFile? {
@@ -356,7 +401,9 @@ class VaultManager(private val context: Context) {
                 title = cleanTitle,
                 tags = updatedMetadata.tags,
                 isInbox = updatedMetadata.isInbox,
-                body = body
+                body = body,
+                completed = note.completed,
+                completedAt = note.completedAt
             )
         } catch (e: Exception) {
             e.printStackTrace()
@@ -384,6 +431,9 @@ class VaultManager(private val context: Context) {
         val createdStr = frontmatterMap["created"] as? String
         val modifiedStr = frontmatterMap["modified"] as? String
         val isInbox = frontmatterMap["inbox"] as? Boolean ?: (relativePath == "Inbox")
+        val completed = frontmatterMap["completed"] as? Boolean ?: false
+        val completedAtStr = frontmatterMap["completed_at"] as? String
+        val completedAt = completedAtStr?.let { parseIsoDate(it) }
 
         val createdTime = createdStr?.let { parseIsoDate(it) } ?: file.lastModified()
         val modifiedTime = modifiedStr?.let { parseIsoDate(it) } ?: file.lastModified()
@@ -398,6 +448,8 @@ class VaultManager(private val context: Context) {
             createdTime = createdTime,
             modifiedTime = modifiedTime,
             isInbox = isInbox,
+            completed = completed,
+            completedAt = completedAt,
             wordCount = wordCount
         )
     }
@@ -458,11 +510,16 @@ class VaultManager(private val context: Context) {
                         } else {
                             // Simple key-value
                             val finalValue = valueStr.removeSurrounding("\"").removeSurrounding("'")
-                            val boolVal = finalValue.lowercase().toBooleanStrictOrNull()
-                            if (boolVal != null) {
-                                metadata[key] = boolVal
+                            if (finalValue == "null") {
+                                @Suppress("UNCHECKED_CAST")
+                                (metadata as MutableMap<String, Any?>)[key] = null
                             } else {
-                                metadata[key] = finalValue
+                                val boolVal = finalValue.lowercase().toBooleanStrictOrNull()
+                                if (boolVal != null) {
+                                    metadata[key] = boolVal
+                                } else {
+                                    metadata[key] = finalValue
+                                }
                             }
                         }
                     }
@@ -493,6 +550,12 @@ class VaultManager(private val context: Context) {
         sb.append("created: \"${formatIsoDate(metadata.createdTime)}\"\n")
         sb.append("modified: \"${formatIsoDate(metadata.modifiedTime)}\"\n")
         sb.append("inbox: ${metadata.isInbox}\n")
+        sb.append("completed: ${metadata.completed}\n")
+        if (metadata.completedAt != null) {
+            sb.append("completed_at: \"${formatIsoDate(metadata.completedAt)}\"\n")
+        } else {
+            sb.append("completed_at: null\n")
+        }
         sb.append("---\n")
         sb.append(body)
         return sb.toString()
@@ -504,9 +567,15 @@ class VaultManager(private val context: Context) {
 
     private fun parseIsoDate(isoStr: String): Long {
         return try {
-            isoFormatter.parse(isoStr)?.time ?: System.currentTimeMillis()
+            isoFormatter.parse(isoStr)?.time
+                ?: isoMillisFormatter.parse(isoStr)?.time
+                ?: System.currentTimeMillis()
         } catch (e: Exception) {
-            System.currentTimeMillis()
+            try {
+                isoMillisFormatter.parse(isoStr)?.time ?: System.currentTimeMillis()
+            } catch (e2: Exception) {
+                System.currentTimeMillis()
+            }
         }
     }
 
@@ -557,6 +626,8 @@ class VaultManager(private val context: Context) {
             createdTime = createdTime,
             modifiedTime = createdTime,
             isInbox = false,
+            completed = false,
+            completedAt = null,
             wordCount = 0
         )
 

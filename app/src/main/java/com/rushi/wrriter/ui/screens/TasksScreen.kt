@@ -50,7 +50,7 @@ fun TasksScreen(
         coroutineScope.launch(Dispatchers.IO) {
             try {
                 val allNotes = vaultManager.getCachedNotes()
-                val taskNotes = allNotes.filter { it.filePath == "Tasks" }
+                val taskNotes = allNotes.filter { it.filePath.startsWith("Tasks") }
                 withContext(Dispatchers.Main) {
                     tasksList = taskNotes
                     isLoading = false
@@ -182,27 +182,11 @@ fun TasksScreen(
                             onToggle = { isChecked ->
                                 coroutineScope.launch(Dispatchers.IO) {
                                     try {
-                                        val cleanName = note.fileName.removeSuffix(".md")
-                                        val newFileName = if (isChecked) {
-                                            if (cleanName.startsWith("~~") && cleanName.endsWith("~~")) {
-                                                note.fileName
-                                            } else {
-                                                "~~${cleanName}~~.md"
-                                            }
-                                        } else {
-                                            if (cleanName.startsWith("~~") && cleanName.endsWith("~~")) {
-                                                cleanName.removePrefix("~~").removeSuffix("~~") + ".md"
-                                            } else {
-                                                note.fileName
-                                            }
-                                        }
-                                        if (newFileName != note.fileName) {
-                                            vaultManager.renameNote(note, newFileName)
-                                        }
+                                        vaultManager.toggleNoteComplete(note, isChecked)
                                         
                                         // Refresh
                                         val allNotes = vaultManager.getCachedNotes()
-                                        val taskNotes = allNotes.filter { it.filePath == "Tasks" }
+                                        val taskNotes = allNotes.filter { it.filePath.startsWith("Tasks") }
                                         withContext(Dispatchers.Main) {
                                             tasksList = taskNotes
                                         }
@@ -231,7 +215,7 @@ fun TaskRowItem(
     onToggle: (Boolean) -> Unit,
     onClick: () -> Unit
 ) {
-    val isCompleted = note.filePath == "Tasks/Completed"
+    val isCompleted = note.isCompleted
     Card(
         modifier = Modifier
             .fillMaxWidth()

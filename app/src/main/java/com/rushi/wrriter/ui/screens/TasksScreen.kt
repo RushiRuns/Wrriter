@@ -151,7 +151,7 @@ fun TasksScreen(
             }
 
             // Task Content
-            if (isLoading) {
+            if (filteredTasks.isEmpty() && isLoading) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()

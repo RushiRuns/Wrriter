@@ -274,7 +274,7 @@ fun InboxScreen(
             }
 
             // Notes list or loader
-            if (!isIndexReady) {
+            if (notesList.isEmpty() && !isIndexReady) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()

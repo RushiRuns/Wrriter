@@ -64,7 +64,7 @@ fun JournalScreen(
         modifier = modifier
             .background(Color(0xFF000000)) // OLED Black
     ) {
-        if (!isIndexReady) {
+        if (journalNotes.isEmpty() && !isIndexReady) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center

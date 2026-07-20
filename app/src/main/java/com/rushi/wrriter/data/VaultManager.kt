@@ -129,8 +129,9 @@ class VaultManager(private val context: Context) {
         val (frontmatterMap, body) = parseFrontmatter(rawText)
         
         // Derive folder path
+        val existingMetadata = synchronized(noteCache) { noteCache[fileUriString] }
         val parentFile = file.parentFile
-        val relativePath = parentFile?.name ?: "" // Fallback
+        val relativePath = existingMetadata?.filePath ?: parentFile?.name ?: ""
 
         val title = frontmatterMap["title"] as? String ?: file.name?.removeSuffix(".md") ?: "Untitled"
         val tags = (frontmatterMap["tags"] as? List<*>)?.mapNotNull { it?.toString() } ?: emptyList()
@@ -300,9 +301,15 @@ class VaultManager(private val context: Context) {
             isInbox = (targetFolderName == "Inbox")
         )
 
+        // Put in cache first so loadNote can resolve relativePath correctly
+        synchronized(noteCache) {
+            noteCache.remove(note.uriString)
+            noteCache[newUri.toString()] = updatedMetadata
+        }
+
         // Rewrite frontmatter to update the metadata tags
         val (_, body) = loadNote(newUri.toString())
-        saveNote(
+        val finalMetadata = saveNote(
             fileUriString = newUri.toString(),
             title = updatedMetadata.title,
             tags = updatedMetadata.tags,
@@ -312,12 +319,7 @@ class VaultManager(private val context: Context) {
             completedAt = note.completedAt
         )
 
-        synchronized(noteCache) {
-            noteCache.remove(note.uriString)
-            noteCache[newUri.toString()] = updatedMetadata
-        }
-
-        return updatedMetadata
+        return finalMetadata
     }
 
     /**
@@ -393,10 +395,17 @@ class VaultManager(private val context: Context) {
             title = cleanTitle
         )
 
+        // Put in cache first so loadNote can resolve relativePath correctly
+        synchronized(noteCache) {
+            noteCache.remove(note.uriString)
+            noteCache[newUri.toString()] = updatedMetadata
+        }
+
+        var finalMetadata = updatedMetadata
         // Rewrite frontmatter to keep title and cache in sync
         try {
             val (_, body) = loadNote(newUri.toString())
-            saveNote(
+            finalMetadata = saveNote(
                 fileUriString = newUri.toString(),
                 title = cleanTitle,
                 tags = updatedMetadata.tags,
@@ -409,12 +418,7 @@ class VaultManager(private val context: Context) {
             e.printStackTrace()
         }
 
-        synchronized(noteCache) {
-            noteCache.remove(note.uriString)
-            noteCache[newUri.toString()] = updatedMetadata
-        }
-
-        return updatedMetadata
+        return finalMetadata
     }
 
     // --- Helpers for Frontmatter Parsing and Serialization ---

@@ -30,8 +30,15 @@ class VaultManager(private val context: Context) {
     var lastRebuildTime: Long = 0L
         private set
 
+    @Volatile
+    private var isRebuilding = false
+
     private val _isIndexReady = MutableStateFlow(false)
     val isIndexReady: StateFlow<Boolean> = _isIndexReady.asStateFlow()
+
+    fun markNotReady() {
+        _isIndexReady.value = false
+    }
 
     /**
      * Initializes default folders under the root vault URI.
@@ -60,20 +67,26 @@ class VaultManager(private val context: Context) {
      * Rebuilds the in-memory cache of note metadata by scanning all files in the vault.
      */
     fun rebuildCache(rootUriString: String) {
-        _isIndexReady.value = false
-        val rootUri = Uri.parse(rootUriString)
-        val rootDir = DocumentFile.fromTreeUri(context, rootUri) ?: run {
+        if (isRebuilding) return
+        isRebuilding = true
+        try {
+            val rootUri = Uri.parse(rootUriString)
+            val rootDir = DocumentFile.fromTreeUri(context, rootUri) ?: run {
+                return
+            }
+            val tempCache = mutableMapOf<String, NoteMetadata>()
+            scanDirectory(rootDir, "", rootUri, tempCache)
+            synchronized(noteCache) {
+                noteCache.clear()
+                noteCache.putAll(tempCache)
+            }
+            lastRebuildTime = System.currentTimeMillis()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            isRebuilding = false
             _isIndexReady.value = true
-            return
         }
-        val tempCache = mutableMapOf<String, NoteMetadata>()
-        scanDirectory(rootDir, "", rootUri, tempCache)
-        synchronized(noteCache) {
-            noteCache.clear()
-            noteCache.putAll(tempCache)
-        }
-        lastRebuildTime = System.currentTimeMillis()
-        _isIndexReady.value = true
     }
 
     private fun scanDirectory(dir: DocumentFile, relativePath: String, rootUri: Uri, tempCache: MutableMap<String, NoteMetadata>) {
@@ -423,12 +436,35 @@ class VaultManager(private val context: Context) {
 
     // --- Helpers for Frontmatter Parsing and Serialization ---
 
-    private fun loadMetadata(file: DocumentFile, relativePath: String): NoteMetadata {
-        val inputStream = contentResolver.openInputStream(file.uri) ?: throw Exception("Cannot open file stream")
-        val reader = BufferedReader(InputStreamReader(inputStream))
-        val rawText = reader.use { it.readText() }
+    private fun readFrontmatterOnly(fileUri: Uri): String {
+        return try {
+            val inputStream = contentResolver.openInputStream(fileUri) ?: return ""
+            val sb = java.lang.StringBuilder()
+            BufferedReader(InputStreamReader(inputStream)).use { reader ->
+                val firstLine = reader.readLine()
+                if (firstLine != null) {
+                    sb.append(firstLine).append("\n")
+                    if (firstLine.trim() == "---") {
+                        var line = reader.readLine()
+                        while (line != null) {
+                            sb.append(line).append("\n")
+                            if (line.trim() == "---") {
+                                break
+                            }
+                            line = reader.readLine()
+                        }
+                    }
+                }
+            }
+            sb.toString()
+        } catch (e: Exception) {
+            ""
+        }
+    }
 
-        val (frontmatterMap, body) = parseFrontmatter(rawText)
+    private fun loadMetadata(file: DocumentFile, relativePath: String): NoteMetadata {
+        val rawText = readFrontmatterOnly(file.uri)
+        val (frontmatterMap, _) = parseFrontmatter(rawText)
 
         val title = frontmatterMap["title"] as? String ?: file.name?.removeSuffix(".md") ?: "Untitled"
         val tags = (frontmatterMap["tags"] as? List<*>)?.mapNotNull { it?.toString() } ?: emptyList()
@@ -441,7 +477,9 @@ class VaultManager(private val context: Context) {
 
         val createdTime = createdStr?.let { parseIsoDate(it) } ?: file.lastModified()
         val modifiedTime = modifiedStr?.let { parseIsoDate(it) } ?: file.lastModified()
-        val wordCount = countWords(body)
+        
+        val wordCountStr = frontmatterMap["word_count"] as? String
+        val wordCount = wordCountStr?.toIntOrNull() ?: 0
 
         return NoteMetadata(
             uriString = file.uri.toString(),
@@ -560,6 +598,7 @@ class VaultManager(private val context: Context) {
         } else {
             sb.append("completed_at: null\n")
         }
+        sb.append("word_count: ${metadata.wordCount}\n")
         sb.append("---\n")
         sb.append(body)
         return sb.toString()

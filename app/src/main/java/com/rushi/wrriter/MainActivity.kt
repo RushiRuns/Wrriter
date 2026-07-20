@@ -118,6 +118,7 @@ class MainActivity : ComponentActivity() {
                     // Trigger cache rebuild on Dispatchers.IO when vaultUri is loaded/changed
                     LaunchedEffect(vaultUri) {
                         if (!vaultUri.isNullOrEmpty()) {
+                            vaultManager.markNotReady()
                             withContext(Dispatchers.IO) {
                                 vaultManager.rebuildCache(vaultUri)
                             }

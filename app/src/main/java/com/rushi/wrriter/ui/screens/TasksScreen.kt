@@ -8,10 +8,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Assignment
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -42,6 +45,8 @@ fun TasksScreen(
     var tasksList by remember { mutableStateOf(emptyList<NoteMetadata>()) }
     var selectedTab by remember { mutableStateOf("active") } // "active" or "completed"
     var isLoading by remember { mutableStateOf(true) }
+    var showAddDialog by remember { mutableStateOf(false) }
+    var taskInputText by remember { mutableStateOf("") }
 
     val isIndexReady by vaultManager.isIndexReady.collectAsState()
 
@@ -205,6 +210,107 @@ fun TasksScreen(
                     }
                 }
             }
+        }
+
+        // Floating Action Button to Add New Task
+        FloatingActionButton(
+            onClick = { showAddDialog = true },
+            containerColor = Color(0xFF94A3B8), // Brand Slate Grey
+            contentColor = Color.Black,
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(24.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = "Add Task"
+            )
+        }
+
+        // Dialog for New Task Capture
+        if (showAddDialog) {
+            val focusRequester = remember { FocusRequester() }
+            LaunchedEffect(Unit) {
+                focusRequester.requestFocus()
+            }
+            AlertDialog(
+                onDismissRequest = {
+                    showAddDialog = false
+                    taskInputText = ""
+                },
+                title = {
+                    Text(
+                        text = "New Task",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp
+                    )
+                },
+                text = {
+                    OutlinedTextField(
+                        value = taskInputText,
+                        onValueChange = { taskInputText = it },
+                        placeholder = { Text("What needs to be done?", color = Color(0xFF64748B)) },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedBorderColor = Color(0xFF94A3B8),
+                            unfocusedBorderColor = Color(0xFF334155),
+                            cursorColor = Color(0xFF94A3B8)
+                        ),
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(focusRequester)
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            val taskText = taskInputText.trim()
+                            if (taskText.isNotEmpty()) {
+                                coroutineScope.launch(Dispatchers.IO) {
+                                    try {
+                                        vaultManager.createNote(vaultUri, "Tasks", taskText, "")
+                                        val allNotes = vaultManager.getCachedNotes()
+                                        val taskNotes = allNotes.filter { it.filePath.startsWith("Tasks") }
+                                        withContext(Dispatchers.Main) {
+                                            tasksList = taskNotes
+                                            showAddDialog = false
+                                            taskInputText = ""
+                                        }
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
+                                        withContext(Dispatchers.Main) {
+                                            Toast.makeText(context, "Failed to create task", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        enabled = taskInputText.trim().isNotEmpty()
+                    ) {
+                        Text(
+                            text = "Add",
+                            color = if (taskInputText.trim().isNotEmpty()) Color(0xFF94A3B8) else Color(0xFF475569),
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            showAddDialog = false
+                            taskInputText = ""
+                        }
+                    ) {
+                        Text("Cancel", color = Color(0xFF64748B))
+                    }
+                },
+                containerColor = Color(0xFF121212),
+                shape = RoundedCornerShape(16.dp)
+            )
         }
     }
 }

@@ -183,8 +183,8 @@ Record every query here as it is written.
 | `Table` | Table node, header, rows, alignment, cell padding (`src/renderer/editor/extensions/table.ts`) | M2 | Built |
 | `ImageBlock` | Resize handles, left/centre/right alignment, natural size reset (`src/renderer/editor/extensions/image.ts`) | M2 | Built |
 | `FileChip` | Ticket-shaped file chip with notched sides and type badge (`src/renderer/editor/extensions/file-chip.ts`) | M2 | Built |
-| `BlockHandles` | Fold arrow as handle for headings, grab areas for callouts, grip for other blocks | M2 | Planned |
-| `BlockDrag` | Drag, drop line, auto-scroll, Escape, fold during drag, section moves | M2 | Planned |
+| `BlockHandles` | Fold arrow as handle for headings, grab areas for callouts, grip for other blocks (`src/renderer/editor/extensions/block-handles.ts`, `heading-folding.ts`) | M2 | Built |
+| `BlockDrag` | Drag, drop line, auto-scroll, Escape, fold during drag, section moves, Alt+Up/Down (`src/renderer/editor/extensions/block-drag.ts`, `keyboard-move.ts`) | M2 | Built |
 | `SlashMenu` | The twelve-item slash menu | M2 | Planned |
 | `FloatingToolbar` | The format pill over selected text | M2 | Planned |
 | `PasteToMarkdown` | Web content turned into markdown, never inserted as HTML (`src/renderer/editor/extensions/paste-handler.ts`) | M2 | Built |

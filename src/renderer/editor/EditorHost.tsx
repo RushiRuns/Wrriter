@@ -26,6 +26,10 @@ import { WikilinkMark, WebLinkMark } from './extensions/links';
 import { MarkdownShortcutsExtension } from './extensions/markdown-shortcuts';
 import { PasteHandlerExtension } from './extensions/paste-handler';
 import { FindReplaceExtension, findReplacePluginKey } from './extensions/find-replace-extension';
+import { HeadingFoldingExtension, headingFoldingPluginKey } from './extensions/heading-folding';
+import { KeyboardMoveExtension } from './extensions/keyboard-move';
+import { BlockHandlesExtension } from './extensions/block-handles';
+import { BlockDragExtension } from './extensions/block-drag';
 import { FindBar } from '../components/FindBar';
 import { markdownToTipTapDoc, tipTapDocToMarkdown } from './markdown-converter';
 import { planSave } from '../../shared/markdown/save';
@@ -143,6 +147,29 @@ export const EditorHost: React.FC<EditorHostProps> = ({
   // Active note date line and tags row
   const [activeDateLine, setActiveDateLine] = useState<string>('');
   const [activeTags, setActiveTags] = useState<readonly string[]>([]);
+
+  // "Drag to move" tooltip setting
+  const [dragHintShown, setDragHintShown] = useState(false);
+  const dragHintShownRef = useRef(false);
+
+  useEffect(() => {
+    if (window.wrriter?.app?.getSettings) {
+      void window.wrriter.app.getSettings().then((res: any) => {
+        if (res && res.ok && res.value) {
+          setDragHintShown(Boolean(res.value.dragHintShown));
+          dragHintShownRef.current = Boolean(res.value.dragHintShown);
+        }
+      });
+    }
+  }, []);
+
+  const handleSetDragHintShown = useCallback(() => {
+    setDragHintShown(true);
+    dragHintShownRef.current = true;
+    if (window.wrriter?.app?.saveSettings) {
+      void window.wrriter.app.saveSettings({ dragHintShown: true });
+    }
+  }, []);
 
   // Autosave timer
   const autosaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -277,7 +304,17 @@ export const EditorHost: React.FC<EditorHostProps> = ({
         WebLinkMark,
         MarkdownShortcutsExtension,
         PasteHandlerExtension,
-        FindReplaceExtension
+        FindReplaceExtension,
+        HeadingFoldingExtension,
+        KeyboardMoveExtension,
+        BlockHandlesExtension.configure({
+          getDragHintShown: () => dragHintShownRef.current,
+          onSetDragHintShown: handleSetDragHintShown
+        }),
+        BlockDragExtension.configure({
+          getDragHintShown: () => dragHintShownRef.current,
+          onSetDragHintShown: handleSetDragHintShown
+        })
       ],
       editorProps: {
         attributes: {
@@ -968,14 +1005,45 @@ export const EditorHost: React.FC<EditorHostProps> = ({
     const handleFindPaletteCommand = () => handleOpenFind(false);
     const handleReplacePaletteCommand = () => handleOpenFind(true);
 
+    const handleFoldAll = () => {
+      if (editorRef.current) {
+        const tr = editorRef.current.state.tr.setMeta(headingFoldingPluginKey, { type: 'foldAll' });
+        editorRef.current.view.dispatch(tr);
+      }
+    };
+
+    const handleUnfoldAll = () => {
+      if (editorRef.current) {
+        const tr = editorRef.current.state.tr.setMeta(headingFoldingPluginKey, { type: 'unfoldAll' });
+        editorRef.current.view.dispatch(tr);
+      }
+    };
+
+    const handleUnfoldAt = (e: Event) => {
+      const customEvent = e as CustomEvent<{ pos: number }>;
+      if (editorRef.current && customEvent.detail?.pos !== undefined) {
+        const tr = editorRef.current.state.tr.setMeta(headingFoldingPluginKey, {
+          type: 'unfoldAt',
+          pos: customEvent.detail.pos
+        });
+        editorRef.current.view.dispatch(tr);
+      }
+    };
+
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('wrriter:find-in-note', handleFindPaletteCommand);
     window.addEventListener('wrriter:replace-in-note', handleReplacePaletteCommand);
+    window.addEventListener('wrriter:fold-all', handleFoldAll);
+    window.addEventListener('wrriter:unfold-all', handleUnfoldAll);
+    window.addEventListener('wrriter:unfold-at', handleUnfoldAt);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('wrriter:find-in-note', handleFindPaletteCommand);
       window.removeEventListener('wrriter:replace-in-note', handleReplacePaletteCommand);
+      window.removeEventListener('wrriter:fold-all', handleFoldAll);
+      window.removeEventListener('wrriter:unfold-all', handleUnfoldAll);
+      window.removeEventListener('wrriter:unfold-at', handleUnfoldAt);
     };
   }, [handleOpenFind, handleNextMatch, handlePrevMatch]);
 

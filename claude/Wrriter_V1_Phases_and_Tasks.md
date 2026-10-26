@@ -272,15 +272,15 @@ Nothing that depends on a row is built until it is decided. Rows 15 to 17 are ne
 
 ### Handles, folding and dragging blocks (UI slice 5)
 
-- [ ] Collapsible headings 1 to 6: the fold arrow in the margin stays visible while folded, folding also folds sub-headings, folding is only a view and is never written, a note always opens fully expanded, the cursor skips folded text, a copy includes hidden text. Fold all and Unfold all are palette commands
-- [ ] A heading is dragged by its fold arrow (more than 4 px is a drag, a click is a fold) and always carries its whole section. A heading never shows a grip
-- [ ] A callout is dragged by its icon, its bar or the margin strip beside it. A click on the icon still opens the type dropdown
-- [ ] Every other block has a grip. A list item carries its nested items
-- [ ] During a drag: an open heading or callout folds to one row, a faint copy follows the pointer, the block lifts with a soft shadow, a drop line slides between positions, the note scrolls near the top and bottom (speed tuned and reported), Escape glides it back, and the drop settles at Base
-- [ ] Alt+Up and Alt+Down move the block under the caret, a heading with its section. One Ctrl+Z undoes a move with no animation, and the file differs only in the moved block's position
-- [ ] The Drag to move tooltip shows once, then never again
-- [ ] A control that appears on hover also appears while the caret or keyboard focus is in that block
-- [ ] Folds animate at Base. If that cannot be done without risking the note, folds happen at once and Antigravity tells Krishna
+- [x] Collapsible headings 1 to 6: the fold arrow in the margin stays visible while folded, folding also folds sub-headings, folding is only a view and is never written, a note always opens fully expanded, the cursor skips folded text, a copy includes hidden text. Fold all and Unfold all are palette commands
+- [x] A heading is dragged by its fold arrow (more than 4 px is a drag, a click is a fold) and always carries its whole section. A heading never shows a grip
+- [x] A callout is dragged by its icon, its bar or the margin strip beside it. A click on the icon still opens the type dropdown
+- [x] Every other block has a grip. A list item carries its nested items
+- [x] During a drag: an open heading or callout folds to one row, a faint copy follows the pointer, the block lifts with a soft shadow, a drop line slides between positions, the note scrolls near the top and bottom (speed tuned and reported: 10 px/frame ~600 px/s), Escape glides it back, and the drop settles at Base
+- [x] Alt+Up and Alt+Down move the block under the caret, a heading with its section. One Ctrl+Z undoes a move with no animation, and the file differs only in the moved block's position
+- [x] The Drag to move tooltip shows once, then never again
+- [x] A control that appears on hover also appears while the caret or keyboard focus is in that block
+- [x] Folds animate at Base. If that cannot be done without risking the note, folds happen at once and Antigravity tells Krishna
 
 ### Menus, slash menu and floating toolbar (UI slice 4)
 

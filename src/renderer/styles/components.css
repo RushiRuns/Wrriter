@@ -1459,4 +1459,199 @@
   transform: rotate(-135deg);
 }
 
+/* --------------------------------------------------------------------------
+   UI Slice 5: Block Handles, Folding, and Drag & Drop
+   -------------------------------------------------------------------------- */
+
+.has-handle {
+  position: relative;
+}
+
+/* Heading fold arrow (16 px, centered on first line, no grip ever) */
+.heading-fold-arrow {
+  position: absolute;
+  left: -26px;
+  top: 6px;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--tx3);
+  background: none;
+  border: none;
+  padding: 0;
+  border-radius: var(--r-s);
+  cursor: grab;
+  opacity: 0;
+  transition: opacity var(--t-fast) var(--ease-move), color var(--t-fast) var(--ease-move);
+  z-index: 5;
+}
+
+.heading-fold-arrow:hover {
+  color: var(--tx);
+}
+
+.heading-fold-arrow .fold-arrow-icon {
+  transition: transform var(--t-fast) var(--ease-move);
+}
+
+.heading-fold-arrow.is-folded {
+  opacity: 1 !important;
+}
+
+.heading-fold-arrow.is-folded .fold-arrow-icon {
+  transform: rotate(-90deg);
+}
+
+/* 24 px grip handle for other blocks */
+.grip-handle {
+  position: absolute;
+  left: -26px;
+  top: 4px;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--tx3);
+  background: none;
+  border: none;
+  padding: 0;
+  border-radius: var(--r-s);
+  cursor: grab;
+  opacity: 0;
+  transition: opacity var(--t-fast) var(--ease-move), color var(--t-fast) var(--ease-move);
+  z-index: 5;
+}
+
+.grip-handle:hover {
+  color: var(--tx);
+  background: color-mix(in srgb, var(--tx) 6%, transparent);
+}
+
+/* Controls appear on hover and when caret / keyboard focus is in the block */
+.has-handle:hover .heading-fold-arrow,
+.has-handle.is-active-block .heading-fold-arrow,
+.has-handle:hover .grip-handle,
+.has-handle.is-active-block .grip-handle {
+  opacity: 1;
+}
+
+/* Invisible 24 px margin strip beside callouts that grabs */
+.co-margin-grab {
+  position: absolute;
+  left: -26px;
+  top: 0;
+  width: 24px;
+  height: 100%;
+  cursor: grab;
+  background: transparent;
+  z-index: 5;
+}
+
+.co .ch .ch-icon {
+  cursor: grab;
+}
+
+/* Folded content hidden state */
+.wr-folded-hidden {
+  display: none !important;
+}
+
+/* Block lifting during drag */
+.wr-block-lifted {
+  box-shadow: var(--sh-2);
+  transform: scale(1.005);
+  transition: transform var(--t-fast) var(--ease-move), box-shadow var(--t-fast) var(--ease-move);
+  z-index: 10;
+}
+
+/* Faint copy following pointer */
+.wr-drag-ghost {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.7;
+  padding: var(--s-1) var(--s-3);
+  background: var(--bg);
+  border: 1px solid var(--div);
+  border-radius: var(--r-s);
+  box-shadow: var(--sh-2);
+  font-family: var(--font-sans);
+  font-size: var(--fs-small);
+  color: var(--tx);
+  white-space: nowrap;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Thin drop indicator line sliding between positions at Fast */
+.wr-drop-indicator {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--acc);
+  border-radius: 1px;
+  pointer-events: none;
+  z-index: 50;
+  transition: top var(--t-fast) var(--ease-move);
+  box-shadow: 0 0 4px color-mix(in srgb, var(--acc) 40%, transparent);
+}
+
+/* "Drag to move" tooltip */
+.wr-drag-tooltip {
+  position: fixed;
+  transform: translateX(-50%);
+  padding: 4px var(--s-2);
+  background: var(--bg);
+  border: 1px solid var(--div);
+  border-radius: var(--r-s);
+  box-shadow: var(--sh-1);
+  font-family: var(--font-sans);
+  font-size: var(--fs-caption);
+  color: var(--tx2);
+  pointer-events: none;
+  z-index: 10000;
+  transition: opacity var(--t-base) var(--ease-leave);
+}
+
+/* Callout type dropdown menu */
+.co-type-dropdown {
+  position: fixed;
+  z-index: 10000;
+  min-width: 140px;
+  padding: 4px;
+  background: var(--bg);
+  border: 1px solid var(--div);
+  border-radius: var(--r-s);
+  box-shadow: var(--sh-2);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.co-type-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 6px var(--s-2);
+  border: none;
+  background: transparent;
+  border-radius: var(--r-s);
+  font-family: var(--font-sans);
+  font-size: var(--fs-small);
+  color: var(--tx);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--t-fast) var(--ease-move);
+}
+
+.co-type-item:hover {
+  background: color-mix(in srgb, var(--tx) 6%, transparent);
+}
+
+
 

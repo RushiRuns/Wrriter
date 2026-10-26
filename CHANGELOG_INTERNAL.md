@@ -16,4 +16,6 @@
 
 [2026-10-26] - Decided and configured Own Vite configs: main.vite.config.ts (bundles main into one file and preload into one file), workers.vite.config.ts (bundles index and jobs workers as separate files for Electron utilityProcess), and renderer.vite.config.ts (multi-window HTML builds for renderer). Added V8 compile cache toggle support with --no-code-cache CLI flag in main and renderer. Zero extra wrapper packages added. - Architecture: multi-process bundling via dedicated Vite configs.
 
+[2026-10-26] - Source tree directory layout established according to ARCHITECTURE.md: created all architectural subfolders under src/shared/ (domain, markdown, ipc), src/main/ (app, windows, ipc, services, store, platform), src/renderer/ (windows/capture, windows/settings, features, editor, components, motion), tests/ (samples, bench), and docs/decisions/. Added .gitkeep to all empty folders to track them in git. - none.
+
 

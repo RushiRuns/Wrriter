@@ -31,3 +31,6 @@ test-vault/
 .wrriter/
 .DS_Store
 Thumbs.db
+
+# folders
+/mockup images

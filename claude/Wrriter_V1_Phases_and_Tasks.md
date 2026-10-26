@@ -50,14 +50,14 @@
 - [x] Read and validate `SCHEMA.md`, including every item marked Open
 - [x] Read and validate `PERFORMANCE.md`, `DEPENDENCIES.md` and `DONE.md`
 - [x] `UTILITIES.md` and `CHANGELOG_INTERNAL.md` exist, with planned entries only
-- [ ] Features 1 to 9, the Feature map by version, the versions doc, the UI hand-off and the UI reference read. Where the versions doc and the Feature map disagree about which version a feature belongs to, the versions doc wins. For looks the order is the UI hand-off, the UI reference, the screenshots, then Features 1 to 9
-- [ ] The Editor view mockup screenshots, light and dark, sit beside the UI hand-off
-- [ ] This file checked by Antigravity and approved by Krishna
+- [x] Features 1 to 9, the Feature map by version, the versions doc, the UI hand-off and the UI reference read. Where the versions doc and the Feature map disagree about which version a feature belongs to, the versions doc wins. For looks the order is the UI hand-off, the UI reference, the screenshots, then Features 1 to 9
+- [x] The Editor view mockup screenshots, light and dark, sit beside the UI hand-off (`mockup images/` and `docs/`)
+- [x] This file checked by Antigravity and approved by Krishna
 
 ### Repository and tools
 
-- [ ] Create the GitHub repository. When it goes public is versions doc Question 3
-- [ ] First commit: the governance set at the repo root, plus the Features docs, the versions doc, the UI hand-off, the UI reference and the mockup screenshots in a folder Krishna picks
+- [x] Create the GitHub repository. When it goes public is versions doc Question 3 (pushed to https://github.com/RushiRuns/Wrriter.git)
+- [x] First commit: the governance set at the repo root, plus the Features docs, the versions doc, the UI hand-off, the UI reference and the mockup screenshots in a folder Krishna picks
 - [x] Check how Antigravity loads project rules. Configured and active via `.agents/rules/` and `SYSTEM.md` section 9
 - [x] Write the reference machine into the repo (PERFORMANCE.md): 64-bit Windows 11, AMD Ryzen 5 5600H (i5-class), 8 GB of RAM and 512 GB NVMe SSD
 - [ ] Arrange a Windows 10 and a Windows 11 machine, real or virtual, for the M1 window check and the clean installs in M5
@@ -70,7 +70,7 @@ Nothing that depends on a row is built until it is decided. Rows 15 to 17 are ne
 |---|---|---|---|---|
 | 1 | Renderer state library (plain React state or Zustand) | **Decided:** Plain React state and context (no Zustand). ADR-W13 | Unblocks renderer features | Decided (Setup) |
 | 2 | Test and lint tools: Vitest, Playwright, ESLint, dependency-cruiser, Stylelint, Prettier, @electron/fuses | **Decided:** Yes to all 7, added when first needed (Vitest, ESLint+typescript-eslint, dependency-cruiser, Prettier now; Stylelint with token checks in M1; Playwright with packaged test in M1; fuses at M5) | Unblocks build checks & tests | Decided (Setup) |
-| 3 | This milestone list | Antigravity audited against Features 1-9, UI hand-off & versions doc; report submitted to Krishna | The start of M1 | Pending Krishna's approval of audit report |
+| 3 | This milestone list | **Approved by Krishna:** Audit report accepted. Unblocks M1 start | The start of M1 | Decided (Setup) |
 | 4 | Versions doc Question 1: if Windows 10 cannot have 16 px corners and also resize and maximise properly, which wins | **Decided:** Yes to recommendation (resizing, maximising and snapping win; Windows' own square corners used on Win 10). Recorded in ADR-W06 | Unblocks M1 window shell fallback | Decided (Setup) |
 | 5 | Worker type for the index and job workers | Day-one check, then ADR-W11 | Both workers | M1 |
 | 6 | File watcher library | Day-one check, then ADR-W12 | The watcher adapter | M1 |
@@ -91,9 +91,9 @@ Nothing that depends on a row is built until it is decided. Rows 15 to 17 are ne
 
 **Done when**
 
-- [ ] Krishna has read every governance doc at least once
+- [x] Krishna has read every governance doc at least once
 - [x] Rows 1 to 4 are answered, and rows 5 to 8 have their check or proposal planned in M1
-- [ ] Krishna has approved this list
+- [x] Krishna has approved this list
 
 ---
 

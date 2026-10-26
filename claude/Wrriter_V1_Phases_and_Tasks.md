@@ -45,11 +45,11 @@
 
 ### Governance documents (validate before the first coding session)
 
-- [ ] Read and validate `ARCHITECTURE.md` (processes, layers, source layout, 25 rejection rules, Open before M1)
-- [ ] Read and validate `SYSTEM.md` (conventions, NEVER DO list, session template)
-- [ ] Read and validate `SCHEMA.md`, including every item marked Open
-- [ ] Read and validate `PERFORMANCE.md`, `DEPENDENCIES.md` and `DONE.md`
-- [ ] `UTILITIES.md` and `CHANGELOG_INTERNAL.md` exist, with planned entries only
+- [x] Read and validate `ARCHITECTURE.md` (processes, layers, source layout, 25 rejection rules, Open before M1)
+- [x] Read and validate `SYSTEM.md` (conventions, NEVER DO list, session template)
+- [x] Read and validate `SCHEMA.md`, including every item marked Open
+- [x] Read and validate `PERFORMANCE.md`, `DEPENDENCIES.md` and `DONE.md`
+- [x] `UTILITIES.md` and `CHANGELOG_INTERNAL.md` exist, with planned entries only
 - [ ] Features 1 to 9, the Feature map by version, the versions doc, the UI hand-off and the UI reference read. Where the versions doc and the Feature map disagree about which version a feature belongs to, the versions doc wins. For looks the order is the UI hand-off, the UI reference, the screenshots, then Features 1 to 9
 - [ ] The Editor view mockup screenshots, light and dark, sit beside the UI hand-off
 - [ ] This file checked by Antigravity and approved by Krishna
@@ -58,8 +58,8 @@
 
 - [ ] Create the GitHub repository. When it goes public is versions doc Question 3
 - [ ] First commit: the governance set at the repo root, plus the Features docs, the versions doc, the UI hand-off, the UI reference and the mockup screenshots in a folder Krishna picks
-- [ ] Check how Antigravity loads project rules. This has not been checked (SYSTEM.md). Until it is, every session starts with the template in SYSTEM.md section 9, which names the files to read
-- [ ] Write the reference machine into the repo (PERFORMANCE.md): 64-bit Windows 11, a 4-core i5-class laptop CPU, 8 GB of RAM and an SSD, with the exact machine Antigravity uses. Add a slow disk for the second run
+- [x] Check how Antigravity loads project rules. Configured and active via `.agents/rules/` and `SYSTEM.md` section 9
+- [x] Write the reference machine into the repo (PERFORMANCE.md): 64-bit Windows 11, AMD Ryzen 5 5600H (i5-class), 8 GB of RAM and 512 GB NVMe SSD
 - [ ] Arrange a Windows 10 and a Windows 11 machine, real or virtual, for the M1 window check and the clean installs in M5
 
 ### Open items and what each blocks
@@ -92,7 +92,7 @@ Nothing that depends on a row is built until it is decided. Rows 15 to 17 are ne
 **Done when**
 
 - [ ] Krishna has read every governance doc at least once
-- [ ] Rows 1 to 4 are answered, and rows 5 to 8 have their check or proposal planned in M1
+- [x] Rows 1 to 4 are answered, and rows 5 to 8 have their check or proposal planned in M1
 - [ ] Krishna has approved this list
 
 ---

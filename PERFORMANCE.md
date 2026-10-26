@@ -11,6 +11,11 @@
 ## Reference Machine and Test Setup
 
 - One reference machine, written down in the repository: 64-bit Windows 11, a 4-core laptop CPU of the i5 class, 8 GB of RAM and an SSD. Antigravity reports the exact machine it used.
+  - **Exact Machine:**
+    - **OS:** 64-bit Windows 11 Home Single Language, Version 10.0.26200
+    - **CPU:** AMD Ryzen 5 5600H with Radeon Graphics (6 cores, 12 logical processors, 3.30 GHz base / 4.20 GHz boost, mobile i5-equivalent)
+    - **RAM:** 8 GB DDR4 (7.35 GB usable)
+    - **Primary Disk:** INTEL SSDPEKNW512G8H (512 GB NVMe SSD)
 - A second run on a slow disk (a hard drive or a throttled disk) is reported next to it, because that is where bad file handling shows.
 - Windows Defender real-time protection stays on for every measurement. A run with it off may be added for comparison only.
 - Always the packaged installer build, never the dev build. A dev build of an Electron app is slow by design and is never used to judge speed.

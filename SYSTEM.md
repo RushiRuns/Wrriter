@@ -5,7 +5,7 @@
 > This file decides the habits: how things are named, shaped, written, tested, and committed.
 > If the two ever disagree, ARCHITECTURE.md wins and this file gets fixed.
 
-Every Antigravity session starts with this file and ARCHITECTURE.md in context. How Antigravity loads project rules by itself has not been checked, so the session template at the bottom names both files explicitly and works regardless of that mechanism.
+Every Antigravity session starts with this file and ARCHITECTURE.md in context. Antigravity loads project rules automatically from `.agents/rules/` (and root `AGENTS.md`), and every session starts with the template in section 9 naming all relevant governance files explicitly.
 
 ---
 

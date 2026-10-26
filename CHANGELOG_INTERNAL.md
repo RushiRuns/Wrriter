@@ -12,4 +12,6 @@
 
 [2026-10-26] - Exact pinning of all dependencies and strict removal of unapproved packages per ARCHITECTURE.md rule 8. Pinned exact versions: react@19.3.1, react-dom@19.3.1, @tiptap/core@3.32.0, @tiptap/react@3.32.0, @tiptap/pm@3.32.0, better-sqlite3@12.11.1, electron@42.11.18, typescript@7.0.2, vite@8.3.5, electron-builder@26.18.0, and @types packages. Replaced electron-vite with native Vite 8 multi-target builds (vite.main.config.ts, vite.preload.config.ts, vite.renderer.config.ts). Removed all pending packages from package.json. - Architecture: strict dependency surface compliance.
 
+[2026-10-26] - Four tsconfig files created with project references: root tsconfig.json referencing tsconfig.shared.json (covers src/shared, no DOM, no Node, no Electron types, enforcing no I/O), tsconfig.main.json (covers src/main, src/workers, src/preload, Node + Electron types, no DOM lib), and tsconfig.renderer.json (covers src/renderer, DOM lib, React JSX, no Node types). All configs configured with target ES2022, module ESNext/bundler, strict, noUncheckedIndexedAccess, noImplicitAny, noEmit. Verified boundary isolation (Node/DOM imports in shared and DOM imports in main fail type checks). - Process boundary enforcement via TypeScript project references.
+
 

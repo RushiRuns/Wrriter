@@ -11,7 +11,7 @@
     "build": "vite build --config vite.main.config.ts && vite build --config vite.preload.config.ts && vite build --config vite.renderer.config.ts",
     "postinstall": "electron-builder install-app-deps",
     "package": "npm run build && electron-builder --win --dir",
-    "check:types": "tsc --noEmit && tsc -p src/shared/tsconfig.json --noEmit",
+    "check:types": "tsc -b",
     "test:day-one:sqlite": "electron out/main/test-day-one-sqlite.js"
   },
   "dependencies": {

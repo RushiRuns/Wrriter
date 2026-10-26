@@ -19,3 +19,16 @@ export class TestIdGenerator implements IdGenerator {
     this.counter = 0;
   }
 }
+
+export class SystemIdGenerator implements IdGenerator {
+  nextId(): string {
+    const cryptoObj = typeof globalThis !== 'undefined'
+      ? (globalThis as unknown as { crypto?: { randomUUID?: () => string } }).crypto
+      : undefined;
+    if (cryptoObj && typeof cryptoObj.randomUUID === 'function') {
+      return cryptoObj.randomUUID();
+    }
+    return 'id-' + Math.random().toString(36).slice(2, 10);
+  }
+}
+

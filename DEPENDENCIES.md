@@ -26,6 +26,7 @@
 | React, react-dom | The interface | MIT | Decided (Features 6) |
 | TipTap (core and only the extensions Wrriter uses) | The one editor | MIT | Decided (Features 2, 7). Brings ProseMirror with it. Each extension added is listed here when added |
 | better-sqlite3 | The search index, in the index worker only | MIT | Decided (Features 4). Passed day-one check inside packaged app and utilityProcess (ADR-W11) |
+| @parcel/watcher | File watcher, Windows ReadDirectoryChangesW | MIT | Decided in day-one check (ADR-W12). Fast startup (<100ms) and <3MB RAM |
 | Inter (font files) | The one interface and note font, bundled | SIL OFL 1.1 | Decided (Features 1). Never loaded from the web |
 | PDF.js (Version 2) | PDF preview, bundled, in its own worker | Apache-2.0 | Decided (Features 5). Not added before Version 2 |
 

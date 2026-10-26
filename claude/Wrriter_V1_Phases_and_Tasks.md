@@ -141,22 +141,22 @@ Nothing that depends on a row is built until it is decided. Rows 15 to 17 are ne
 
 ### Files on disk and safety
 
-- [ ] `VaultReader`
-- [ ] `SafeWriter`: a dot-prefixed temp file beside the note, flush, rename over the note, line endings and byte order mark kept, a byte comparison so unchanged bytes are never written, the write remembered so the watcher ignores it, and a retry with the text kept when another app has the file locked
-- [ ] SafeWriter kill test: the process ended in the middle of saving a large note, 100 times, and no note is ever damaged. Plus a locked file, Windows line endings and a byte order mark
-- [ ] Watcher adapter on the ADR-W12 library: events batched, Wrriter's own writes ignored for a moment, a full rescan on lost events
-- [ ] `JobsStore`: one file per vault in the app data folder, saved the safe way, ticks in batches of about 100, room for encrypted entries in Version 2
-- [ ] `JobRunner` in the job worker: one job at a time, about 4 to 8 files in parallel, each through `SafeWriter` with its flush
-- [ ] `JobService`: the job written before the first file is touched, finished (never undone) at the next start with a notice, locked files retried, missing files skipped, a job on an unavailable vault waits. Proven here with a test job. The real jobs arrive in M3 and M4
-- [ ] Which worker writes autosaves: Antigravity proposes, Krishna approves, ADR (open item 7)
-- [ ] `AppDataStore`: `vaults.json`, `settings.json`, `window-state.json`, the first-paint state per vault and `logs/`. Every format versioned. Plain JSON and the file names confirmed (open item 8)
-- [ ] `shared/domain/names`: characters Windows does not allow, trailing spaces and dots, reserved names, the 100-character cap in the file name only, a number on a clash, never two names that differ only by case. Path length tested with long titles and deep folders
-- [ ] `FractionalIndex` in `shared/domain/ordering`, and `OrderService` for `.wrriter/order.json` and `.wrriter/pins.json`
-- [ ] Folders whose names start with a dot are never read, changed or shown, except `.wrriter`. `attachments/` is hidden from the tree
-- [ ] Syncthing conflict copies show as ordinary notes. Handling them is Version 2
-- [ ] `RecycleBin` adapter. Every delete goes to the Windows Recycle Bin
-- [ ] `Notice` component, in the same corner every time
-- [ ] Index table layout proposed by Antigravity (SCHEMA.md). It is a cache, so it can change freely later
+- [x] `VaultReader`
+- [x] `SafeWriter`: a dot-prefixed temp file beside the note, flush, rename over the note, line endings and byte order mark kept, a byte comparison so unchanged bytes are never written, the write remembered so the watcher ignores it, and a retry with the text kept when another app has the file locked
+- [x] SafeWriter kill test: the process ended in the middle of saving a large note, 100 times, and no note is ever damaged. Plus a locked file, Windows line endings and a byte order mark
+- [x] Watcher adapter on the ADR-W12 library: events batched, Wrriter's own writes ignored for a moment, a full rescan on lost events
+- [x] `JobsStore`: one file per vault in the app data folder, saved the safe way, ticks in batches of about 100, room for encrypted entries in Version 2
+- [x] `JobRunner` in the job worker: one job at a time, about 4 to 8 files in parallel, each through `SafeWriter` with its flush
+- [x] `JobService`: the job written before the first file is touched, finished (never undone) at the next start with a notice, locked files retried, missing files skipped, a job on an unavailable vault waits. Proven here with a test job. The real jobs arrive in M3 and M4
+- [x] Which worker writes autosaves: Antigravity proposes, Krishna approves, ADR (open item 7)
+- [x] `AppDataStore`: `vaults.json`, `settings.json`, `window-state.json`, the first-paint state per vault and `logs/`. Every format versioned. Plain JSON and the file names confirmed (open item 8)
+- [x] `shared/domain/names`: characters Windows does not allow, trailing spaces and dots, reserved names, the 100-character cap in the file name only, a number on a clash, never two names that differ only by case. Path length tested with long titles and deep folders
+- [x] `FractionalIndex` in `shared/domain/ordering`, and `OrderService` for `.wrriter/order.json` and `.wrriter/pins.json`
+- [x] Folders whose names start with a dot are never read, changed or shown, except `.wrriter`. `attachments/` is hidden from the tree
+- [x] Syncthing conflict copies show as ordinary notes. Handling them is Version 2
+- [x] `RecycleBin` adapter. Every delete goes to the Windows Recycle Bin
+- [x] `Notice` component, in the same corner every time
+- [x] Index table layout proposed by Antigravity (SCHEMA.md). It is a cache, so it can change freely later
 
 ### Startup
 

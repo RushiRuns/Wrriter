@@ -30,6 +30,7 @@
     "test:day-one:sqlite": "electron out/main/test-day-one-sqlite.js"
   },
   "dependencies": {
+    "@parcel/watcher": "^2.6.0",
     "@tiptap/core": "3.32.0",
     "@tiptap/pm": "3.32.0",
     "@tiptap/react": "3.32.0",

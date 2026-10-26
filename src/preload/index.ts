@@ -1,18 +1,25 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type {
   CreateFolderArgs,
+  CreateVaultArgs,
   DeleteFolderArgs,
   DeleteNoteArgs,
   IpcChannel,
   IpcChannelTable,
+  LocateVaultArgs,
   OpenVaultArgs,
   ReadNoteArgs,
+  RemoveVaultArgs,
   RenameFolderArgs,
+  RenameVaultArgs,
   SaveNoteArgs,
+  SelectFolderDialogArgs,
   SetAccentArgs,
   SetPaneWidthsArgs,
   SetPinnedArgs,
   SetThemeArgs,
+  ShowInExplorerArgs,
+  SwitchVaultArgs,
   WrriterApi
 } from '../shared/ipc';
 import type { Result } from '../shared/result';
@@ -34,8 +41,16 @@ const api: WrriterApi = {
   },
   vault: {
     open: (args: OpenVaultArgs) => invoke('vault.open', args),
+    create: (args: CreateVaultArgs = {}) => invoke('vault.create', args),
     close: () => invoke('vault.close', {}),
-    getActive: () => invoke('vault.getActive', {})
+    getActive: () => invoke('vault.getActive', {}),
+    list: () => invoke('vault.list', {}),
+    switch: (args: SwitchVaultArgs) => invoke('vault.switch', args),
+    rename: (args: RenameVaultArgs) => invoke('vault.rename', args),
+    remove: (args: RemoveVaultArgs) => invoke('vault.remove', args),
+    locate: (args: LocateVaultArgs) => invoke('vault.locate', args),
+    showInExplorer: (args: ShowInExplorerArgs) => invoke('vault.showInExplorer', args),
+    selectFolderDialog: (args: SelectFolderDialogArgs = {}) => invoke('vault.selectFolderDialog', args)
   },
   note: {
     read: (args: ReadNoteArgs) => invoke('note.read', args),

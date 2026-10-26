@@ -1,24 +1,36 @@
 import type { Result } from '../result';
 import type {
   AccentName,
+  CloseVaultArgs,
   CreateFolderArgs,
+  CreateVaultArgs,
   DeleteFolderArgs,
   DeleteNoteArgs,
+  GetActiveVaultArgs,
+  GetStartupStateArgs,
   IpcChannel,
   IpcChannelTable,
+  ListVaultsArgs,
+  LocateVaultArgs,
   NoteContent,
   OpenVaultArgs,
   ReadNoteArgs,
+  RemoveVaultArgs,
   RenameFolderArgs,
+  RenameVaultArgs,
   SaveNoteArgs,
   SaveOutcome,
+  SelectFolderDialogArgs,
   SetAccentArgs,
   SetPaneWidthsArgs,
   SetPinnedArgs,
   SetThemeArgs,
+  ShowInExplorerArgs,
   StartupState,
+  SwitchVaultArgs,
   ThemeName,
-  VaultInfo
+  VaultInfo,
+  VaultListItem
 } from './contracts';
 
 export * from './contracts';
@@ -38,8 +50,16 @@ export interface WrriterApi {
   };
   readonly vault: {
     open(args: OpenVaultArgs): Promise<Result<VaultInfo>>;
+    create(args?: CreateVaultArgs): Promise<Result<VaultInfo>>;
     close(): Promise<Result<void>>;
     getActive(): Promise<Result<VaultInfo | null>>;
+    list(): Promise<Result<readonly VaultListItem[]>>;
+    switch(args: SwitchVaultArgs): Promise<Result<VaultInfo>>;
+    rename(args: RenameVaultArgs): Promise<Result<void>>;
+    remove(args: RemoveVaultArgs): Promise<Result<void>>;
+    locate(args: LocateVaultArgs): Promise<Result<void>>;
+    showInExplorer(args: ShowInExplorerArgs): Promise<Result<void>>;
+    selectFolderDialog(args?: SelectFolderDialogArgs): Promise<Result<string | null>>;
   };
   readonly note: {
     read(args: ReadNoteArgs): Promise<Result<NoteContent>>;

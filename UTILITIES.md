@@ -78,7 +78,7 @@ Each of these exists exactly once. A second copy is a bug.
 
 | Name | Purpose | Milestone | Status |
 |---|---|---|---|
-| `VaultService` | Open a folder as a vault, create a vault, the vault list, unavailable vaults, `resolveInside` | M1 | Planned |
+| `VaultService` | Open a folder as a vault, create a vault, the vault list, unavailable vaults, `resolveInside` (`src/main/services/vault-service.ts`) | M1 | Built |
 | `NoteService` | Save, rename on leaving, duplicate, delete to the Recycle Bin, pin | M1 to M2 | Planned |
 | `FolderService` | New, rename, move, delete with a count | M1 | Planned |
 | `OrderService` | Manual order and pins in `.wrriter` (`src/main/services/order-service.ts`) | M1 | Built |

@@ -6,12 +6,14 @@ import { IpcRouter } from '../ipc/router';
 import { VaultReader } from './vault-reader';
 import { WatcherAdapter } from './watcher-adapter';
 import { JobService } from './job-service';
+import { VaultService } from './vault-service';
 import { Result, ok, err } from '../../shared/result';
 import type { StartupState, AccentName, SetPaneWidthsArgs } from '../../shared/ipc';
 
 export interface WindowServiceOptions {
   appDataStore: AppDataStore;
   ipcRouter: IpcRouter;
+  vaultService?: VaultService | undefined;
   vaultReader?: VaultReader | undefined;
   watcherAdapter?: { start(): Promise<void>; stop(): Promise<void> } | undefined;
   watcherFactory?: ((vaultPath: string) => { start(): Promise<void>; stop(): Promise<void> }) | undefined;
@@ -22,6 +24,7 @@ export interface WindowServiceOptions {
 export class WindowService {
   private readonly appDataStore: AppDataStore;
   private readonly ipcRouter: IpcRouter;
+  private readonly vaultService: VaultService;
   private readonly vaultReader: VaultReader;
   private readonly watcherAdapter?: { start(): Promise<void>; stop(): Promise<void> };
   private readonly watcherFactory?: (vaultPath: string) => { start(): Promise<void>; stop(): Promise<void> };
@@ -33,6 +36,7 @@ export class WindowService {
   private currentSettings: AppSettings | null = null;
   private activeVault: KnownVault | null = null;
   private firstPaintState: FirstPaintState | null = null;
+  private activeWatcher?: { start(): Promise<void>; stop(): Promise<void> } | undefined;
 
   private boundsSaveTimer: NodeJS.Timeout | null = null;
   private isIdleWorkStarted = false;
@@ -41,6 +45,12 @@ export class WindowService {
     this.appDataStore = options.appDataStore;
     this.ipcRouter = options.ipcRouter;
     this.vaultReader = options.vaultReader ?? new VaultReader();
+    this.vaultService =
+      options.vaultService ??
+      new VaultService({
+        appDataStore: this.appDataStore,
+        onActiveVaultChanged: (vault) => this.handleActiveVaultChanged(vault)
+      });
     if (options.watcherAdapter) {
       this.watcherAdapter = options.watcherAdapter;
     }
@@ -66,7 +76,8 @@ export class WindowService {
    * 3. Show window only when ready-to-show (first frame ready) with zero white flash.
    */
   async createMainWindow(): Promise<BrowserWindow> {
-    // 1. Read settings, window state, and vaults
+    // 1. Initialize vault service and read settings, window state, and vaults
+    await this.vaultService.initialize();
     const [settings, windowState, vaults] = await Promise.all([
       this.appDataStore.getSettings(),
       this.appDataStore.getWindowState(),
@@ -76,13 +87,8 @@ export class WindowService {
     this.currentSettings = settings;
     this.currentWindowState = windowState;
 
-    // Determine active vault: latest opened vault
-    if (vaults.length > 0) {
-      const sorted = vaults.slice().sort((a, b) => b.lastOpenedAt - a.lastOpenedAt);
-      this.activeVault = sorted[0] ?? null;
-    } else {
-      this.activeVault = null;
-    }
+    const activeId = this.vaultService.getActiveVaultId();
+    this.activeVault = activeId ? (vaults.find((v) => v.id === activeId) ?? null) : null;
 
     // 2. Load cached first-paint state for the active vault if available
     if (this.activeVault) {
@@ -239,6 +245,48 @@ export class WindowService {
       this.triggerIdleWork();
       return ok(undefined);
     });
+
+    // 4. Vault management channels
+    this.ipcRouter.register('vault.open', (args) => this.vaultService.openVault(args));
+    this.ipcRouter.register('vault.create', (args) => this.vaultService.createVault(args));
+    this.ipcRouter.register('vault.close', () => this.vaultService.closeVault());
+    this.ipcRouter.register('vault.getActive', () => this.vaultService.getActiveVault());
+    this.ipcRouter.register('vault.list', () => this.vaultService.listVaults());
+    this.ipcRouter.register('vault.switch', (args) => this.vaultService.switchVault(args));
+    this.ipcRouter.register('vault.rename', (args) => this.vaultService.renameVault(args));
+    this.ipcRouter.register('vault.remove', (args) => this.vaultService.removeVault(args));
+    this.ipcRouter.register('vault.locate', (args) => this.vaultService.locateVault(args));
+    this.ipcRouter.register('vault.showInExplorer', (args) => this.vaultService.showInExplorer(args));
+    this.ipcRouter.register('vault.selectFolderDialog', (args) => this.vaultService.selectFolderDialog(args));
+  }
+
+  /**
+   * Updates state and switches watcher when active vault changes.
+   */
+  async handleActiveVaultChanged(vault: KnownVault | null): Promise<void> {
+    this.activeVault = vault;
+    if (this.activeWatcher) {
+      try {
+        await this.activeWatcher.stop();
+      } catch {
+        // Safe skip on watcher stop
+      }
+      this.activeWatcher = undefined;
+    }
+
+    if (vault) {
+      this.firstPaintState = await this.appDataStore.getFirstPaintState(vault.id);
+      if (this.watcherFactory) {
+        try {
+          this.activeWatcher = this.watcherFactory(vault.path);
+          await this.activeWatcher.start();
+        } catch {
+          // Safe skip
+        }
+      }
+    } else {
+      this.firstPaintState = null;
+    }
   }
 
   /**

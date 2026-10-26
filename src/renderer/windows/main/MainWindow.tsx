@@ -8,9 +8,12 @@ import {
   ArchiveTileIcon,
   TrashTileIcon,
   FolderClosedIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  ChevronUpDownIcon
 } from '../../components/icons';
-import type { FirstPaintNoteSummary, StartupState } from '../../../shared/ipc';
+import { FirstRunScreen } from '../../components/FirstRunScreen';
+import { VaultMenu } from '../../components/VaultMenu';
+import type { FirstPaintNoteSummary, StartupState, VaultInfo } from '../../../shared/ipc';
 
 export const MainWindow: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -20,9 +23,29 @@ export const MainWindow: React.FC = () => {
   const [notes, setNotes] = useState<readonly FirstPaintNoteSummary[]>([]);
   const [selectedNotePath, setSelectedNotePath] = useState<string | null>(null);
   const [noteTitle, setNoteTitle] = useState('Welcome to Wrriter');
-  const [vaultName, setVaultName] = useState<string | null>(null);
+  const [activeVault, setActiveVault] = useState<VaultInfo | null>(null);
+  const [vaultMenuOpen, setVaultMenuOpen] = useState(false);
+  const [showFirstRun, setShowFirstRun] = useState(false);
 
   const resizeCleanupRef = useRef<(() => void) | null>(null);
+
+  const reloadNotesForActiveVault = useCallback(async () => {
+    if (window.wrriter?.app?.getStartupState) {
+      const res = await window.wrriter.app.getStartupState();
+      if (res.ok) {
+        const state: StartupState = res.value;
+        if (state.firstPaintNotes && state.firstPaintNotes.length > 0) {
+          setNotes(state.firstPaintNotes);
+          setSelectedNotePath(state.firstPaintNotes[0]?.path ?? null);
+          setNoteTitle(state.firstPaintNotes[0]?.title ?? 'Untitled');
+        } else {
+          setNotes([]);
+          setSelectedNotePath(null);
+          setNoteTitle('Welcome to Wrriter');
+        }
+      }
+    }
+  }, []);
 
   // Load initial startup state from IPC (or query string fallback)
   useEffect(() => {
@@ -45,7 +68,15 @@ export const MainWindow: React.FC = () => {
           const state: StartupState = res.value;
           if (state.windowState.sidebarWidth) setSidebarWidth(state.windowState.sidebarWidth);
           if (state.windowState.listWidth) setListWidth(state.windowState.listWidth);
-          if (state.activeVault) setVaultName(state.activeVault.name);
+
+          if (state.activeVault) {
+            setActiveVault(state.activeVault);
+            setShowFirstRun(false);
+          } else {
+            setActiveVault(null);
+            setShowFirstRun(true);
+          }
+
           if (state.firstPaintNotes && state.firstPaintNotes.length > 0) {
             setNotes(state.firstPaintNotes);
             setSelectedNotePath(state.firstPaintNotes[0]?.path ?? null);
@@ -124,6 +155,25 @@ export const MainWindow: React.FC = () => {
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseup', onMouseUp);
   };
+
+  // Show First-Run Screen if no vault is active / zero vaults
+  if (showFirstRun) {
+    return (
+      <WindowShell
+        sidebarOpen={false}
+        onToggleSidebar={() => {}}
+        noteName="Wrriter"
+      >
+        <FirstRunScreen
+          onVaultOpened={async (vault) => {
+            setActiveVault(vault);
+            setShowFirstRun(false);
+            await reloadNotesForActiveVault();
+          }}
+        />
+      </WindowShell>
+    );
+  }
 
   return (
     <WindowShell
@@ -221,14 +271,58 @@ export const MainWindow: React.FC = () => {
             </div>
           </div>
 
-          {/* Bottom Vault Button and Gear */}
-          <div style={{ borderTop: '1px solid var(--div)', padding: '8px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ width: 24, height: 24, borderRadius: '50%', backgroundColor: 'var(--vault-p)', color: '#fff', display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 700 }}>
-                {vaultName ? vaultName[0]?.toUpperCase() : 'W'}
+          {/* Bottom Vault Button and Popup Menu */}
+          <div className="vaults" style={{ position: 'relative' }}>
+            <button
+              type="button"
+              className="vtrig"
+              aria-expanded={vaultMenuOpen}
+              onClick={() => setVaultMenuOpen((open) => !open)}
+              title="Vault menu"
+              style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer' }}
+            >
+              <div
+                className="vc p"
+                style={{
+                  backgroundColor: 'var(--vault-p)',
+                  color: '#fff',
+                  width: 24,
+                  height: 24,
+                  borderRadius: '50%',
+                  display: 'grid',
+                  placeItems: 'center',
+                  fontSize: 12,
+                  fontWeight: 700
+                }}
+              >
+                {activeVault?.name ? activeVault.name[0]?.toUpperCase() : 'W'}
               </div>
-              <span style={{ fontSize: 'var(--fs-ui)', fontWeight: 600 }}>{vaultName || 'Personal Vault'}</span>
-            </div>
+              <span className="vn">{activeVault?.name || 'Personal Vault'}</span>
+              <ChevronUpDownIcon style={{ marginLeft: 'auto', width: 16, height: 16, color: 'var(--tx3)' }} />
+            </button>
+
+            {/* Floating Vault Menu */}
+            <VaultMenu
+              isOpen={vaultMenuOpen}
+              onClose={() => setVaultMenuOpen(false)}
+              activeVaultId={activeVault?.vaultId ?? null}
+              onVaultSwitched={async (newVault) => {
+                setActiveVault(newVault);
+                await reloadNotesForActiveVault();
+              }}
+              onVaultListChanged={async () => {
+                if (window.wrriter?.vault?.getActive) {
+                  const res = await window.wrriter.vault.getActive();
+                  if (res.ok && res.value) {
+                    setActiveVault(res.value);
+                  }
+                }
+              }}
+              onShowFirstRun={() => {
+                setActiveVault(null);
+                setShowFirstRun(true);
+              }}
+            />
           </div>
         </div>
 

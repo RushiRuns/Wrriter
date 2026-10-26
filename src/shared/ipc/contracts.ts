@@ -62,12 +62,51 @@ export type GetStartupStateArgs = Record<string, never>;
 
 
 // 2. vault.*
+export interface VaultListItem {
+  readonly id: string;
+  readonly name: string;
+  readonly path: string;
+  readonly isAvailable: boolean;
+  readonly isActive: boolean;
+}
+
 export interface OpenVaultArgs {
   readonly path: string;
 }
 
+export interface CreateVaultArgs {
+  readonly path?: string;
+}
+
 export type CloseVaultArgs = Record<string, never>;
 export type GetActiveVaultArgs = Record<string, never>;
+export type ListVaultsArgs = Record<string, never>;
+
+export interface SwitchVaultArgs {
+  readonly vaultId: string;
+}
+
+export interface RenameVaultArgs {
+  readonly vaultId: string;
+  readonly newName: string;
+}
+
+export interface RemoveVaultArgs {
+  readonly vaultId: string;
+}
+
+export interface LocateVaultArgs {
+  readonly vaultId: string;
+  readonly newPath: string;
+}
+
+export interface ShowInExplorerArgs {
+  readonly vaultId: string;
+}
+
+export interface SelectFolderDialogArgs {
+  readonly defaultPath?: string;
+}
 
 // 3. note.*
 export interface ReadNoteArgs {
@@ -121,8 +160,16 @@ export interface IpcChannelTable {
   'window.setPaneWidths': { args: SetPaneWidthsArgs; result: void };
   'window.firstPaintComplete': { args: FirstPaintCompleteArgs; result: void };
   'vault.open': { args: OpenVaultArgs; result: VaultInfo };
+  'vault.create': { args: CreateVaultArgs; result: VaultInfo };
   'vault.close': { args: CloseVaultArgs; result: void };
   'vault.getActive': { args: GetActiveVaultArgs; result: VaultInfo | null };
+  'vault.list': { args: ListVaultsArgs; result: readonly VaultListItem[] };
+  'vault.switch': { args: SwitchVaultArgs; result: VaultInfo };
+  'vault.rename': { args: RenameVaultArgs; result: void };
+  'vault.remove': { args: RemoveVaultArgs; result: void };
+  'vault.locate': { args: LocateVaultArgs; result: void };
+  'vault.showInExplorer': { args: ShowInExplorerArgs; result: void };
+  'vault.selectFolderDialog': { args: SelectFolderDialogArgs; result: string | null };
   'note.read': { args: ReadNoteArgs; result: NoteContent };
   'note.save': { args: SaveNoteArgs; result: SaveOutcome };
   'note.setPinned': { args: SetPinnedArgs; result: void };
@@ -162,8 +209,68 @@ export const IPC_VALIDATORS: { readonly [K in IpcChannel]: Validator<IpcChannelT
     return ok({ path: path.value });
   },
 
+  'vault.create': (input: unknown): Result<CreateVaultArgs> => {
+    if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });
+    if (input['path'] !== undefined) {
+      const p = validateNonEmptyString('path', input['path']);
+      if (!p.ok) return p;
+      return ok({ path: p.value });
+    }
+    return ok({});
+  },
+
   'vault.close': validateEmptyArgs,
   'vault.getActive': validateEmptyArgs,
+  'vault.list': validateEmptyArgs,
+
+  'vault.switch': (input: unknown): Result<SwitchVaultArgs> => {
+    if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });
+    const vaultId = validateNonEmptyString('vaultId', input['vaultId']);
+    if (!vaultId.ok) return vaultId;
+    return ok({ vaultId: vaultId.value });
+  },
+
+  'vault.rename': (input: unknown): Result<RenameVaultArgs> => {
+    if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });
+    const vaultId = validateNonEmptyString('vaultId', input['vaultId']);
+    if (!vaultId.ok) return vaultId;
+    const newName = validateNonEmptyString('newName', input['newName']);
+    if (!newName.ok) return newName;
+    return ok({ vaultId: vaultId.value, newName: newName.value });
+  },
+
+  'vault.remove': (input: unknown): Result<RemoveVaultArgs> => {
+    if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });
+    const vaultId = validateNonEmptyString('vaultId', input['vaultId']);
+    if (!vaultId.ok) return vaultId;
+    return ok({ vaultId: vaultId.value });
+  },
+
+  'vault.locate': (input: unknown): Result<LocateVaultArgs> => {
+    if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });
+    const vaultId = validateNonEmptyString('vaultId', input['vaultId']);
+    if (!vaultId.ok) return vaultId;
+    const newPath = validateNonEmptyString('newPath', input['newPath']);
+    if (!newPath.ok) return newPath;
+    return ok({ vaultId: vaultId.value, newPath: newPath.value });
+  },
+
+  'vault.showInExplorer': (input: unknown): Result<ShowInExplorerArgs> => {
+    if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });
+    const vaultId = validateNonEmptyString('vaultId', input['vaultId']);
+    if (!vaultId.ok) return vaultId;
+    return ok({ vaultId: vaultId.value });
+  },
+
+  'vault.selectFolderDialog': (input: unknown): Result<SelectFolderDialogArgs> => {
+    if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });
+    if (input['defaultPath'] !== undefined) {
+      const p = validateNonEmptyString('defaultPath', input['defaultPath']);
+      if (!p.ok) return p;
+      return ok({ defaultPath: p.value });
+    }
+    return ok({});
+  },
 
   'note.read': (input: unknown): Result<ReadNoteArgs> => {
     if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });

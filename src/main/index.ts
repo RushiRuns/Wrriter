@@ -9,6 +9,7 @@ import { WatcherAdapter } from './services/watcher-adapter';
 import { SafeWriter } from './services/safe-writer';
 import { JobsStore } from './store/jobs-store';
 import { JobService } from './services/job-service';
+import { VaultService } from './services/vault-service';
 
 // 1. Single-instance lock
 const gotTheLock = app.requestSingleInstanceLock();
@@ -23,10 +24,15 @@ const ipcRouter = new IpcRouter();
 const vaultReader = new VaultReader();
 const jobsStore = new JobsStore(appDataDir, safeWriter);
 const jobService = new JobService(jobsStore);
+const vaultService = new VaultService({
+  appDataStore,
+  safeWriter
+});
 
 const windowService = new WindowService({
   appDataStore,
   ipcRouter,
+  vaultService,
   vaultReader,
   watcherFactory: (vaultPath: string) =>
     new WatcherAdapter(vaultPath, safeWriter, {

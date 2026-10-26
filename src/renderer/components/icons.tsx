@@ -456,3 +456,27 @@ export const TabCloseIcon: React.FC<IconProps> = ({ className = 'ic xs', style }
     <path d="M6 6l12 12M18 6L6 18" />
   </svg>
 );
+
+// 54. Checkmark
+export const CheckmarkIcon: React.FC<IconProps> = ({ className = 'ic sm', style }) => (
+  <svg className={className} style={style} viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
+
+// 55. Chevron Up/Down (selector)
+export const ChevronUpDownIcon: React.FC<IconProps> = ({ className = 'ic sm', style }) => (
+  <svg className={className} style={style} viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M7 15l5 5 5-5M7 9l5-5 5-5" />
+  </svg>
+);
+
+// 56. Folder Add
+export const FolderAddIcon: React.FC<IconProps> = ({ className = 'ic', style }) => (
+  <svg className={className} style={style} viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2z" />
+    <line x1="12" y1="10" x2="12" y2="16" />
+    <line x1="9" y1="13" x2="15" y2="13" />
+  </svg>
+);
+

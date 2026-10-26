@@ -167,13 +167,13 @@ Nothing that depends on a row is built until it is decided. Rows 15 to 17 are ne
 
 ### Vaults
 
-- [ ] First-run screen with two buttons: open a folder as a vault, or create a new vault in a suggested `Documents\Wrriter` or any other place (not drawn in the mockup, shown to Krishna)
-- [ ] Open folder as vault: the notes show at once, nothing is converted, and nothing is written except `.wrriter/vault.json` with a UUID v4 vault id
-- [ ] A folder inside an existing vault, or one that contains a vault, is refused with the reason
-- [ ] Several vaults. The vault button opens the vault menu: the vaults with a check on the open one, switching, and Add vault. Each vault has its own folders, pins and order
-- [ ] Vault right-click menu: rename (display name only), show in File Explorer, remove from Wrriter (never deletes a file)
-- [ ] An unavailable vault (drive unplugged, folder renamed) shows Locate and Remove from list
-- [ ] Nothing crosses from one vault into another
+- [x] First-run screen with two buttons: open a folder as a vault, or create a new vault in a suggested `Documents\Wrriter` or any other place (not drawn in the mockup, shown to Krishna)
+- [x] Open folder as vault: the notes show at once, nothing is converted, and nothing is written except `.wrriter/vault.json` with a UUID v4 vault id
+- [x] A folder inside an existing vault, or one that contains a vault, is refused with the reason
+- [x] Several vaults. The vault button opens the vault menu: the vaults with a check on the open one, switching, and Add vault. Each vault has its own folders, pins and order
+- [x] Vault right-click menu: rename (display name only), show in File Explorer, remove from Wrriter (never deletes a file)
+- [x] An unavailable vault (drive unplugged, folder renamed) shows Locate and Remove from list
+- [x] Nothing crosses from one vault into another
 
 ### Window shell and panes (UI slices 1 and 2)
 

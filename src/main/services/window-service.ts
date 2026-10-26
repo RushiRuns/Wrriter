@@ -7,6 +7,8 @@ import { VaultReader } from './vault-reader';
 import { WatcherAdapter } from './watcher-adapter';
 import { JobService } from './job-service';
 import { VaultService } from './vault-service';
+import { FolderService } from './folder-service';
+import { NoteService } from './note-service';
 import { Result, ok, err } from '../../shared/result';
 import type { StartupState, AccentName, SetPaneWidthsArgs } from '../../shared/ipc';
 
@@ -14,6 +16,8 @@ export interface WindowServiceOptions {
   appDataStore: AppDataStore;
   ipcRouter: IpcRouter;
   vaultService?: VaultService | undefined;
+  folderService?: FolderService | undefined;
+  noteService?: NoteService | undefined;
   vaultReader?: VaultReader | undefined;
   watcherAdapter?: { start(): Promise<void>; stop(): Promise<void> } | undefined;
   watcherFactory?: ((vaultPath: string) => { start(): Promise<void>; stop(): Promise<void> }) | undefined;
@@ -25,6 +29,8 @@ export class WindowService {
   private readonly appDataStore: AppDataStore;
   private readonly ipcRouter: IpcRouter;
   private readonly vaultService: VaultService;
+  private readonly folderService: FolderService;
+  private readonly noteService: NoteService;
   private readonly vaultReader: VaultReader;
   private readonly watcherAdapter?: { start(): Promise<void>; stop(): Promise<void> };
   private readonly watcherFactory?: (vaultPath: string) => { start(): Promise<void>; stop(): Promise<void> };
@@ -51,6 +57,8 @@ export class WindowService {
         appDataStore: this.appDataStore,
         onActiveVaultChanged: (vault) => this.handleActiveVaultChanged(vault)
       });
+    this.folderService = options.folderService ?? new FolderService();
+    this.noteService = options.noteService ?? new NoteService({ vaultReader: this.vaultReader });
     if (options.watcherAdapter) {
       this.watcherAdapter = options.watcherAdapter;
     }
@@ -258,6 +266,55 @@ export class WindowService {
     this.ipcRouter.register('vault.locate', (args) => this.vaultService.locateVault(args));
     this.ipcRouter.register('vault.showInExplorer', (args) => this.vaultService.showInExplorer(args));
     this.ipcRouter.register('vault.selectFolderDialog', (args) => this.vaultService.selectFolderDialog(args));
+
+    // 5. Note channels
+    this.ipcRouter.register('note.read', async (args) => {
+      if (!this.activeVault) return err({ kind: 'vaultUnavailable' });
+      const res = await this.noteService.readNote(this.activeVault.path, args.path);
+      if (!res.ok) return res;
+      return ok({
+        path: args.path,
+        text: res.value.text
+      });
+    });
+    this.ipcRouter.register('note.save', (args) =>
+      this.activeVault ? this.noteService.saveNote(this.activeVault.path, args.path, args.text) : err({ kind: 'vaultUnavailable' })
+    );
+    this.ipcRouter.register('note.setPinned', (args) =>
+      this.activeVault ? this.noteService.setPinned(this.activeVault.path, args.path, args.pinned) : err({ kind: 'vaultUnavailable' })
+    );
+    this.ipcRouter.register('note.delete', (args) =>
+      this.activeVault ? this.noteService.deleteNote(this.activeVault.path, args.path) : err({ kind: 'vaultUnavailable' })
+    );
+    this.ipcRouter.register('note.list', (args) =>
+      this.activeVault ? this.noteService.listNotes(this.activeVault.path, args) : err({ kind: 'vaultUnavailable' })
+    );
+    this.ipcRouter.register('note.setOrder', (args) =>
+      this.activeVault
+        ? this.noteService.setOrder(this.activeVault.path, args.folder ?? '', args.path, args.beforeKey ?? null, args.afterKey ?? null)
+        : err({ kind: 'vaultUnavailable' })
+    );
+
+    // 6. Folder channels
+    this.ipcRouter.register('folder.create', (args) =>
+      this.activeVault ? this.folderService.createFolder(this.activeVault.path, args.path) : err({ kind: 'vaultUnavailable' })
+    );
+    this.ipcRouter.register('folder.rename', (args) =>
+      this.activeVault ? this.folderService.renameFolder(this.activeVault.path, args.oldPath, args.newPath) : err({ kind: 'vaultUnavailable' })
+    );
+    this.ipcRouter.register('folder.delete', async (args) => {
+      if (!this.activeVault) return err({ kind: 'vaultUnavailable' });
+      const res = await this.folderService.deleteFolder(this.activeVault.path, args.path);
+      if (!res.ok) return res;
+      return ok(undefined);
+    });
+    this.ipcRouter.register('folder.list', () =>
+      this.activeVault ? this.folderService.listFolders(this.activeVault.path) : err({ kind: 'vaultUnavailable' })
+    );
+
+    // 7. Settings channels
+    this.ipcRouter.register('app.getSettings', async () => ok(await this.appDataStore.getSettings()));
+    this.ipcRouter.register('app.saveSettings', async (args) => this.appDataStore.saveSettings(args));
   }
 
   /**

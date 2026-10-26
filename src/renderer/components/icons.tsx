@@ -480,3 +480,7 @@ export const FolderAddIcon: React.FC<IconProps> = ({ className = 'ic', style }) 
   </svg>
 );
 
+// 57. MoreDotsIcon alias
+export const MoreDotsIcon = ThreeDotsHorizontalIcon;
+
+

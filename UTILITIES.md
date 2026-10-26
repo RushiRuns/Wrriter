@@ -79,8 +79,8 @@ Each of these exists exactly once. A second copy is a bug.
 | Name | Purpose | Milestone | Status |
 |---|---|---|---|
 | `VaultService` | Open a folder as a vault, create a vault, the vault list, unavailable vaults, `resolveInside` (`src/main/services/vault-service.ts`) | M1 | Built |
-| `NoteService` | Save, rename on leaving, duplicate, delete to the Recycle Bin, pin | M1 to M2 | Planned |
-| `FolderService` | New, rename, move, delete with a count | M1 | Planned |
+| `NoteService` | Save, rename on leaving, duplicate, delete to the Recycle Bin, pin (`src/main/services/note-service.ts`) | M1 to M2 | Built |
+| `FolderService` | New, rename, move, delete with a count (`src/main/services/folder-service.ts`) | M1 | Built |
 | `OrderService` | Manual order and pins in `.wrriter` (`src/main/services/order-service.ts`) | M1 | Built |
 | `JobService` | Writes jobs to the pending list, hands them to the job worker, finishes them at start (`src/main/services/job-service.ts`) | M1 | Built |
 | `SearchService` | Vault search with filters, the quick switcher | M3 | Planned |
@@ -125,15 +125,20 @@ Record every request here as it is written, so a second one is not added for the
 | `note.read` | `{ path: string }` | `NoteContent` | M1 | Built (Contract & Router) |
 | `note.save` | `{ path: string, text: string }` | `SaveOutcome` | M1 | Built (Contract & Router) |
 | `note.setPinned` | `{ path: string, pinned: boolean }` | `void` | M1 | Built (Contract & Router) |
-| `note.delete` | `{ path: string }` | `void` | M1 | Built (Contract & Router) |
-| `folder.create` | `{ path: string }` | `void` | M1 | Built (Contract & Router) |
-| `folder.rename` | `{ oldPath: string, newPath: string }` | `void` | M1 | Built (Contract & Router) |
-| `folder.delete` | `{ path: string }` | `void` | M1 | Built (Contract & Router) |
+| `note.delete` | `{ path: string }` | `void` | M1 | Built |
+| `note.list` | `{ folder?: string, sortBy?: string }` | `NoteListItem[]` | M1 | Built |
+| `note.setOrder` | `{ path: string, folder?: string, beforeKey?: string, afterKey?: string }` | `void` | M1 | Built |
+| `folder.create` | `{ path: string }` | `void` | M1 | Built |
+| `folder.rename` | `{ oldPath: string, newPath: string }` | `void` | M1 | Built |
+| `folder.delete` | `{ path: string }` | `void` | M1 | Built |
+| `folder.list` | `{}` | `FolderNode[]` | M1 | Built |
 | `app.getStartupState` | `{}` | `StartupState` | M1 | Built |
 | `app.getTheme` | `{}` | `ThemeName` | M1 | Built |
 | `app.setTheme` | `{ theme: ThemeName }` | `void` | M1 | Built |
 | `app.getAccent` | `{}` | `AccentName` | M1 | Built |
 | `app.setAccent` | `{ accent: AccentName }` | `void` | M1 | Built |
+| `app.getSettings` | `{}` | `AppSettingsContract` | M1 | Built |
+| `app.saveSettings` | `Partial<AppSettingsContract>` | `AppSettingsContract` | M1 | Built |
 
 ## Index Queries
 
@@ -148,23 +153,24 @@ Record every query here as it is written.
 | Name | Purpose | Milestone | Status |
 |---|---|---|---|
 | `WindowShell` | Frameless rounded window, the 40 px toolbar, the three window buttons (`src/renderer/components/WindowShell.tsx`) | M1 | Built |
-| `NameField` | The note name field in the toolbar, rename in place | M2 | Planned |
-| `Tile`, `TileGrid` | Icon tiles, three to a row, tiles come from a list | M1 | Planned |
-| `FolderRow` | Folder row with the icon that turns into the expand chevron on hover | M1 | Planned |
-| `NoteRow` | Note row: title, date, preview, thumbnail | M1 | Planned |
-| `VirtualList` | Virtualised, paged list | M1 | Planned |
-| `VaultButton` | The vault button and its menu | M1 | Planned |
+| `NameField` | The note name field in the toolbar, rename in place | M1 | Built |
+| `Tile`, `TileGrid` | Icon tiles, three to a row, tiles come from a list (`src/renderer/windows/main/MainWindow.tsx`) | M1 | Built |
+| `FolderTree`, `FolderRow` | Folder row with the icon that turns into the expand chevron on hover (`src/renderer/components/FolderTree.tsx`) | M1 | Built |
+| `NoteRow` | Note row: title, date, preview, thumbnail (`src/renderer/components/NoteRow.tsx`) | M1 | Built |
+| `VirtualList` | Virtualised, windowed list with FLIP glide (`src/renderer/components/VirtualList.tsx`) | M1 | Built |
+| `VaultButton`, `VaultMenu` | The vault button and its popup menu (`src/renderer/components/VaultMenu.tsx`) | M1 | Built |
+| `NotesPaneMenu` | The three-dot options menu of the notes pane (`src/renderer/components/NotesPaneMenu.tsx`) | M1 | Built |
 | `Menu`, `MenuItem` | The one menu look for every menu | M2 | Planned |
-| `TabStrip`, `Tab` | The 32 px tabs strip at the bottom of the editor | M2 | Planned |
+| `TabStrip`, `Tab` | The 32 px tabs strip at the bottom of the editor | M1 | Built |
 | `Notice` | Notices in the same corner every time (`src/renderer/components/Notice.tsx`) | M1 | Built |
 | `Tooltip` | Tooltips after about half a second | M2 | Planned |
-| `Dialog` | Confirmations such as deleting a folder | M2 | Planned |
+| `Dialog` | Confirmations such as deleting a folder | M1 | Built |
 | `Palette` | Command palette and quick switcher overlay | M2 to M3 | Planned |
 | `FindBar` | Find and replace in a note | M2 | Planned |
 | `SettingsWindow` | Settings, including Note margin and the shortcut list | M2 | Planned |
 | `FileChip` | The ticket-shaped file chip, and the missing file state | M4 | Planned |
-| `Icon` | The icon set copied from the UI reference | M1 | Planned |
-| `ComponentGallery` | Development-only page showing every component in light and dark on all five accents | M1 | Planned |
+| `Icon` | The icon set copied from the UI reference (`src/renderer/components/icons.tsx`) | M1 | Built |
+| `ComponentGallery` | Development-only page showing every component in light and dark on all five accents (`src/renderer/components/gallery/Gallery.tsx`) | M1 | Built |
 
 ## Editor Parts (`src/renderer/editor`)
 

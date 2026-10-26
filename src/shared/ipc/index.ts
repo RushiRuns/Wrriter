@@ -1,18 +1,22 @@
 import type { Result } from '../result';
 import type {
   AccentName,
+  AppSettingsContract,
   CloseVaultArgs,
   CreateFolderArgs,
   CreateVaultArgs,
   DeleteFolderArgs,
   DeleteNoteArgs,
+  FolderNode,
   GetActiveVaultArgs,
   GetStartupStateArgs,
   IpcChannel,
   IpcChannelTable,
+  ListNotesArgs,
   ListVaultsArgs,
   LocateVaultArgs,
   NoteContent,
+  NoteListItem,
   OpenVaultArgs,
   ReadNoteArgs,
   RemoveVaultArgs,
@@ -20,8 +24,10 @@ import type {
   RenameVaultArgs,
   SaveNoteArgs,
   SaveOutcome,
+  SaveSettingsArgs,
   SelectFolderDialogArgs,
   SetAccentArgs,
+  SetNoteOrderArgs,
   SetPaneWidthsArgs,
   SetPinnedArgs,
   SetThemeArgs,
@@ -66,11 +72,14 @@ export interface WrriterApi {
     save(args: SaveNoteArgs): Promise<Result<SaveOutcome>>;
     setPinned(args: SetPinnedArgs): Promise<Result<void>>;
     delete(args: DeleteNoteArgs): Promise<Result<void>>;
+    list(args?: ListNotesArgs): Promise<Result<readonly NoteListItem[]>>;
+    setOrder(args: SetNoteOrderArgs): Promise<Result<void>>;
   };
   readonly folder: {
     create(args: CreateFolderArgs): Promise<Result<void>>;
     rename(args: RenameFolderArgs): Promise<Result<void>>;
     delete(args: DeleteFolderArgs): Promise<Result<void>>;
+    list(): Promise<Result<readonly FolderNode[]>>;
   };
   readonly app: {
     getStartupState(): Promise<Result<StartupState>>;
@@ -78,6 +87,8 @@ export interface WrriterApi {
     setTheme(args: SetThemeArgs): Promise<Result<void>>;
     getAccent(): Promise<Result<AccentName>>;
     setAccent(args: SetAccentArgs): Promise<Result<void>>;
+    getSettings(): Promise<Result<AppSettingsContract>>;
+    saveSettings(args: SaveSettingsArgs): Promise<Result<AppSettingsContract>>;
   };
   readonly invoke: <K extends IpcChannel>(
     channel: K,

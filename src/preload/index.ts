@@ -6,6 +6,7 @@ import type {
   DeleteNoteArgs,
   IpcChannel,
   IpcChannelTable,
+  ListNotesArgs,
   LocateVaultArgs,
   OpenVaultArgs,
   ReadNoteArgs,
@@ -13,8 +14,10 @@ import type {
   RenameFolderArgs,
   RenameVaultArgs,
   SaveNoteArgs,
+  SaveSettingsArgs,
   SelectFolderDialogArgs,
   SetAccentArgs,
+  SetNoteOrderArgs,
   SetPaneWidthsArgs,
   SetPinnedArgs,
   SetThemeArgs,
@@ -56,19 +59,24 @@ const api: WrriterApi = {
     read: (args: ReadNoteArgs) => invoke('note.read', args),
     save: (args: SaveNoteArgs) => invoke('note.save', args),
     setPinned: (args: SetPinnedArgs) => invoke('note.setPinned', args),
-    delete: (args: DeleteNoteArgs) => invoke('note.delete', args)
+    delete: (args: DeleteNoteArgs) => invoke('note.delete', args),
+    list: (args: ListNotesArgs = {}) => invoke('note.list', args),
+    setOrder: (args: SetNoteOrderArgs) => invoke('note.setOrder', args)
   },
   folder: {
     create: (args: CreateFolderArgs) => invoke('folder.create', args),
     rename: (args: RenameFolderArgs) => invoke('folder.rename', args),
-    delete: (args: DeleteFolderArgs) => invoke('folder.delete', args)
+    delete: (args: DeleteFolderArgs) => invoke('folder.delete', args),
+    list: () => invoke('folder.list', {})
   },
   app: {
     getStartupState: () => invoke('app.getStartupState', {}),
     getTheme: () => invoke('app.getTheme', {}),
     setTheme: (args: SetThemeArgs) => invoke('app.setTheme', args),
     getAccent: () => invoke('app.getAccent', {}),
-    setAccent: (args: SetAccentArgs) => invoke('app.setAccent', args)
+    setAccent: (args: SetAccentArgs) => invoke('app.setAccent', args),
+    getSettings: () => invoke('app.getSettings', {}),
+    saveSettings: (args: SaveSettingsArgs) => invoke('app.saveSettings', args)
   },
   invoke
 };

@@ -177,21 +177,21 @@ Nothing that depends on a row is built until it is decided. Rows 15 to 17 are ne
 
 ### Window shell and panes (UI slices 1 and 2)
 
-- [ ] `WindowShell`: frameless per ADR-W06, 16 px corners or the fallback from Question 1, a one pixel edge line, the 40 px toolbar, dragged by any empty part of the toolbar, double-click maximises
-- [ ] Three drawn window buttons: 24 px circles, with the hover and pressed colours in UI hand-off section 4
-- [ ] Toolbar: the sidebar toggle works now. Back and forward, the note name field and the new note button are drawn now and start working in M2
-- [ ] First pane: 248 px, divider drag with the width remembered, slides shut at Slow, its contents out of the tab order while shut
-- [ ] Tiles: two rows of three from a list in code, with the sliding active highlight at Base. Notes works now and lists every note in the vault, read from disk until M3. Search and Tags start working in M3, Inbox in M4. Archive and Trash wait on decision 4
-- [ ] Folder tree: the FOLDERS label, 32 px rows, children loaded only on expand, the folder icon as the toggle with the chevron on icon hover, subfolders indented 24 px, empty folders shown. Note counts come from the index in M3
-- [ ] Folder actions: new folder (inside the selected folder, or at the root), rename (F2, with a message for characters Windows does not allow), delete with a confirmation that states the note count. Until M3 a folder rename does not update links (Features 7). Moving a folder by drag arrives in M4
-- [ ] A folder created, renamed or moved outside Wrriter appears without a restart
-- [ ] Notes pane: 320 px, the header with the pane toggle and folder name, the three-dot menu with Sort by, Show sort icon, Show previews, Show dates, Show images (remembered) and New folder. Select notes waits on decision 4
-- [ ] `VirtualList` and `NoteRow`: virtualised, paged by "continue after this row", 80 px rows. In M1 titles and dates are read from the folder. Preview lines and thumbnails arrive with the index in M3. TanStack Virtual or own code is picked on a 50,000-row scroll test
-- [ ] Pinned group: pin and unpin from the right-click menu and a shortcut, stored in `.wrriter/pins.json` and never in the note
-- [ ] Sort: manual (fractional keys in `.wrriter/order.json`), modified and title. Created joins in M3. Notes with no key show at the top by modified time
-- [ ] Note right-click menu: pin and delete to the Recycle Bin. Open in new tab joins in M2, duplicate in M3, pop out in M4
-- [ ] Pane width limits and the smallest window size: Antigravity proposes, Krishna approves (UI hand-off section 13)
-- [ ] Motion built here: the pane slide, the tile highlight, the folder icon and chevron, folders opening, row hover, the selected row fade, the pin glide, the sort glide (about 50 rows or fewer), the delete collapse, the list cross-fade on a tile or vault change, notices
+- [x] `WindowShell`: frameless per ADR-W06, 16 px corners or the fallback from Question 1, a one pixel edge line, the 40 px toolbar, dragged by any empty part of the toolbar, double-click maximises
+- [x] Three drawn window buttons: 24 px circles, with the hover and pressed colours in UI hand-off section 4
+- [x] Toolbar: the sidebar toggle works now. Back and forward, the note name field and the new note button are drawn now and start working in M2
+- [x] First pane: 248 px, divider drag with the width remembered, slides shut at Slow, its contents out of the tab order while shut
+- [x] Tiles: two rows of three from a list in code, with the sliding active highlight at Base. Notes works now and lists every note in the vault, read from disk until M3. Search and Tags start working in M3, Inbox in M4. Archive and Trash wait on decision 4
+- [x] Folder tree: the FOLDERS label, 32 px rows, children loaded only on expand, the folder icon as the toggle with the chevron on icon hover, subfolders indented 24 px, empty folders shown. Note counts come from the index in M3
+- [x] Folder actions: new folder (inside the selected folder, or at the root), rename (F2, with a message for characters Windows does not allow), delete with a confirmation that states the note count. Until M3 a folder rename does not update links (Features 7). Moving a folder by drag arrives in M4
+- [x] A folder created, renamed or moved outside Wrriter appears without a restart
+- [x] Notes pane: 320 px, the header with the pane toggle and folder name, the three-dot menu with Sort by, Show sort icon, Show previews, Show dates, Show images (remembered) and New folder. Select notes waits on decision 4
+- [x] `VirtualList` and `NoteRow`: virtualised, paged by "continue after this row", 80 px rows. In M1 titles and dates are read from the folder. Preview lines and thumbnails arrive with the index in M3. TanStack Virtual or own code is picked on a 50,000-row scroll test
+- [x] Pinned group: pin and unpin from the right-click menu and a shortcut, stored in `.wrriter/pins.json` and never in the note
+- [x] Sort: manual (fractional keys in `.wrriter/order.json`), modified and title. Created joins in M3. Notes with no key show at the top by modified time
+- [x] Note right-click menu: pin and delete to the Recycle Bin. Open in new tab joins in M2, duplicate in M3, pop out in M4
+- [x] Pane width limits and the smallest window size: Antigravity proposes, Krishna approves (UI hand-off section 13)
+- [x] Motion built here: the pane slide, the tile highlight, the folder icon and chevron, folders opening, row hover, the selected row fade, the pin glide, the sort glide (about 50 rows or fewer), the delete collapse, the list cross-fade on a tile or vault change, notices
 
 **Done when**
 
@@ -203,9 +203,9 @@ Nothing that depends on a row is built until it is decided. Rows 15 to 17 are ne
 - [ ] Two vaults can be added and switched, and removing one leaves its folder untouched on disk
 - [ ] Renaming a vault folder in File Explorer shows it as unavailable with Locate and Remove, with no crash and nothing deleted
 - [ ] The SafeWriter kill test passes 100 times
-- [ ] Scrolling the 50,000-note test vault stays smooth, and expanding a folder in it feels instant
-- [ ] A folder renamed in File Explorer updates in the tree while Wrriter is open
-- [ ] Pinning a note does not change the note file
+- [x] Scrolling the 50,000-note test vault stays smooth, and expanding a folder in it feels instant
+- [x] A folder renamed in File Explorer updates in the tree while Wrriter is open
+- [x] Pinning a note does not change the note file
 - [ ] The M1 report is sent, and Krishna says go
 
 ---

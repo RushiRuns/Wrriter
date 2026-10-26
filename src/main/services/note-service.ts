@@ -1,0 +1,157 @@
+import * as fs from 'fs';
+import * as path from 'path';
+import { Result, ok, err } from '../../shared/result';
+import { SafeWriter, type WriteOutcome } from './safe-writer';
+import { VaultReader, type NoteContent as VaultNoteContent } from './vault-reader';
+import { OrderService } from './order-service';
+import { sendToRecycleBin } from '../platform/recycle-bin';
+import { resolveInsideVault } from './vault-reader';
+import { sortNotesWithManualOrder, generateKeyBetween } from '../../shared/domain/ordering';
+import type { NoteListItem } from '../../shared/ipc/contracts';
+
+export interface NoteServiceOptions {
+  safeWriter?: SafeWriter | undefined;
+  vaultReader?: VaultReader | undefined;
+  orderService?: OrderService | undefined;
+}
+
+export class NoteService {
+  private readonly safeWriter: SafeWriter;
+  private readonly vaultReader: VaultReader;
+  private readonly orderService: OrderService;
+
+  constructor(options: NoteServiceOptions = {}) {
+    this.safeWriter = options.safeWriter ?? new SafeWriter();
+    this.vaultReader = options.vaultReader ?? new VaultReader();
+    this.orderService = options.orderService ?? new OrderService(this.safeWriter);
+  }
+
+  /**
+   * Reads a note from disk with encoding and line-ending detection.
+   */
+  async readNote(vaultRoot: string, noteRelPath: string): Promise<Result<VaultNoteContent>> {
+    return this.vaultReader.read(vaultRoot, noteRelPath);
+  }
+
+  /**
+   * Atomically saves note bytes to disk via SafeWriter with fsync.
+   */
+  async saveNote(vaultRoot: string, noteRelPath: string, text: string): Promise<Result<WriteOutcome>> {
+    return this.safeWriter.write(vaultRoot, noteRelPath, text);
+  }
+
+  /**
+   * Deletes a note by sending it to the native Windows Recycle Bin.
+   */
+  async deleteNote(vaultRoot: string, noteRelPath: string): Promise<Result<void>> {
+    const resolved = resolveInsideVault(vaultRoot, noteRelPath);
+    if (!resolved.ok) return resolved;
+
+    if (!fs.existsSync(resolved.value)) {
+      return err({ kind: 'notFound' });
+    }
+
+    // Remove pin if pinned
+    await this.orderService.setPin(vaultRoot, noteRelPath, false);
+
+    return sendToRecycleBin(resolved.value);
+  }
+
+  /**
+   * Toggles a note's pinned status in .wrriter/pins.json without altering the note file.
+   */
+  async setPinned(vaultRoot: string, noteRelPath: string, pinned: boolean): Promise<Result<void>> {
+    const res = await this.orderService.setPin(vaultRoot, noteRelPath, pinned);
+    if (!res.ok) return res;
+    return ok(undefined);
+  }
+
+  /**
+   * Updates a note's manual sort order in .wrriter/order.json.
+   */
+  async setOrder(
+    vaultRoot: string,
+    folderRelPath: string,
+    notePath: string,
+    beforeKey: string | null = null,
+    afterKey: string | null = null
+  ): Promise<Result<void>> {
+    const newKey = generateKeyBetween(beforeKey, afterKey);
+    return this.orderService.setOrderKey(vaultRoot, folderRelPath, notePath, newKey);
+  }
+
+  /**
+   * Lists notes for a specific folder or the entire vault, applying pins and sorting.
+   */
+  async listNotes(
+    vaultRoot: string,
+    options: {
+      folder?: string | undefined;
+      sortBy?: 'manual' | 'modified' | 'title' | undefined;
+    } = {}
+  ): Promise<Result<NoteListItem[]>> {
+    const scanRes = await this.vaultReader.listNotes(vaultRoot);
+    if (!scanRes.ok) return scanRes;
+
+    const [pins, orderFile] = await Promise.all([
+      this.orderService.getPins(vaultRoot),
+      this.orderService.getOrderFile(vaultRoot)
+    ]);
+
+    const folderFilter = options.folder ? options.folder.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '') : null;
+    const sortBy = options.sortBy ?? 'manual';
+
+    // 1. Filter by folder if specified
+    const filtered = scanRes.value.filter((note) => {
+      const normalizedPath = note.path.replace(/\\/g, '/');
+      if (folderFilter === null || folderFilter === '') {
+        return true; // All notes in vault
+      }
+      const noteFolder = path.posix.dirname(normalizedPath);
+      return noteFolder === folderFilter;
+    });
+
+    // 2. Map metadata
+    const items: NoteListItem[] = filtered.map((n) => {
+      const normalizedPath = n.path.replace(/\\/g, '/');
+      const folderKey = path.posix.dirname(normalizedPath);
+      const folderOrder = orderFile.folders[folderKey] ?? {};
+      const orderKey = folderOrder[normalizedPath];
+      const isPinned = pins.includes(normalizedPath);
+
+      const hasImage = Boolean(n.preview && (/!\[.*\]\(.*\)/.test(n.preview) || /<img/i.test(n.preview)));
+
+      return {
+        path: normalizedPath,
+        title: n.title,
+        preview: n.preview,
+        modified: n.modified,
+        pinned: isPinned,
+        hasImage,
+        orderKey
+      };
+    });
+
+    // 3. Separate pinned and unpinned, and apply sort
+    const pinnedItems = items.filter((i) => i.pinned);
+    const unpinnedItems = items.filter((i) => !i.pinned);
+
+    const sortGroup = (group: NoteListItem[]): NoteListItem[] => {
+      if (sortBy === 'title') {
+        return group.slice().sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: 'accent' }));
+      }
+      if (sortBy === 'modified') {
+        return group.slice().sort((a, b) => b.modified - a.modified);
+      }
+      // Manual sorting
+      const folderKey = folderFilter ?? '';
+      const orderMap = orderFile.folders[folderKey] ?? {};
+      return sortNotesWithManualOrder(group, orderMap);
+    };
+
+    const sortedPinned = sortGroup(pinnedItems);
+    const sortedUnpinned = sortGroup(unpinnedItems);
+
+    return ok([...sortedPinned, ...sortedUnpinned]);
+  }
+}

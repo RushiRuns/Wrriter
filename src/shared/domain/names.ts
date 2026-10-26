@@ -3,7 +3,8 @@
  * Strictly pure logic: no Node.js or DOM imports (ARCHITECTURE.md rule 4).
  */
 
-const WINDOWS_FORBIDDEN_CHARS_REGEX = /[\\/:*?"<>|]/g;
+const WINDOWS_FORBIDDEN_CHARS_PATTERN = /[\\/:*?"<>|]/;
+const WINDOWS_FORBIDDEN_CHARS_GLOBAL = /[\\/:*?"<>|]/g;
 const TRAILING_DOTS_SPACES_REGEX = /[. ]+$/;
 
 const WINDOWS_RESERVED_NAMES = new Set([
@@ -30,10 +31,32 @@ export function isReservedWindowsName(name: string): boolean {
 export function isValidFileName(name: string): boolean {
   if (!name || name.trim().length === 0) return false;
   if (name.length > MAX_FILE_NAME_LENGTH) return false;
-  if (WINDOWS_FORBIDDEN_CHARS_REGEX.test(name)) return false;
+  if (WINDOWS_FORBIDDEN_CHARS_PATTERN.test(name)) return false;
   if (name.endsWith('.') || name.endsWith(' ')) return false;
   if (isReservedWindowsName(name)) return false;
   return true;
+}
+
+/**
+ * Returns a user-friendly error message if a file or folder name is invalid on Windows, or null if valid.
+ */
+export function getFileNameValidationError(name: string): string | null {
+  if (!name || name.trim().length === 0) {
+    return 'Name cannot be empty';
+  }
+  if (name.length > MAX_FILE_NAME_LENGTH) {
+    return `Name cannot exceed ${MAX_FILE_NAME_LENGTH} characters`;
+  }
+  if (WINDOWS_FORBIDDEN_CHARS_PATTERN.test(name)) {
+    return 'Name cannot contain any of these characters: \\ / : * ? " < > |';
+  }
+  if (name.endsWith('.') || name.endsWith(' ')) {
+    return 'Name cannot end with a period or space';
+  }
+  if (isReservedWindowsName(name)) {
+    return `"${name}" is a reserved device name in Windows`;
+  }
+  return null;
 }
 
 /**
@@ -48,7 +71,7 @@ export function isValidFileName(name: string): boolean {
 export function sanitizeFileName(title: string): string {
   if (!title) return 'Untitled';
 
-  let clean = title.replace(WINDOWS_FORBIDDEN_CHARS_REGEX, '').trim();
+  let clean = title.replace(WINDOWS_FORBIDDEN_CHARS_GLOBAL, '').trim();
   clean = clean.replace(/\s+/g, ' ');
   clean = clean.replace(TRAILING_DOTS_SPACES_REGEX, '');
 

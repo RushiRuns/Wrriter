@@ -1,0 +1,144 @@
+import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { flipGlide } from '../motion';
+
+export interface VirtualListProps<T> {
+  items: readonly T[];
+  itemHeight?: number;
+  overscan?: number;
+  getKey: (item: T, index: number) => string;
+  renderItem: (item: T, index: number) => React.ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
+  enableGlideAnimation?: boolean;
+}
+
+export function VirtualList<T>({
+  items,
+  itemHeight = 84, // 80px row + 4px margin
+  overscan = 5,
+  getKey,
+  renderItem,
+  className = 'rows',
+  style,
+  enableGlideAnimation = true
+}: VirtualListProps<T>): React.ReactElement {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [scrollTop, setScrollTop] = useState(0);
+  const [viewportHeight, setViewportHeight] = useState(600);
+
+  // Position tracking for FLIP glide animations
+  const prevRectsRef = useRef<Map<string, DOMRect>>(new Map());
+  const itemRefsRef = useRef<Map<string, HTMLElement>>(new Map());
+
+  // Update viewport dimensions
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const updateHeight = () => {
+      setViewportHeight(el.clientHeight || 600);
+    };
+
+    updateHeight();
+
+    const resizeObserver = new ResizeObserver(() => updateHeight());
+    resizeObserver.observe(el);
+
+    return () => resizeObserver.disconnect();
+  }, []);
+
+  // Handle scroll events with RAF
+  const handleScroll = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    requestAnimationFrame(() => {
+      if (el) {
+        setScrollTop(el.scrollTop);
+      }
+    });
+  }, []);
+
+  // FLIP glide animation on reordering (for lists <= 50 items)
+  useEffect(() => {
+    if (!enableGlideAnimation || items.length > 50) return;
+
+    const prevRects = prevRectsRef.current;
+    const currentItemRefs = itemRefsRef.current;
+
+    for (const [key, element] of currentItemRefs.entries()) {
+      const prevRect = prevRects.get(key);
+      if (prevRect && element) {
+        flipGlide(element, prevRect);
+      }
+    }
+
+    // Capture current positions for next render
+    const newRects = new Map<string, DOMRect>();
+    for (const [key, element] of currentItemRefs.entries()) {
+      if (element) {
+        newRects.set(key, element.getBoundingClientRect());
+      }
+    }
+    prevRectsRef.current = newRects;
+  }, [items, enableGlideAnimation]);
+
+  const totalCount = items.length;
+  const totalHeight = totalCount * itemHeight;
+
+  const startIndex = Math.max(0, Math.floor(scrollTop / itemHeight) - overscan);
+  const endIndex = Math.min(totalCount, Math.ceil((scrollTop + viewportHeight) / itemHeight) + overscan);
+
+  const visibleItems = items.slice(startIndex, endIndex);
+  const offsetY = startIndex * itemHeight;
+
+  return (
+    <div
+      ref={containerRef}
+      className={className}
+      onScroll={handleScroll}
+      style={{
+        overflowY: 'auto',
+        position: 'relative',
+        ...style
+      }}
+    >
+      <div
+        style={{
+          height: totalHeight,
+          width: '100%',
+          position: 'relative'
+        }}
+      >
+        <div
+          style={{
+            transform: `translateY(${offsetY}px)`,
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: 0
+          }}
+        >
+          {visibleItems.map((item, localIdx) => {
+            const index = startIndex + localIdx;
+            const key = getKey(item, index);
+            return (
+              <div
+                key={key}
+                ref={(el) => {
+                  if (el) {
+                    itemRefsRef.current.set(key, el);
+                  } else {
+                    itemRefsRef.current.delete(key);
+                  }
+                }}
+              >
+                {renderItem(item, index)}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}

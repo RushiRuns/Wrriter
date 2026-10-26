@@ -127,6 +127,28 @@ export interface DeleteNoteArgs {
   readonly path: string;
 }
 
+export interface ListNotesArgs {
+  readonly folder?: string;
+  readonly sortBy?: 'manual' | 'modified' | 'title';
+}
+
+export interface NoteListItem {
+  readonly path: string;
+  readonly title: string;
+  readonly preview: string;
+  readonly modified: number;
+  readonly pinned: boolean;
+  readonly hasImage?: boolean | undefined;
+  readonly orderKey?: string | undefined;
+}
+
+export interface SetNoteOrderArgs {
+  readonly path: string;
+  readonly folder?: string;
+  readonly beforeKey?: string;
+  readonly afterKey?: string;
+}
+
 // 4. folder.*
 export interface CreateFolderArgs {
   readonly path: string;
@@ -141,6 +163,16 @@ export interface DeleteFolderArgs {
   readonly path: string;
 }
 
+export interface FolderNode {
+  readonly name: string;
+  readonly relPath: string;
+  readonly parentPath: string;
+  readonly children: readonly FolderNode[];
+  readonly noteCount: number;
+}
+
+export type ListFoldersArgs = Record<string, never>;
+
 // 5. app.*
 export type GetThemeArgs = Record<string, never>;
 export interface SetThemeArgs {
@@ -151,6 +183,28 @@ export type GetAccentArgs = Record<string, never>;
 export interface SetAccentArgs {
   readonly accent: AccentName;
 }
+
+export interface AppSettingsContract {
+  readonly theme: 'light' | 'dark' | 'follow-windows';
+  readonly accent: 'sky' | 'yellow' | 'coral' | 'mint' | 'lilac';
+  readonly motion: 'follow-windows' | 'reduced' | 'full';
+  readonly noteMargin: number;
+  readonly keepRunningInBackground: boolean;
+  readonly startWithWindows: boolean;
+  readonly captureHotkey: string;
+  readonly captureVault: 'last-active' | string;
+  readonly noteList: {
+    readonly sortBy: 'manual' | 'modified' | 'created' | 'title';
+    readonly showSortIcon: boolean;
+    readonly showPreviews: boolean;
+    readonly showDates: boolean;
+    readonly showImages: boolean;
+  };
+  readonly dragHintShown: boolean;
+}
+
+export type GetSettingsArgs = Record<string, never>;
+export type SaveSettingsArgs = Partial<AppSettingsContract>;
 
 // Fixed Channel Registry
 export interface IpcChannelTable {
@@ -174,14 +228,19 @@ export interface IpcChannelTable {
   'note.save': { args: SaveNoteArgs; result: SaveOutcome };
   'note.setPinned': { args: SetPinnedArgs; result: void };
   'note.delete': { args: DeleteNoteArgs; result: void };
+  'note.list': { args: ListNotesArgs; result: readonly NoteListItem[] };
+  'note.setOrder': { args: SetNoteOrderArgs; result: void };
   'folder.create': { args: CreateFolderArgs; result: void };
   'folder.rename': { args: RenameFolderArgs; result: void };
   'folder.delete': { args: DeleteFolderArgs; result: void };
+  'folder.list': { args: ListFoldersArgs; result: readonly FolderNode[] };
   'app.getStartupState': { args: GetStartupStateArgs; result: StartupState };
   'app.getTheme': { args: GetThemeArgs; result: ThemeName };
   'app.setTheme': { args: SetThemeArgs; result: void };
   'app.getAccent': { args: GetAccentArgs; result: AccentName };
   'app.setAccent': { args: SetAccentArgs; result: void };
+  'app.getSettings': { args: GetSettingsArgs; result: AppSettingsContract };
+  'app.saveSettings': { args: SaveSettingsArgs; result: AppSettingsContract };
 }
 
 export type IpcChannel = keyof IpcChannelTable;
@@ -304,6 +363,31 @@ export const IPC_VALIDATORS: { readonly [K in IpcChannel]: Validator<IpcChannelT
     return ok({ path: path.value });
   },
 
+  'note.list': (input: unknown): Result<ListNotesArgs> => {
+    if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });
+    const res: { folder?: string; sortBy?: 'manual' | 'modified' | 'title' } = {};
+    if (typeof input['folder'] === 'string') {
+      res.folder = input['folder'];
+    }
+    if (typeof input['sortBy'] === 'string') {
+      if (input['sortBy'] === 'manual' || input['sortBy'] === 'modified' || input['sortBy'] === 'title') {
+        res.sortBy = input['sortBy'];
+      }
+    }
+    return ok(res);
+  },
+
+  'note.setOrder': (input: unknown): Result<SetNoteOrderArgs> => {
+    if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });
+    const path = validateNonEmptyString('path', input['path']);
+    if (!path.ok) return path;
+    const res: { path: string; folder?: string; beforeKey?: string; afterKey?: string } = { path: path.value };
+    if (typeof input['folder'] === 'string') res.folder = input['folder'];
+    if (typeof input['beforeKey'] === 'string') res.beforeKey = input['beforeKey'];
+    if (typeof input['afterKey'] === 'string') res.afterKey = input['afterKey'];
+    return ok(res);
+  },
+
   'folder.create': (input: unknown): Result<CreateFolderArgs> => {
     if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });
     const path = validateNonEmptyString('path', input['path']);
@@ -327,6 +411,8 @@ export const IPC_VALIDATORS: { readonly [K in IpcChannel]: Validator<IpcChannelT
     return ok({ path: path.value });
   },
 
+  'folder.list': validateEmptyArgs,
+
   'app.getStartupState': validateEmptyArgs,
 
   'app.getTheme': validateEmptyArgs,
@@ -349,6 +435,13 @@ export const IPC_VALIDATORS: { readonly [K in IpcChannel]: Validator<IpcChannelT
       return err({ kind: 'validation', field: 'accent', reason: 'expected sky, yellow, coral, mint, or lilac' });
     }
     return ok({ accent });
+  },
+
+  'app.getSettings': validateEmptyArgs,
+
+  'app.saveSettings': (input: unknown): Result<SaveSettingsArgs> => {
+    if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });
+    return ok(input as SaveSettingsArgs);
   }
 };
 

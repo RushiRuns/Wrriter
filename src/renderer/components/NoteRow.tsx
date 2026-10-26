@@ -8,7 +8,7 @@ export interface NoteRowProps {
   showDates: boolean;
   showPreviews: boolean;
   showImages: boolean;
-  onSelect: () => void;
+  onSelect: (e?: React.MouseEvent) => void;
   onContextMenu: (e: React.MouseEvent, note: NoteListItem) => void;
 }
 
@@ -33,7 +33,13 @@ export const NoteRow: React.FC<NoteRowProps> = ({
   return (
     <div
       className={`row ${isSelected ? 'sel' : ''}`}
-      onClick={onSelect}
+      onClick={(e) => onSelect(e)}
+      onAuxClick={(e) => {
+        if (e.button === 1) {
+          e.preventDefault();
+          onSelect(e);
+        }
+      }}
       onContextMenu={(e) => onContextMenu(e, note)}
       style={{
         height: 80,

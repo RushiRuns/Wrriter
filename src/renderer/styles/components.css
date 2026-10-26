@@ -1909,3 +1909,299 @@
   background: var(--sel-bg);
   font-weight: var(--fw-semi);
 }
+
+/* ==========================================================================
+   Tabs, Navigation and Palette (TabStrip, CommandPalette, Dialog, Tooltip)
+   ========================================================================== */
+
+/* 1. TabStrip along bottom of editor pane */
+.tstr {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--tabs-h, 32px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid var(--div);
+  background: var(--ed);
+  z-index: 10;
+  padding: 0 var(--s-3);
+  box-sizing: border-box;
+}
+
+.tstr-scroll {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+  overflow-x: auto;
+  flex: 1;
+  min-width: 0;
+  scrollbar-width: none;
+}
+
+.tstr-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.tstr-tab {
+  height: 24px;
+  padding: 0 var(--s-2);
+  border-radius: var(--r-s);
+  font-size: var(--fs-small);
+  color: var(--tx3);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  cursor: pointer;
+  user-select: none;
+  max-width: 200px;
+  white-space: nowrap;
+  box-sizing: border-box;
+  flex: none;
+  transition: background var(--t-fast) var(--ease-move), color var(--t-fast) var(--ease-move);
+}
+
+.tstr-tab:hover {
+  color: var(--tx2);
+  background: color-mix(in srgb, var(--tx) 4%, transparent);
+}
+
+.tstr-tab.active {
+  color: var(--tx);
+  background: color-mix(in srgb, var(--tx) 6%, transparent);
+  font-weight: var(--fw-medium);
+}
+
+.tstr-tab.dragging {
+  opacity: 0.4;
+}
+
+.tstr-tab.drop-target {
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.tstr-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tstr-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  padding: 2px;
+  border-radius: var(--r-s);
+  font-size: 14px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.6;
+  transition: opacity var(--t-fast) var(--ease-move), background var(--t-fast) var(--ease-move);
+}
+
+.tstr-close:hover {
+  opacity: 1;
+  background: color-mix(in srgb, var(--tx) 10%, transparent);
+}
+
+.tstr-plus {
+  height: 24px;
+  width: 24px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: var(--r-s);
+  color: var(--tx3);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  transition: background var(--t-fast) var(--ease-move), color var(--t-fast) var(--ease-move);
+}
+
+.tstr-plus:hover {
+  color: var(--tx);
+  background: color-mix(in srgb, var(--tx) 6%, transparent);
+}
+
+.tstr-stats {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex: none;
+  margin-left: var(--s-3);
+  font-size: var(--fs-small);
+  color: var(--tx3);
+  user-select: none;
+}
+
+.tstr-saved {
+  color: var(--tx3);
+}
+
+.tstr-words {
+  color: var(--tx3);
+  cursor: default;
+}
+
+.tstr-words:hover {
+  color: var(--tx2);
+}
+
+/* 2. Command Palette Overlay */
+.cmd-pal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: color-mix(in srgb, var(--bg) 60%, transparent);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 15vh;
+  animation: lin var(--t-fast) var(--ease-arrive) both;
+}
+
+.cmd-palette {
+  width: 480px;
+  max-width: calc(100vw - 32px);
+  border-radius: var(--r-l);
+  background: var(--pop);
+  box-shadow: 0 0 0 1px var(--line), var(--shadow);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: lin var(--t-fast) var(--ease-arrive) both;
+}
+
+.cmd-pal-header {
+  padding: var(--s-3);
+  border-bottom: 1px solid var(--div);
+}
+
+.cmd-pal-in {
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-size: var(--fs-ui);
+  color: var(--tx);
+  outline: none;
+}
+
+.cmd-pal-list {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: var(--s-1);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cmd-pal-item {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 var(--s-3);
+  border-radius: var(--r-s);
+  cursor: pointer;
+  font-size: var(--fs-small);
+  color: var(--tx);
+  gap: var(--s-2);
+  transition: background var(--t-fast) var(--ease-move);
+}
+
+.cmd-pal-item:hover,
+.cmd-pal-item.sel {
+  background: color-mix(in srgb, var(--tx) 8%, transparent);
+}
+
+.cmd-pal-cat {
+  font-size: var(--fs-label);
+  color: var(--tx3);
+  text-transform: uppercase;
+  letter-spacing: var(--ls-label);
+  font-weight: var(--fw-semi);
+  min-width: 68px;
+  flex: none;
+}
+
+.cmd-pal-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cmd-pal-shortcut {
+  font-size: var(--fs-label);
+  color: var(--tx3);
+  background: color-mix(in srgb, var(--tx) 6%, transparent);
+  padding: 2px var(--s-1);
+  border-radius: var(--r-s);
+  flex: none;
+  margin-left: auto;
+}
+
+.cmd-pal-empty {
+  padding: var(--s-5) var(--s-3);
+  text-align: center;
+  color: var(--tx3);
+  font-size: var(--fs-small);
+}
+
+/* 3. Universal Dialog */
+.wr-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: color-mix(in srgb, var(--bg) 60%, transparent);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  animation: lin var(--t-fast) var(--ease-arrive) both;
+}
+
+.wr-dialog {
+  max-width: calc(100vw - 32px);
+  border-radius: var(--r-l);
+  background: var(--pop);
+  box-shadow: 0 0 0 1px var(--line), var(--shadow);
+  padding: var(--s-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  animation: lin var(--t-fast) var(--ease-arrive) both;
+}
+
+.wr-dialog-title {
+  margin: 0;
+  font-size: var(--fs-h2);
+  font-weight: var(--fw-bold);
+  color: var(--tx);
+  letter-spacing: var(--ls-head);
+}
+
+.wr-dialog-content {
+  font-size: var(--fs-small);
+  color: var(--tx2);
+  line-height: var(--lh-small);
+}
+
+/* 4. Universal Tooltip */
+.wr-tooltip {
+  padding: 4px var(--s-2);
+  border-radius: var(--r-s);
+  background: var(--pop);
+  box-shadow: 0 0 0 1px var(--line), var(--shadow);
+  font-size: var(--fs-small);
+  color: var(--tx);
+  white-space: nowrap;
+  pointer-events: none;
+  animation: lin var(--t-fast) var(--ease-arrive) both;
+}

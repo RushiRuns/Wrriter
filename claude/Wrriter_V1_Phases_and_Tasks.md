@@ -293,17 +293,17 @@ Nothing that depends on a row is built until it is decided. Rows 15 to 17 are ne
 
 ### Tabs, navigation and the palette
 
-- [ ] `TabStrip`: 32 px along the bottom of the editor pane, one tab per open note, the title following the note live, closed by its close mark, middle-click and Ctrl+W, overflowing tabs scroll sideways
-- [ ] A click on a note opens it in the current tab. Ctrl+click and middle-click open a new tab. Ctrl+Tab and Ctrl+Shift+Tab move between tabs
-- [ ] After a tab is closed with the mouse, the other tabs keep their widths until the cursor leaves the strip
-- [ ] Tabs belong to each vault and come back after a restart. The first paint now includes the open tabs
-- [ ] Tab reordering by drag (first on the cut line)
-- [ ] Back and forward per tab: the buttons and Alt+Left and Alt+Right, forward dimmed when there is nothing ahead, deleted notes skipped, renames followed
-- [ ] `Palette`: the command palette (Ctrl+Shift+P) on one command registry, loose matching (own code or fuzzysort, decided here), each command's shortcut beside it, prepared after the first paint so it opens at once
-- [ ] Every action in a right-click menu is also a palette command
-- [ ] One shortcut list in code, from the table in Features 1. Ctrl+backslash hides and shows both navigation panes. A shortcut with nothing to do is ignored
-- [ ] Open log folder command
-- [ ] `Tooltip` after about half a second, `Dialog` with the palette motion
+- [x] `TabStrip`: 32 px along the bottom of the editor pane, one tab per open note, the title following the note live, closed by its close mark, middle-click and Ctrl+W, overflowing tabs scroll sideways
+- [x] A click on a note opens it in the current tab. Ctrl+click and middle-click open a new tab. Ctrl+Tab and Ctrl+Shift+Tab move between tabs
+- [x] After a tab is closed with the mouse, the other tabs keep their widths until the cursor leaves the strip
+- [x] Tabs belong to each vault and come back after a restart. The first paint now includes the open tabs
+- [x] Tab reordering by drag (first on the cut line)
+- [x] Back and forward per tab: the buttons and Alt+Left and Alt+Right, forward dimmed when there is nothing ahead, deleted notes skipped, renames followed
+- [x] `Palette`: the command palette (Ctrl+Shift+P) on one command registry, loose matching (own code or fuzzysort, decided here), each command's shortcut beside it, prepared after the first paint so it opens at once
+- [x] Every action in a right-click menu is also a palette command
+- [x] One shortcut list in code, from the table in Features 1. Ctrl+backslash hides and shows both navigation panes. A shortcut with nothing to do is ignored
+- [x] Open log folder command
+- [x] `Tooltip` after about half a second, `Dialog` with the palette motion
 
 ### Settings
 

@@ -28,6 +28,7 @@ import type {
   SelectFolderDialogArgs,
   SetAccentArgs,
   SetNoteOrderArgs,
+  SetOpenTabsArgs,
   SetPaneWidthsArgs,
   SetPinnedArgs,
   SetThemeArgs,
@@ -52,6 +53,7 @@ export interface WrriterApi {
     maximize(): Promise<Result<void>>;
     close(): Promise<Result<void>>;
     setPaneWidths(args: SetPaneWidthsArgs): Promise<Result<void>>;
+    setOpenTabs(args: SetOpenTabsArgs): Promise<Result<void>>;
     firstPaintComplete(): Promise<Result<void>>;
   };
   readonly vault: {
@@ -89,7 +91,9 @@ export interface WrriterApi {
     setAccent(args: SetAccentArgs): Promise<Result<void>>;
     getSettings(): Promise<Result<AppSettingsContract>>;
     saveSettings(args: SaveSettingsArgs): Promise<Result<AppSettingsContract>>;
+    openLogFolder(): Promise<Result<void>>;
   };
+  readonly showItemInFolder?: (path: string) => Promise<Result<void>>;
   readonly invoke: <K extends IpcChannel>(
     channel: K,
     args: IpcChannelTable[K]['args']

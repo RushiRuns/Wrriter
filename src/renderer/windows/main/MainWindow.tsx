@@ -23,6 +23,9 @@ import { Notice } from '../../components/Notice';
 import { EditorHost } from '../../editor/EditorHost';
 import { EditorMenu } from '../../components/menu/EditorMenu';
 import { ContextMenu } from '../../components/menu/ContextMenu';
+import { CommandPalette } from '../../components/CommandPalette';
+import { commandRegistry, type Command } from '../../palette/command-registry';
+import { matchesShortcut } from '../../../shared/shortcuts';
 import { formatDefaultTitle, deriveFileNameFromTitle } from '../../../shared';
 import type {
   FolderNode,
@@ -63,6 +66,14 @@ export const MainWindow: React.FC = () => {
   const [newFolderNameInput, setNewFolderNameInput] = useState('');
   const [newFolderInputError, setNewFolderInputError] = useState<string | null>(null);
   const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+
+  // Per-tab navigation history and panes state
+  const tabHistoriesRef = useRef<Map<string, { stack: string[]; index: number }>>(new Map());
+  const prevPaneWidthsRef = useRef<{ sidebarOpen: boolean; listWidth: number }>({
+    sidebarOpen: true,
+    listWidth: 320
+  });
 
   // Settings state (defaults per SCHEMA.md)
   const [sortBy, setSortBy] = useState<'manual' | 'modified' | 'title'>('manual');
@@ -197,6 +208,10 @@ export const MainWindow: React.FC = () => {
           if (state.activeVault) {
             setActiveVault(state.activeVault);
             setShowFirstRun(false);
+            if (state.activeTabPath) {
+              setSelectedNotePath(state.activeTabPath);
+              tabHistoriesRef.current.set(state.activeTabPath, { stack: [state.activeTabPath], index: 0 });
+            }
           } else {
             setActiveVault(null);
             setShowFirstRun(true);
@@ -400,19 +415,383 @@ export const MainWindow: React.FC = () => {
     setNotes((prev) => [newNoteItem, ...prev]);
     setSelectedNotePath(newPath);
     setNoteTitle(defaultTitle);
+    tabHistoriesRef.current.set(newPath, { stack: [newPath], index: 0 });
   }, [selectedFolder, notes]);
 
-  // Global Ctrl+N keyboard shortcut
+  // Per-tab navigation: canGoBack and canGoForward
+  const currentHistory = tabHistoriesRef.current.get(selectedNotePath ?? '');
+
+  const canGoBack = Boolean(
+    currentHistory &&
+      currentHistory.index > 0 &&
+      currentHistory.stack.slice(0, currentHistory.index).some((p) => notes.some((n) => n.path === p))
+  );
+
+  const canGoForward = Boolean(
+    currentHistory &&
+      currentHistory.index < currentHistory.stack.length - 1 &&
+      currentHistory.stack.slice(currentHistory.index + 1).some((p) => notes.some((n) => n.path === p))
+  );
+
+  const handleGoBack = useCallback(() => {
+    if (!currentHistory) return;
+    for (let i = currentHistory.index - 1; i >= 0; i--) {
+      const p = currentHistory.stack[i];
+      if (p && notes.some((n) => n.path === p)) {
+        currentHistory.index = i;
+        setSelectedNotePath(p);
+        const match = notes.find((n) => n.path === p);
+        if (match) setNoteTitle(match.title);
+        return;
+      }
+    }
+  }, [currentHistory, notes]);
+
+  const handleGoForward = useCallback(() => {
+    if (!currentHistory) return;
+    for (let i = currentHistory.index + 1; i < currentHistory.stack.length; i++) {
+      const p = currentHistory.stack[i];
+      if (p && notes.some((n) => n.path === p)) {
+        currentHistory.index = i;
+        setSelectedNotePath(p);
+        const match = notes.find((n) => n.path === p);
+        if (match) setNoteTitle(match.title);
+        return;
+      }
+    }
+  }, [currentHistory, notes]);
+
+  const handleToggleBothPanes = useCallback(() => {
+    if (sidebarOpen || listWidth > 0) {
+      prevPaneWidthsRef.current = {
+        sidebarOpen,
+        listWidth: listWidth > 0 ? listWidth : 320
+      };
+      setSidebarOpen(false);
+      setListWidth(0);
+    } else {
+      setSidebarOpen(prevPaneWidthsRef.current.sidebarOpen);
+      setListWidth(prevPaneWidthsRef.current.listWidth);
+    }
+  }, [sidebarOpen, listWidth]);
+
+  const handleSelectNote = useCallback(
+    (e: React.MouseEvent | undefined, notePath: string) => {
+      const isNewTab = e && (e.ctrlKey || e.metaKey || e.button === 1);
+      if (isNewTab) {
+        setSelectedNotePath(notePath);
+        const match = notes.find((n) => n.path === notePath);
+        if (match) setNoteTitle(match.title);
+        if (!tabHistoriesRef.current.has(notePath)) {
+          tabHistoriesRef.current.set(notePath, { stack: [notePath], index: 0 });
+        }
+      } else {
+        const prevPath = selectedNotePath;
+        if (prevPath && prevPath !== notePath) {
+          const hist = tabHistoriesRef.current.get(prevPath) ?? { stack: [prevPath], index: 0 };
+          const newStack = hist.stack.slice(0, hist.index + 1).concat(notePath);
+          const updatedHist = { stack: newStack, index: newStack.length - 1 };
+          tabHistoriesRef.current.delete(prevPath);
+          tabHistoriesRef.current.set(notePath, updatedHist);
+        } else if (!tabHistoriesRef.current.has(notePath)) {
+          tabHistoriesRef.current.set(notePath, { stack: [notePath], index: 0 });
+        }
+        setSelectedNotePath(notePath);
+        const match = notes.find((n) => n.path === notePath);
+        if (match) setNoteTitle(match.title);
+      }
+    },
+    [selectedNotePath, notes]
+  );
+
+  // Global Keyboard Shortcuts handler
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'n' && !e.shiftKey && !e.altKey) {
+      if (matchesShortcut(e, 'Ctrl+\\')) {
+        e.preventDefault();
+        handleToggleBothPanes();
+        return;
+      }
+      if (matchesShortcut(e, 'Ctrl+Shift+P')) {
+        e.preventDefault();
+        setCommandPaletteOpen((prev) => !prev);
+        return;
+      }
+      if (matchesShortcut(e, 'Ctrl+N')) {
         e.preventDefault();
         handleCreateNewNote();
+        return;
+      }
+      if (matchesShortcut(e, 'Ctrl+W')) {
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent('wrriter:close-tab'));
+        return;
+      }
+      if (matchesShortcut(e, 'Ctrl+Tab')) {
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent('wrriter:next-tab'));
+        return;
+      }
+      if (matchesShortcut(e, 'Ctrl+Shift+Tab')) {
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent('wrriter:prev-tab'));
+        return;
+      }
+      if (matchesShortcut(e, 'Alt+Left')) {
+        if (canGoBack) {
+          e.preventDefault();
+          handleGoBack();
+        }
+        return;
+      }
+      if (matchesShortcut(e, 'Alt+Right')) {
+        if (canGoForward) {
+          e.preventDefault();
+          handleGoForward();
+        }
+        return;
+      }
+      if (matchesShortcut(e, 'Ctrl+B')) {
+        e.preventDefault();
+        setSidebarOpen((open) => !open);
+        return;
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleCreateNewNote]);
+  }, [
+    handleToggleBothPanes,
+    handleCreateNewNote,
+    canGoBack,
+    canGoForward,
+    handleGoBack,
+    handleGoForward
+  ]);
+
+  // Command Registry Batch Registration
+  useEffect(() => {
+    const commands: Command[] = [
+      {
+        id: 'wrriter:new-note',
+        title: 'New note',
+        category: 'File',
+        shortcut: 'Ctrl+N',
+        keywords: ['create', 'note'],
+        run: () => handleCreateNewNote()
+      },
+      {
+        id: 'wrriter:close-tab',
+        title: 'Close tab',
+        category: 'File',
+        shortcut: 'Ctrl+W',
+        keywords: ['tab', 'dismiss'],
+        run: () => {
+          window.dispatchEvent(new CustomEvent('wrriter:close-tab'));
+        }
+      },
+      {
+        id: 'wrriter:close-other-tabs',
+        title: 'Close other tabs',
+        category: 'File',
+        keywords: ['tab', 'others'],
+        run: () => {
+          window.dispatchEvent(new CustomEvent('wrriter:close-other-tabs'));
+        }
+      },
+      {
+        id: 'wrriter:close-tabs-to-right',
+        title: 'Close tabs to right',
+        category: 'File',
+        keywords: ['tab', 'right'],
+        run: () => {
+          window.dispatchEvent(new CustomEvent('wrriter:close-tabs-to-right'));
+        }
+      },
+      {
+        id: 'wrriter:pin-note',
+        title: 'Pin or unpin note',
+        category: 'File',
+        keywords: ['pin', 'star', 'favorite'],
+        run: () => {
+          const sel = notes.find((n) => n.path === selectedNotePath);
+          if (sel) void handleTogglePinNote(sel);
+        }
+      },
+      {
+        id: 'wrriter:duplicate-note',
+        title: 'Duplicate note',
+        category: 'File',
+        keywords: ['copy', 'clone'],
+        run: () => setNoticeMessage('Duplicate note arrives in Milestone 3')
+      },
+      {
+        id: 'wrriter:show-in-explorer',
+        title: 'Show in File Explorer',
+        category: 'File',
+        keywords: ['explorer', 'reveal', 'folder'],
+        run: () => {
+          if (selectedNotePath && window.wrriter?.showItemInFolder) {
+            void window.wrriter.showItemInFolder(selectedNotePath);
+          }
+        }
+      },
+      {
+        id: 'wrriter:delete-note',
+        title: 'Delete note',
+        category: 'File',
+        keywords: ['trash', 'remove'],
+        run: () => {
+          const sel = notes.find((n) => n.path === selectedNotePath);
+          if (sel) void handleDeleteNote(sel);
+        }
+      },
+      {
+        id: 'wrriter:new-folder',
+        title: 'New folder',
+        category: 'File',
+        keywords: ['create', 'directory'],
+        run: () => setShowNewFolderModal(true)
+      },
+      {
+        id: 'wrriter:toggle-both-panes',
+        title: 'Toggle both panes',
+        category: 'View',
+        shortcut: 'Ctrl+\\',
+        keywords: ['sidebar', 'navigation', 'hide', 'show'],
+        run: () => handleToggleBothPanes()
+      },
+      {
+        id: 'wrriter:toggle-sidebar',
+        title: 'Toggle sidebar',
+        category: 'View',
+        shortcut: 'Ctrl+B',
+        keywords: ['folder', 'tree'],
+        run: () => setSidebarOpen((open) => !open)
+      },
+      {
+        id: 'wrriter:toggle-theme',
+        title: 'Toggle light / dark theme',
+        category: 'View',
+        keywords: ['dark', 'light', 'mode'],
+        run: () => {
+          const cur = document.documentElement.getAttribute('data-theme');
+          const next = cur === 'dark' ? 'light' : 'dark';
+          document.documentElement.setAttribute('data-theme', next);
+          if (window.wrriter?.app?.setTheme) {
+            void window.wrriter.app.setTheme({ theme: next });
+          }
+        }
+      },
+      {
+        id: 'wrriter:next-tab',
+        title: 'Next tab',
+        category: 'Navigation',
+        shortcut: 'Ctrl+Tab',
+        run: () => {
+          window.dispatchEvent(new CustomEvent('wrriter:next-tab'));
+        }
+      },
+      {
+        id: 'wrriter:prev-tab',
+        title: 'Previous tab',
+        category: 'Navigation',
+        shortcut: 'Ctrl+Shift+Tab',
+        run: () => {
+          window.dispatchEvent(new CustomEvent('wrriter:prev-tab'));
+        }
+      },
+      {
+        id: 'wrriter:go-back',
+        title: 'Go back',
+        category: 'Navigation',
+        shortcut: 'Alt+Left',
+        run: () => {
+          handleGoBack();
+        },
+        isEnabled: () => canGoBack
+      },
+      {
+        id: 'wrriter:go-forward',
+        title: 'Go forward',
+        category: 'Navigation',
+        shortcut: 'Alt+Right',
+        run: () => {
+          handleGoForward();
+        },
+        isEnabled: () => canGoForward
+      },
+      {
+        id: 'wrriter:find-in-note',
+        title: 'Find in note',
+        category: 'Search',
+        shortcut: 'Ctrl+F',
+        keywords: ['search', 'locate'],
+        run: () => {
+          window.dispatchEvent(new CustomEvent('wrriter:find-in-note'));
+        }
+      },
+      {
+        id: 'wrriter:replace-in-note',
+        title: 'Replace in note',
+        category: 'Search',
+        shortcut: 'Ctrl+H',
+        keywords: ['substitute'],
+        run: () => {
+          window.dispatchEvent(new CustomEvent('wrriter:replace-in-note'));
+        }
+      },
+      {
+        id: 'wrriter:fold-all',
+        title: 'Fold all headings',
+        category: 'View',
+        keywords: ['collapse'],
+        run: () => {
+          window.dispatchEvent(new CustomEvent('wrriter:fold-all'));
+        }
+      },
+      {
+        id: 'wrriter:unfold-all',
+        title: 'Unfold all headings',
+        category: 'View',
+        keywords: ['expand'],
+        run: () => {
+          window.dispatchEvent(new CustomEvent('wrriter:unfold-all'));
+        }
+      },
+      {
+        id: 'wrriter:open-log-folder',
+        title: 'Open log folder',
+        category: 'Help',
+        keywords: ['logs', 'debug', 'troubleshoot'],
+        run: () => {
+          if (window.wrriter?.app?.openLogFolder) {
+            void window.wrriter.app.openLogFolder();
+          }
+        }
+      },
+      {
+        id: 'wrriter:open-settings',
+        title: 'Open settings',
+        category: 'Settings',
+        shortcut: 'Ctrl+,',
+        keywords: ['preferences', 'options'],
+        run: () => setNoticeMessage('Settings window arrives in next slice')
+      }
+    ];
+
+    commandRegistry.registerBatch(commands);
+  }, [
+    handleCreateNewNote,
+    selectedNotePath,
+    notes,
+    handleTogglePinNote,
+    handleDeleteNote,
+    handleToggleBothPanes,
+    canGoBack,
+    canGoForward,
+    handleGoBack,
+    handleGoForward
+  ]);
 
   // Group notes into pinned and unpinned
   const pinnedNotes = notes.filter((n) => n.pinned);
@@ -452,6 +831,10 @@ export const MainWindow: React.FC = () => {
       noteName={noteTitle}
       onRenameNote={handleRenameNote}
       onNewNote={handleCreateNewNote}
+      canGoBack={canGoBack}
+      canGoForward={canGoForward}
+      onGoBack={handleGoBack}
+      onGoForward={handleGoForward}
     >
       {/* 1. First Pane: Sidebar (Tiles, Folders, Vault & Settings) */}
       <aside
@@ -741,10 +1124,7 @@ export const MainWindow: React.FC = () => {
                         showDates={showDates}
                         showPreviews={showPreviews}
                         showImages={showImages}
-                        onSelect={() => {
-                          setSelectedNotePath(note.path);
-                          setNoteTitle(note.title);
-                        }}
+                        onSelect={(e) => handleSelectNote(e, note.path)}
                         onContextMenu={(e, item) => {
                           e.preventDefault();
                           e.stopPropagation();
@@ -770,10 +1150,7 @@ export const MainWindow: React.FC = () => {
                     showDates={showDates}
                     showPreviews={showPreviews}
                     showImages={showImages}
-                    onSelect={() => {
-                      setSelectedNotePath(note.path);
-                      setNoteTitle(note.title);
-                    }}
+                    onSelect={(e) => handleSelectNote(e, note.path)}
                     onContextMenu={(e, item) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -899,8 +1276,24 @@ export const MainWindow: React.FC = () => {
               }
             }
           }}
+          onTabsUpdate={(tabsList, activePath) => {
+            const paths = tabsList.map((t) => t.path);
+            if (window.wrriter?.window?.setOpenTabs) {
+              void window.wrriter.window.setOpenTabs({
+                openTabs: paths,
+                activeTabPath: activePath
+              });
+            }
+          }}
           onPathChange={(_oldPath, newPath) => {
             setSelectedNotePath(newPath);
+            for (const [key, hist] of tabHistoriesRef.current.entries()) {
+              hist.stack = hist.stack.map((p) => (p === _oldPath ? newPath : p));
+              if (key === _oldPath) {
+                tabHistoriesRef.current.delete(_oldPath);
+                tabHistoriesRef.current.set(newPath, hist);
+              }
+            }
             void refreshNotes();
           }}
           onNotice={(msg) => setNoticeMessage(msg)}
@@ -1020,6 +1413,12 @@ export const MainWindow: React.FC = () => {
           </form>
         </div>
       )}
+
+      {/* Command Palette Overlay */}
+      <CommandPalette
+        isOpen={commandPaletteOpen}
+        onClose={() => setCommandPaletteOpen(false)}
+      />
 
       {/* Temporary Notice Banner */}
       {noticeMessage && (

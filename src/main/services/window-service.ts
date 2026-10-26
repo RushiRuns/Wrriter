@@ -1,5 +1,6 @@
-import { BrowserWindow, nativeTheme, Menu, MenuItem } from 'electron';
+import { BrowserWindow, nativeTheme, Menu, MenuItem, shell } from 'electron';
 import * as path from 'path';
+import * as fs from 'fs';
 import { AppDataStore, type AppSettings, type WindowState, type KnownVault, type FirstPaintState } from '../store/app-data-store';
 import { createSecureWindow } from '../windows/window-factory';
 import { IpcRouter } from '../ipc/router';
@@ -10,7 +11,7 @@ import { VaultService } from './vault-service';
 import { FolderService } from './folder-service';
 import { NoteService } from './note-service';
 import { Result, ok, err } from '../../shared/result';
-import type { StartupState, AccentName, SetPaneWidthsArgs } from '../../shared/ipc';
+import type { StartupState, AccentName, SetPaneWidthsArgs, SetOpenTabsArgs } from '../../shared/ipc';
 
 export interface WindowServiceOptions {
   appDataStore: AppDataStore;
@@ -274,7 +275,9 @@ export class WindowService {
               path: this.activeVault.path
             }
           : null,
-        firstPaintNotes: this.firstPaintState?.firstPageNotes ?? []
+        firstPaintNotes: this.firstPaintState?.firstPageNotes ?? [],
+        openTabs: this.firstPaintState?.openTabs ?? [],
+        activeTabPath: this.firstPaintState?.activeTabPath ?? null
       };
 
       return ok(state);
@@ -288,6 +291,20 @@ export class WindowService {
       this.currentWindowState.sidebarWidth = args.sidebarWidth;
       this.currentWindowState.listWidth = args.listWidth;
       this.scheduleSaveWindowState();
+      return ok(undefined);
+    });
+
+    // 2b. Set Open Tabs
+    this.ipcRouter.register('window.setOpenTabs', async (args: SetOpenTabsArgs) => {
+      if (this.activeVault) {
+        const updatedState: FirstPaintState = {
+          openTabs: Array.from(args.openTabs),
+          activeTabPath: args.activeTabPath,
+          firstPageNotes: this.firstPaintState?.firstPageNotes ?? []
+        };
+        this.firstPaintState = updatedState;
+        void this.appDataStore.saveFirstPaintState(this.activeVault.id, updatedState);
+      }
       return ok(undefined);
     });
 
@@ -358,6 +375,18 @@ export class WindowService {
     // 7. Settings channels
     this.ipcRouter.register('app.getSettings', async () => ok(await this.appDataStore.getSettings()));
     this.ipcRouter.register('app.saveSettings', async (args) => this.appDataStore.saveSettings(args));
+    this.ipcRouter.register('app.openLogFolder', async () => {
+      const logsDir = this.appDataStore.getLogsDir();
+      try {
+        await fs.promises.mkdir(logsDir, { recursive: true });
+        if (shell?.openPath) {
+          await shell.openPath(logsDir);
+        }
+      } catch {
+        // Safe skip
+      }
+      return ok(undefined);
+    });
   }
 
   /**

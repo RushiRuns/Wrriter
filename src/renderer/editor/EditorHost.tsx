@@ -37,6 +37,7 @@ import { FindBar } from '../components/FindBar';
 import { SlashMenu } from '../components/SlashMenu';
 import { FloatingToolbar } from '../components/FloatingToolbar';
 import { ContextMenu } from '../components/menu/ContextMenu';
+import { TabStrip } from '../components/TabStrip';
 import { markdownToTipTapDoc, tipTapDocToMarkdown } from './markdown-converter';
 import { planSave } from '../../shared/markdown/save';
 import { parseFrontmatter } from '../../shared/domain/frontmatter';
@@ -159,6 +160,11 @@ export const EditorHost: React.FC<EditorHostProps> = ({
   const [floatingToolbarState, setFloatingToolbarState] = useState<FloatingToolbarState | null>(null);
   const [tabContextMenu, setTabContextMenu] = useState<{ x: number; y: number; tabPath: string } | null>(null);
 
+  // Stats and saving state for TabStrip
+  const [wordCount, setWordCount] = useState(0);
+  const [charCount, setCharCount] = useState(0);
+  const [isSaving, setIsSaving] = useState(false);
+
   // "Drag to move" tooltip setting
   const [dragHintShown, setDragHintShown] = useState(false);
   const dragHintShownRef = useRef(false);
@@ -200,10 +206,12 @@ export const EditorHost: React.FC<EditorHostProps> = ({
       const docJson = tab.editorState.doc.toJSON();
       const currentMarkdown = tipTapDocToMarkdown(docJson as any);
 
+      setIsSaving(true);
       const plan = planSave(tab.originalBytes, currentMarkdown);
 
       if (plan.unchanged) {
         tab.isDirty = false;
+        setIsSaving(false);
         return true;
       }
 
@@ -212,6 +220,8 @@ export const EditorHost: React.FC<EditorHostProps> = ({
           path: tab.path,
           text: plan.text
         });
+
+        setIsSaving(false);
 
         if (res.ok) {
           tab.originalBytes = plan.bytes;
@@ -480,6 +490,13 @@ export const EditorHost: React.FC<EditorHostProps> = ({
             notifyTabs();
           }
 
+          // Live word and character count
+          const docText = currentEditor.state.doc.textBetween(0, currentEditor.state.doc.content.size, ' ');
+          const words = docText.trim() ? docText.trim().split(/\s+/).length : 0;
+          setWordCount(words);
+          setCharCount(docText.length);
+          setIsSaving(true);
+
           // Debounced typing autosave (1 second pause)
           if (autosaveTimeoutRef.current) {
             clearTimeout(autosaveTimeoutRef.current);
@@ -638,6 +655,14 @@ export const EditorHost: React.FC<EditorHostProps> = ({
         scrollRef.current.scrollTop = targetTab.scrollTop;
       }
 
+      // Compute word count for active note
+      if (editor) {
+        const docText = editor.state.doc.textBetween(0, editor.state.doc.content.size, ' ');
+        const words = docText.trim() ? docText.trim().split(/\s+/).length : 0;
+        setWordCount(words);
+        setCharCount(docText.length);
+      }
+
       setActiveTabPath(activeNotePath);
       notifyTabs();
     };
@@ -784,6 +809,25 @@ export const EditorHost: React.FC<EditorHostProps> = ({
       }
     },
     [activeTabPath, handleSelectTab, notifyTabs, saveTabSession, checkRenameOnLeave]
+  );
+
+  // Reorder tabs by drag & drop
+  const handleReorderTabs = useCallback(
+    (fromIndex: number, toIndex: number) => {
+      const list = Array.from(tabsList);
+      const [moved] = list.splice(fromIndex, 1);
+      if (!moved) return;
+      list.splice(toIndex, 0, moved);
+
+      const reorderedMap = new Map<string, TabSession>();
+      for (const item of list) {
+        reorderedMap.set(item.path, item);
+      }
+      tabsRef.current = reorderedMap;
+      setTabsList(list);
+      notifyTabs();
+    },
+    [tabsList, notifyTabs]
   );
 
   // Scrolls active match into view and unfolds heading if folded
@@ -1131,6 +1175,40 @@ export const EditorHost: React.FC<EditorHostProps> = ({
       if (customEvent.detail?.except !== 'tab-context-menu') setTabContextMenu(null);
     };
 
+    const handleCloseTabCmd = () => {
+      if (activePathRef.current) {
+        void handleCloseTab(null, activePathRef.current);
+      }
+    };
+    const handleCloseOthersCmd = () => {
+      if (activePathRef.current) {
+        void handleCloseOtherTabs(activePathRef.current);
+      }
+    };
+    const handleCloseRightCmd = () => {
+      if (activePathRef.current) {
+        void handleCloseTabsToRight(activePathRef.current);
+      }
+    };
+    const handleNextTabCmd = () => {
+      const list = Array.from(tabsRef.current.keys());
+      if (list.length > 1) {
+        const curIdx = list.indexOf(activePathRef.current ?? '');
+        const nextIdx = (curIdx + 1) % list.length;
+        const nextPath = list[nextIdx];
+        if (nextPath) handleSelectTab(nextPath);
+      }
+    };
+    const handlePrevTabCmd = () => {
+      const list = Array.from(tabsRef.current.keys());
+      if (list.length > 1) {
+        const curIdx = list.indexOf(activePathRef.current ?? '');
+        const prevIdx = (curIdx - 1 + list.length) % list.length;
+        const prevPath = list[prevIdx];
+        if (prevPath) handleSelectTab(prevPath);
+      }
+    };
+
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('wrriter:find-in-note', handleFindPaletteCommand);
     window.addEventListener('wrriter:replace-in-note', handleReplacePaletteCommand);
@@ -1138,6 +1216,11 @@ export const EditorHost: React.FC<EditorHostProps> = ({
     window.addEventListener('wrriter:unfold-all', handleUnfoldAll);
     window.addEventListener('wrriter:unfold-at', handleUnfoldAt);
     window.addEventListener('wrriter:close-all-menus', handleCloseAllMenus);
+    window.addEventListener('wrriter:close-tab', handleCloseTabCmd);
+    window.addEventListener('wrriter:close-other-tabs', handleCloseOthersCmd);
+    window.addEventListener('wrriter:close-tabs-to-right', handleCloseRightCmd);
+    window.addEventListener('wrriter:next-tab', handleNextTabCmd);
+    window.addEventListener('wrriter:prev-tab', handlePrevTabCmd);
     slashListeners.forEach(([event, handler]) => window.addEventListener(event, handler));
     formatListeners.forEach(([event, handler]) => window.addEventListener(event, handler));
 
@@ -1149,10 +1232,15 @@ export const EditorHost: React.FC<EditorHostProps> = ({
       window.removeEventListener('wrriter:unfold-all', handleUnfoldAll);
       window.removeEventListener('wrriter:unfold-at', handleUnfoldAt);
       window.removeEventListener('wrriter:close-all-menus', handleCloseAllMenus);
+      window.removeEventListener('wrriter:close-tab', handleCloseTabCmd);
+      window.removeEventListener('wrriter:close-other-tabs', handleCloseOthersCmd);
+      window.removeEventListener('wrriter:close-tabs-to-right', handleCloseRightCmd);
+      window.removeEventListener('wrriter:next-tab', handleNextTabCmd);
+      window.removeEventListener('wrriter:prev-tab', handlePrevTabCmd);
       slashListeners.forEach(([event, handler]) => window.removeEventListener(event, handler));
       formatListeners.forEach(([event, handler]) => window.removeEventListener(event, handler));
     };
-  }, [handleOpenFind, handleNextMatch, handlePrevMatch]);
+  }, [handleOpenFind, handleNextMatch, handlePrevMatch, handleCloseOtherTabs, handleCloseTabsToRight]);
 
   return (
     <div
@@ -1284,75 +1372,18 @@ export const EditorHost: React.FC<EditorHostProps> = ({
       )}
 
       {/* 32px TabStrip along the bottom of the editor pane */}
-      <div
-        style={{
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          bottom: 0,
-          height: 'var(--tab-h, 32px)',
-          display: 'flex',
-          alignItems: 'center',
-          padding: '0 12px',
-          borderTop: '1px solid var(--div)',
-          backgroundColor: 'var(--ed)',
-          gap: 6,
-          overflowX: 'auto',
-          zIndex: 10
-        }}
-      >
-        {tabsList.map((tab) => {
-          const isActive = tab.path === activeTabPath;
-          return (
-            <div
-              key={tab.path}
-              className={`tab ${isActive ? 'on' : ''}`}
-              onClick={() => handleSelectTab(tab.path)}
-              onContextMenu={(e) => {
-                e.preventDefault();
-                setTabContextMenu({ x: e.clientX, y: e.clientY, tabPath: tab.path });
-              }}
-              style={{
-                height: 24,
-                padding: '0 8px 0 10px',
-                borderRadius: 6,
-                fontSize: 'var(--fs-small)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                cursor: 'pointer',
-                color: isActive ? 'var(--tx)' : 'var(--tx2)',
-                backgroundColor: isActive
-                  ? 'color-mix(in srgb, var(--tx) 8%, transparent)'
-                  : 'transparent',
-                border: '1px solid transparent',
-                userSelect: 'none',
-                maxWidth: 180,
-                whiteSpace: 'nowrap'
-              }}
-            >
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{tab.title}</span>
-              <button
-                type="button"
-                onClick={(e) => void handleCloseTab(e, tab.path)}
-                title="Close tab (Ctrl+W)"
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: 'inherit',
-                  padding: 2,
-                  display: 'flex',
-                  alignItems: 'center',
-                  fontSize: 12
-                }}
-              >
-                ×
-              </button>
-            </div>
-          );
-        })}
-      </div>
+      <TabStrip
+        tabs={tabsList.map((t) => ({ path: t.path, title: t.title }))}
+        activeTabPath={activeTabPath}
+        onSelectTab={handleSelectTab}
+        onCloseTab={(path) => void handleCloseTab(null, path)}
+        onNewTab={() => window.dispatchEvent(new CustomEvent('wrriter:new-note'))}
+        onReorderTabs={handleReorderTabs}
+        onContextMenu={(e, tabPath) => setTabContextMenu({ x: e.clientX, y: e.clientY, tabPath })}
+        savedState={isSaving ? 'saving' : 'saved'}
+        wordCount={wordCount}
+        charCount={charCount}
+      />
     </div>
   );
 };

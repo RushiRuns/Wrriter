@@ -160,12 +160,12 @@ Record every query here as it is written.
 | `VirtualList` | Virtualised, windowed list with FLIP glide (`src/renderer/components/VirtualList.tsx`) | M1 | Built |
 | `VaultButton`, `VaultMenu` | The vault button and its popup menu (`src/renderer/components/VaultMenu.tsx`) | M1 | Built |
 | `NotesPaneMenu` | The three-dot options menu of the notes pane (`src/renderer/components/NotesPaneMenu.tsx`) | M1 | Built |
-| `Menu`, `MenuItem` | The one menu look for every menu | M2 | Planned |
-| `TabStrip`, `Tab` | The 32 px tabs strip at the bottom of the editor | M1 | Built |
+| `Menu`, `MenuItem` | The one menu look for every menu (`src/renderer/components/menu/`) | M2 | Built |
+| `TabStrip`, `Tab` | The 32 px tabs strip at the bottom of the editor (`src/renderer/components/TabStrip.tsx`) | M1 to M2 | Built |
 | `Notice` | Notices in the same corner every time (`src/renderer/components/Notice.tsx`) | M1 | Built |
-| `Tooltip` | Tooltips after about half a second | M2 | Planned |
-| `Dialog` | Confirmations such as deleting a folder | M1 | Built |
-| `Palette` | Command palette and quick switcher overlay | M2 to M3 | Planned |
+| `Tooltip` | Tooltips after about half a second (`src/renderer/components/Tooltip.tsx`) | M2 | Built |
+| `Dialog` | Confirmations such as deleting a folder (`src/renderer/components/Dialog.tsx`) | M1 to M2 | Built |
+| `Palette` | Command palette and quick switcher overlay (`src/renderer/components/CommandPalette.tsx`, `src/renderer/palette/command-registry.ts`) | M2 to M3 | Built |
 | `FindBar` | Find and replace floating bar over note column with toggles and counts (`src/renderer/components/FindBar.tsx`) | M2 | Built |
 | `SettingsWindow` | Settings, including Note margin and the shortcut list | M2 | Planned |
 | `FileChip` | The ticket-shaped file chip, and the missing file state | M4 | Planned |

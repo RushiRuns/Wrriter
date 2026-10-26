@@ -426,21 +426,32 @@ export class VaultService {
    * Reveals the vault folder in Windows File Explorer.
    */
   async showInExplorer(args: ShowInExplorerArgs): Promise<Result<void>> {
-    const vaults = await this.appDataStore.getVaults();
-    const vault = vaults.find((v) => v.id === args.vaultId);
-    if (!vault) {
+    let targetPath: string | null = null;
+    if (args.vaultId) {
+      const vaults = await this.appDataStore.getVaults();
+      const vault = vaults.find((v) => v.id === args.vaultId);
+      if (vault) {
+        targetPath = args.path
+          ? (path.isAbsolute(args.path) ? args.path : path.join(vault.path, args.path))
+          : vault.path;
+      }
+    }
+    if (!targetPath && args.path) {
+      targetPath = args.path;
+    }
+    if (!targetPath) {
       return err({ kind: 'notFound' });
     }
 
-    if (!fs.existsSync(vault.path)) {
-      return err({ kind: 'ruleViolation', rule: 'Vault path does not exist on disk' });
+    if (!fs.existsSync(targetPath)) {
+      return err({ kind: 'ruleViolation', rule: 'Path does not exist on disk' });
     }
 
     try {
       if (this.shellOpenPath) {
-        await this.shellOpenPath(vault.path);
+        await this.shellOpenPath(targetPath);
       } else if (shell?.openPath) {
-        await shell.openPath(vault.path);
+        await shell.openPath(targetPath);
       }
       return ok(undefined);
     } catch (error: any) {

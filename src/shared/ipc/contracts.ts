@@ -47,6 +47,8 @@ export interface StartupState {
   };
   readonly activeVault: VaultInfo | null;
   readonly firstPaintNotes: readonly FirstPaintNoteSummary[];
+  readonly openTabs?: readonly string[];
+  readonly activeTabPath?: string | null;
 }
 
 // 1. window.*
@@ -58,7 +60,12 @@ export interface SetPaneWidthsArgs {
   readonly sidebarWidth: number;
   readonly listWidth: number;
 }
+export interface SetOpenTabsArgs {
+  readonly openTabs: readonly string[];
+  readonly activeTabPath: string | null;
+}
 export type GetStartupStateArgs = Record<string, never>;
+export type OpenLogFolderArgs = Record<string, never>;
 
 
 // 2. vault.*
@@ -101,7 +108,8 @@ export interface LocateVaultArgs {
 }
 
 export interface ShowInExplorerArgs {
-  readonly vaultId: string;
+  readonly vaultId?: string | undefined;
+  readonly path?: string | undefined;
 }
 
 export interface SelectFolderDialogArgs {
@@ -212,6 +220,7 @@ export interface IpcChannelTable {
   'window.maximize': { args: WindowMaximizeArgs; result: void };
   'window.close': { args: WindowCloseArgs; result: void };
   'window.setPaneWidths': { args: SetPaneWidthsArgs; result: void };
+  'window.setOpenTabs': { args: SetOpenTabsArgs; result: void };
   'window.firstPaintComplete': { args: FirstPaintCompleteArgs; result: void };
   'vault.open': { args: OpenVaultArgs; result: VaultInfo };
   'vault.create': { args: CreateVaultArgs; result: VaultInfo };
@@ -241,6 +250,7 @@ export interface IpcChannelTable {
   'app.setAccent': { args: SetAccentArgs; result: void };
   'app.getSettings': { args: GetSettingsArgs; result: AppSettingsContract };
   'app.saveSettings': { args: SaveSettingsArgs; result: AppSettingsContract };
+  'app.openLogFolder': { args: OpenLogFolderArgs; result: void };
 }
 
 export type IpcChannel = keyof IpcChannelTable;
@@ -259,6 +269,15 @@ export const IPC_VALIDATORS: { readonly [K in IpcChannel]: Validator<IpcChannelT
     if (sidebarWidth === null) return err({ kind: 'validation', field: 'sidebarWidth', reason: 'expected number' });
     if (listWidth === null) return err({ kind: 'validation', field: 'listWidth', reason: 'expected number' });
     return ok({ sidebarWidth, listWidth });
+  },
+
+  'window.setOpenTabs': (input: unknown): Result<SetOpenTabsArgs> => {
+    if (!isObject(input) || !Array.isArray(input['openTabs'])) {
+      return err({ kind: 'validation', field: 'openTabs', reason: 'expected array of strings' });
+    }
+    const openTabs = (input['openTabs'] as unknown[]).filter((t): t is string => typeof t === 'string');
+    const activeTabPath = typeof input['activeTabPath'] === 'string' ? input['activeTabPath'] : null;
+    return ok({ openTabs, activeTabPath });
   },
 
   'vault.open': (input: unknown): Result<OpenVaultArgs> => {
@@ -316,9 +335,10 @@ export const IPC_VALIDATORS: { readonly [K in IpcChannel]: Validator<IpcChannelT
 
   'vault.showInExplorer': (input: unknown): Result<ShowInExplorerArgs> => {
     if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });
-    const vaultId = validateNonEmptyString('vaultId', input['vaultId']);
-    if (!vaultId.ok) return vaultId;
-    return ok({ vaultId: vaultId.value });
+    const vaultId = typeof input['vaultId'] === 'string' && input['vaultId'].length > 0 ? input['vaultId'] : undefined;
+    const p = typeof input['path'] === 'string' && input['path'].length > 0 ? input['path'] : undefined;
+    if (!vaultId && !p) return err({ kind: 'validation', field: 'vaultId', reason: 'expected vaultId or path' });
+    return ok({ vaultId, path: p });
   },
 
   'vault.selectFolderDialog': (input: unknown): Result<SelectFolderDialogArgs> => {
@@ -442,6 +462,8 @@ export const IPC_VALIDATORS: { readonly [K in IpcChannel]: Validator<IpcChannelT
   'app.saveSettings': (input: unknown): Result<SaveSettingsArgs> => {
     if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });
     return ok(input as SaveSettingsArgs);
-  }
+  },
+
+  'app.openLogFolder': validateEmptyArgs
 };
 

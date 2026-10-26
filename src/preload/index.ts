@@ -40,6 +40,7 @@ const api: WrriterApi = {
     maximize: () => invoke('window.maximize', {}),
     close: () => invoke('window.close', {}),
     setPaneWidths: (args: SetPaneWidthsArgs) => invoke('window.setPaneWidths', args),
+    setOpenTabs: (args) => invoke('window.setOpenTabs', args),
     firstPaintComplete: () => invoke('window.firstPaintComplete', {})
   },
   vault: {
@@ -76,8 +77,10 @@ const api: WrriterApi = {
     getAccent: () => invoke('app.getAccent', {}),
     setAccent: (args: SetAccentArgs) => invoke('app.setAccent', args),
     getSettings: () => invoke('app.getSettings', {}),
-    saveSettings: (args: SaveSettingsArgs) => invoke('app.saveSettings', args)
+    saveSettings: (args: SaveSettingsArgs) => invoke('app.saveSettings', args),
+    openLogFolder: () => invoke('app.openLogFolder', {})
   },
+  showItemInFolder: (path: string) => invoke('vault.showInExplorer', { path }),
   invoke
 };
 

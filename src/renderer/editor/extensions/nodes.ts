@@ -14,7 +14,7 @@ export const ParagraphNode = Node.create({
     return [{ tag: 'p' }];
   },
   renderHTML({ HTMLAttributes }) {
-    return ['p', mergeAttributes(HTMLAttributes), 0];
+    return ['p', mergeAttributes(HTMLAttributes, { class: 'edp' }), 0];
   }
 });
 
@@ -48,7 +48,7 @@ export const HeadingNode = Node.create({
   },
   renderHTML({ node, HTMLAttributes }) {
     const level = (node.attrs['level'] as number) || 1;
-    return [`h${level}`, mergeAttributes(HTMLAttributes), 0];
+    return [`h${level}`, mergeAttributes(HTMLAttributes, { class: `ed${level}` }), 0];
   }
 });
 
@@ -69,6 +69,16 @@ export const CodeBlockNode = Node.create({
   parseHTML() {
     return [
       {
+        tag: 'div.codeb',
+        preserveWhitespace: 'full',
+        getAttrs: (node) => {
+          if (typeof node === 'string') return null;
+          const el = node as HTMLElement;
+          const lang = el.getAttribute('data-language');
+          return { language: lang || null };
+        }
+      },
+      {
         tag: 'pre',
         preserveWhitespace: 'full',
         getAttrs: (node) => {
@@ -82,11 +92,23 @@ export const CodeBlockNode = Node.create({
     ];
   },
   renderHTML({ node, HTMLAttributes }) {
-    const lang = node.attrs['language'] as string | null;
+    const lang = (node.attrs['language'] as string | null) || '';
+    const isDataview = lang.toLowerCase() === 'dataview' || lang.toLowerCase() === 'dataviewjs';
+    const displayLang = lang ? lang.toUpperCase() : 'TEXT';
+
     return [
-      'pre',
-      mergeAttributes(HTMLAttributes, { class: 'code-block' }),
-      ['code', { class: lang ? `language-${lang}` : undefined }, 0]
+      'div',
+      mergeAttributes(HTMLAttributes, {
+        class: 'codeb',
+        'data-language': lang || undefined
+      }),
+      [
+        'div',
+        { class: 'ctop', contenteditable: 'false' },
+        ['span', { class: 'clang' }, displayLang],
+        isDataview ? ['span', { class: 'pill' }, 'Not run'] : ['span', { class: 'pill' }, 'Copy']
+      ],
+      ['pre', { class: 'cbody mono' }, ['code', { class: lang ? `language-${lang}` : undefined }, 0]]
     ];
   }
 });
@@ -100,7 +122,7 @@ export const BlockquoteNode = Node.create({
     return [{ tag: 'blockquote' }];
   },
   renderHTML({ HTMLAttributes }) {
-    return ['blockquote', mergeAttributes(HTMLAttributes), 0];
+    return ['blockquote', mergeAttributes(HTMLAttributes, { class: 'bq' }), 0];
   }
 });
 
@@ -109,10 +131,10 @@ export const BulletListNode = Node.create({
   group: 'block',
   content: 'listItem+',
   parseHTML() {
-    return [{ tag: 'ul' }];
+    return [{ tag: 'ul:not([data-type="taskList"])' }];
   },
   renderHTML({ HTMLAttributes }) {
-    return ['ul', mergeAttributes(HTMLAttributes), 0];
+    return ['ul', mergeAttributes(HTMLAttributes, { class: 'bullet-list' }), 0];
   }
 });
 
@@ -131,7 +153,7 @@ export const OrderedListNode = Node.create({
     return [{ tag: 'ol' }];
   },
   renderHTML({ node, HTMLAttributes }) {
-    return ['ol', mergeAttributes(HTMLAttributes, { start: node.attrs['start'] }), 0];
+    return ['ol', mergeAttributes(HTMLAttributes, { start: node.attrs['start'], class: 'ordered-list' }), 0];
   }
 });
 
@@ -143,7 +165,7 @@ export const ListItemNode = Node.create({
     return [{ tag: 'li' }];
   },
   renderHTML({ HTMLAttributes }) {
-    return ['li', mergeAttributes(HTMLAttributes), 0];
+    return ['li', mergeAttributes(HTMLAttributes, { class: 'li' }), 0];
   }
 });
 
@@ -152,10 +174,10 @@ export const TaskListNode = Node.create({
   group: 'block',
   content: 'taskItem+',
   parseHTML() {
-    return [{ tag: 'ul[data-type="taskList"]' }];
+    return [{ tag: 'ul[data-type="taskList"]' }, { tag: 'div.tasks' }];
   },
   renderHTML({ HTMLAttributes }) {
-    return ['ul', mergeAttributes(HTMLAttributes, { 'data-type': 'taskList', class: 'task-list' }), 0];
+    return ['ul', mergeAttributes(HTMLAttributes, { 'data-type': 'taskList', class: 'tasks task-list' }), 0];
   }
 });
 
@@ -180,8 +202,20 @@ export const TaskItemNode = Node.create({
         getAttrs: (el) => {
           if (typeof el === 'string') return null;
           const checkbox = (el as HTMLElement).querySelector('input[type="checkbox"]');
+          const isDone = (el as HTMLElement).classList.contains('done');
           return {
-            checked: checkbox ? (checkbox as HTMLInputElement).checked : false
+            checked: checkbox ? (checkbox as HTMLInputElement).checked : isDone
+          };
+        }
+      },
+      {
+        tag: 'div.task',
+        getAttrs: (el) => {
+          if (typeof el === 'string') return null;
+          const chk = (el as HTMLElement).querySelector('.chk');
+          const isDone = chk?.classList.contains('on');
+          return {
+            checked: Boolean(isDone)
           };
         }
       }
@@ -193,9 +227,19 @@ export const TaskItemNode = Node.create({
       'li',
       mergeAttributes(HTMLAttributes, {
         'data-type': 'taskItem',
-        class: `task-item ${isChecked ? 'done' : ''}`
+        class: `task ${isChecked ? 'done' : ''}`
       }),
-      ['input', { type: 'checkbox', checked: isChecked ? 'checked' : undefined, disabled: 'disabled' }],
+      [
+        'button',
+        {
+          type: 'button',
+          class: `chk ${isChecked ? 'on' : ''}`,
+          'aria-checked': isChecked ? 'true' : 'false',
+          contenteditable: 'false',
+          'data-task-toggle': 'true'
+        },
+        ['span', { class: 'chk-tick' }]
+      ],
       ['div', { class: 'task-content' }, 0]
     ];
   }
@@ -208,6 +252,6 @@ export const HorizontalRuleNode = Node.create({
     return [{ tag: 'hr' }];
   },
   renderHTML({ HTMLAttributes }) {
-    return ['hr', mergeAttributes(HTMLAttributes, { class: 'thematic-break' })];
+    return ['hr', mergeAttributes(HTMLAttributes, { class: 'hr thematic-break' })];
   }
 });

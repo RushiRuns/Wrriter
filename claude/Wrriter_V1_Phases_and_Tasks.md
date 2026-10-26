@@ -252,23 +252,23 @@ Nothing that depends on a row is built until it is decided. Rows 15 to 17 are ne
 
 ### The note column and its elements (UI slice 3)
 
-- [ ] Note column: fills the editor pane with the Note margin on each side (default 24 px), no width cap, a 360 px floor with a sideways scroll bar below it, 88 px above the first line and 64 px below the last. Hiding a pane glides the text without re-wrapping it
-- [ ] Elements in the order of UI hand-off section 6, a few at a time. Each one survives open, edit and save with the file unchanged:
-  - [ ] Date line and title
-  - [ ] Tags row look. It is filled from the index in M3, and its colour waits on decision 3
-  - [ ] Paragraph, heading 2 and heading 3. Headings 4 to 6: Antigravity proposes line heights and weights, and Krishna approves
-  - [ ] Bold, italic, strikethrough, inline code
+- [x] Note column: fills the editor pane with the Note margin on each side (default 24 px), no width cap, a 360 px floor with a sideways scroll bar below it, 88 px above the first line and 64 px below the last. Hiding a pane glides the text without re-wrapping it
+- [x] Elements in the order of UI hand-off section 6, a few at a time. Each one survives open, edit and save with the file unchanged:
+  - [x] Date line and title
+  - [x] Tags row look. It is filled from the index in M3, and its colour waits on decision 3
+  - [x] Paragraph, heading 2 and heading 3. Headings 4 to 6: Antigravity proposes line heights and weights, and Krishna approves
+  - [x] Bold, italic, strikethrough, inline code
   - [ ] Highlight and coloured text: wait on decision 1
-  - [ ] Note link pill (the look only, links work in M3) and web link with the globe icon, opened in the default browser after the address is checked
-  - [ ] Bullet, numbered and task lists, with the tick drawing at Fast
-  - [ ] Divider (the five dots) and table
+  - [x] Note link pill (the look only, links work in M3) and web link with the globe icon, opened in the default browser after the address is checked
+  - [x] Bullet, numbered and task lists, with the tick drawing at Fast
+  - [x] Divider (the five dots) and table
   - [ ] Pull quote and blockquote: wait on decision 2
-  - [ ] Callouts: every type, the colour mixes from the UI reference, the type dropdown from the icon, the `-` and `+` markers as the starting state only, an unknown type kept by name, nested callouts kept
-  - [ ] Code block with its language header
-  - [ ] File chip look. Attachments start working in M4
-  - [ ] Images inserted from the slash menu with the file picker: resized by the corners with proportions kept, left, centre or right, the selected ring and bar, double-click back to natural size, written as `![alt|400|center](...)` with the path relative to the note. Removing an image never deletes its file. Images decode off the main thread and reserve their height
-  - [ ] Placeholder and selected text
-- [ ] The Weekly plan note rebuilt with the same words and compared with the screenshots element by element
+  - [x] Callouts: every type, the colour mixes from the UI reference, the type dropdown from the icon, the `-` and `+` markers as the starting state only, an unknown type kept by name, nested callouts kept
+  - [x] Code block with its language header
+  - [x] File chip look. Attachments start working in M4
+  - [x] Images inserted from the slash menu with the file picker: resized by the corners with proportions kept, left, centre or right, the selected ring and bar, double-click back to natural size, written as `![alt|400|center](...)` with the path relative to the note. Removing an image never deletes its file. Images decode off the main thread and reserve their height
+  - [x] Placeholder and selected text
+- [x] The Weekly plan note rebuilt with the same words and compared with the screenshots element by element
 
 ### Handles, folding and dragging blocks (UI slice 5)
 

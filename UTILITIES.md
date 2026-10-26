@@ -179,12 +179,14 @@ Record every query here as it is written.
 | `EditorHost` | One live TipTap editor, hidden tabs kept without a drawn editor (`src/renderer/editor/EditorHost.tsx`) | M2 | Built |
 | `FindReplace` | ProseMirror search, decoration highlights, protected pass-through/wikilink skipping, mark-preserving replacement (`src/renderer/editor/find-replace-core.ts`, `src/renderer/editor/extensions/find-replace-extension.ts`) | M2 | Built |
 | Element nodes and marks | Headings, lists, tasks, blockquote, codeblock, hr, bold, italic, strike, code (`src/renderer/editor/extensions/`) | M2 | Built |
-| `Callout` | Callout node, types, fold, the colour mixes from the UI reference | M2 | Planned |
+| `Callout` | Callout node, types, fold, the colour mixes from the UI reference (`src/renderer/editor/extensions/callout.ts`) | M2 | Built |
+| `Table` | Table node, header, rows, alignment, cell padding (`src/renderer/editor/extensions/table.ts`) | M2 | Built |
+| `ImageBlock` | Resize handles, left/centre/right alignment, natural size reset (`src/renderer/editor/extensions/image.ts`) | M2 | Built |
+| `FileChip` | Ticket-shaped file chip with notched sides and type badge (`src/renderer/editor/extensions/file-chip.ts`) | M2 | Built |
 | `BlockHandles` | Fold arrow as handle for headings, grab areas for callouts, grip for other blocks | M2 | Planned |
 | `BlockDrag` | Drag, drop line, auto-scroll, Escape, fold during drag, section moves | M2 | Planned |
 | `SlashMenu` | The twelve-item slash menu | M2 | Planned |
 | `FloatingToolbar` | The format pill over selected text | M2 | Planned |
-| `ImageBlock` | Resize, left, centre, right, the selected look | M2 | Planned |
 | `PasteToMarkdown` | Web content turned into markdown, never inserted as HTML (`src/renderer/editor/extensions/paste-handler.ts`) | M2 | Built |
 | `TypingTouches` | Caret glide, selection fade, new-letter fade, skipped when typing is fast | M2 | Planned |
 

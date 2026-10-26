@@ -14,6 +14,131 @@ export interface TipTapDocJSON {
 }
 
 /**
+ * Parses inline markdown tokens (bold, italic, strike, code, wikilinks, web links) into TipTap inline text nodes.
+ */
+export function parseInlineMarkdown(text: string): TipTapNodeJSON[] {
+  if (!text) return [];
+
+  // Regex matching inline formatting tokens
+  // 1: Wikilink [[target|alias]]
+  // 2: Web link [text](url)
+  // 3: Code `code`
+  // 4: Bold **text**
+  // 5: Strike ~~text~~
+  // 6: Italic *text*
+  const TOKEN_REGEX = /(\[\[([^\]|]+)(?:\|([^\]]+))?\]\])|(\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\))|(`([^`]+)`)|(\*\*([^*]+)\*\*)|(~~([^~]+)~~)|(\*([^*]+)\*)/g;
+
+  const result: TipTapNodeJSON[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = TOKEN_REGEX.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      result.push({
+        type: 'text',
+        text: text.slice(lastIndex, match.index)
+      });
+    }
+
+    if (match[1]) {
+      // Wikilink [[target|alias]]
+      const target = match[2]?.trim() ?? '';
+      const alias = match[3]?.trim() ?? '';
+      result.push({
+        type: 'text',
+        text: alias || target,
+        marks: [{ type: 'wikilink', attrs: { target, alias } }]
+      });
+    } else if (match[4]) {
+      // Web link [text](url)
+      const linkText = match[5] ?? '';
+      const href = match[6] ?? '';
+      result.push({
+        type: 'text',
+        text: linkText,
+        marks: [{ type: 'webLink', attrs: { href, title: linkText } }]
+      });
+    } else if (match[7]) {
+      // Code `code`
+      result.push({
+        type: 'text',
+        text: match[8] ?? '',
+        marks: [{ type: 'code' }]
+      });
+    } else if (match[9]) {
+      // Bold **text**
+      result.push({
+        type: 'text',
+        text: match[10] ?? '',
+        marks: [{ type: 'bold' }]
+      });
+    } else if (match[11]) {
+      // Strike ~~text~~
+      result.push({
+        type: 'text',
+        text: match[12] ?? '',
+        marks: [{ type: 'strike' }]
+      });
+    } else if (match[13]) {
+      // Italic *text*
+      result.push({
+        type: 'text',
+        text: match[14] ?? '',
+        marks: [{ type: 'italic' }]
+      });
+    }
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < text.length) {
+    result.push({
+      type: 'text',
+      text: text.slice(lastIndex)
+    });
+  }
+
+  return result.length > 0 ? result : [{ type: 'text', text }];
+}
+
+/**
+ * Serializes inline text nodes with marks back to standard markdown.
+ */
+export function serializeInlineNodes(nodes: TipTapNodeJSON[] | undefined): string {
+  if (!nodes || nodes.length === 0) return '';
+
+  return nodes
+    .map((node) => {
+      let t = node.text || '';
+      if (!t && node.content) {
+        t = serializeInlineNodes(node.content);
+      }
+      if (!node.marks || node.marks.length === 0) return t;
+
+      for (const mark of node.marks) {
+        if (mark.type === 'bold') {
+          t = `**${t}**`;
+        } else if (mark.type === 'italic') {
+          t = `*${t}*`;
+        } else if (mark.type === 'strike') {
+          t = `~~${t}~~`;
+        } else if (mark.type === 'code') {
+          t = `\`${t}\``;
+        } else if (mark.type === 'wikilink') {
+          const target = (mark.attrs?.['target'] as string) || t;
+          const alias = (mark.attrs?.['alias'] as string) || (t !== target ? t : '');
+          t = alias ? `[[${target}|${alias}]]` : `[[${target}]]`;
+        } else if (mark.type === 'webLink') {
+          const href = (mark.attrs?.['href'] as string) || '';
+          t = `[${t}](${href})`;
+        }
+      }
+      return t;
+    })
+    .join('');
+}
+
+/**
  * Converts a markdown string into TipTap document JSON.
  */
 export function markdownToTipTapDoc(source: string): TipTapDocJSON {
@@ -26,8 +151,7 @@ export function markdownToTipTapDoc(source: string): TipTapDocJSON {
     }
 
     if (block.type === 'frontmatter') {
-      // Frontmatter is preserved in raw format and rendered in metadata header,
-      // not as an editable rich text block inside document flow
+      // Frontmatter preserved in raw format and handled in note header
       continue;
     }
 
@@ -38,7 +162,7 @@ export function markdownToTipTapDoc(source: string): TipTapDocJSON {
       content.push({
         type: 'heading',
         attrs: { level },
-        content: text ? [{ type: 'text', text }] : []
+        content: parseInlineMarkdown(text)
       });
       continue;
     }
@@ -66,8 +190,47 @@ export function markdownToTipTapDoc(source: string): TipTapDocJSON {
     }
 
     if (block.type === 'blockquote') {
-      const quoteText = block.raw
-        .split(/\r?\n/)
+      const rawLines = block.raw.split(/\r?\n/);
+      const firstLine = rawLines[0] ?? '';
+
+      // Check for Callout syntax: > [!type][+-]? Title
+      const calloutMatch = firstLine.match(/^[ ]{0,3}>[ \t]*\[!([a-zA-Z0-9_-]+)\]([+-]?)[ \t]*(.*)$/);
+
+      if (calloutMatch) {
+        const type = calloutMatch[1]?.toLowerCase() || 'info';
+        const marker = calloutMatch[2] || null;
+        const title = calloutMatch[3]?.trim() || '';
+        const isFolded = marker === '-';
+
+        // Extract body lines
+        const bodyLines: string[] = [];
+        for (let i = 1; i < rawLines.length; i++) {
+          const l = rawLines[i];
+          if (l === undefined) continue;
+          bodyLines.push(l.replace(/^[ ]{0,3}>[ \t]?/, ''));
+        }
+        const bodyText = bodyLines.join('\n').trim();
+
+        content.push({
+          type: 'callout',
+          attrs: {
+            type,
+            title,
+            marker,
+            folded: isFolded
+          },
+          content: [
+            {
+              type: 'paragraph',
+              content: parseInlineMarkdown(bodyText)
+            }
+          ]
+        });
+        continue;
+      }
+
+      // Plain blockquote
+      const quoteText = rawLines
         .map((l) => l.replace(/^[ ]{0,3}>[ \t]?/, ''))
         .join('\n')
         .trim();
@@ -77,69 +240,235 @@ export function markdownToTipTapDoc(source: string): TipTapDocJSON {
         content: [
           {
             type: 'paragraph',
-            content: quoteText ? [{ type: 'text', text: quoteText }] : []
+            content: parseInlineMarkdown(quoteText)
           }
         ]
       });
       continue;
     }
 
-    if (block.type === 'list') {
-      const lines = block.raw.split(/\r?\n/).filter((l) => l.trim().length > 0);
-      const isTask = lines.some((l) => /^[ ]{0,3}-[ \t]+\[[ xX/]\]/.test(l));
+    if (block.type === 'table') {
+      const tableLines = block.raw.split(/\r?\n/).filter((l) => l.trim().length > 0);
+      if (tableLines.length >= 2) {
+        const headerLine = tableLines[0] || '';
+        const delimiterLine = tableLines[1] || '';
+        const dataLines = tableLines.slice(2);
 
-      if (isTask) {
-        const taskItems: TipTapNodeJSON[] = [];
-        for (const line of lines) {
-          const match = line.match(/^[ ]{0,3}-[ \t]+\[([ xX/])\][ \t]*(.*)$/);
-          if (match) {
-            const checked = match[1] === 'x' || match[1] === 'X';
-            const itemText = match[2]?.trim() ?? '';
-            taskItems.push({
-              type: 'taskItem',
-              attrs: { checked },
-              content: [
-                {
-                  type: 'paragraph',
-                  content: itemText ? [{ type: 'text', text: itemText }] : []
-                }
-              ]
-            });
-          }
-        }
-        content.push({
-          type: 'taskList',
-          content: taskItems
+        // Alignments from delimiter line
+        const delimiterCells = delimiterLine
+          .split('|')
+          .slice(1, -1)
+          .map((c) => c.trim());
+        const alignments = delimiterCells.map((c) => {
+          if (c.startsWith(':') && c.endsWith(':')) return 'center';
+          if (c.endsWith(':')) return 'right';
+          if (c.startsWith(':')) return 'left';
+          return null;
         });
-        continue;
-      }
 
-      // Standard bullet list
-      const listItems: TipTapNodeJSON[] = [];
-      for (const line of lines) {
-        const itemText = line.replace(/^[ ]{0,3}(?:[-*+]|\d+[.)])[ \t]+/, '').trim();
-        listItems.push({
-          type: 'listItem',
+        // Header row
+        const headerCells = headerLine
+          .split('|')
+          .slice(1, -1)
+          .map((c) => c.trim());
+        const headerNodes: TipTapNodeJSON[] = headerCells.map((cellText, idx) => ({
+          type: 'tableHeader',
+          attrs: { align: alignments[idx] ?? null },
           content: [
             {
               type: 'paragraph',
-              content: itemText ? [{ type: 'text', text: itemText }] : []
+              content: parseInlineMarkdown(cellText)
             }
           ]
+        }));
+
+        const rowNodes: TipTapNodeJSON[] = [
+          {
+            type: 'tableRow',
+            content: headerNodes
+          }
+        ];
+
+        // Data rows
+        for (const dLine of dataLines) {
+          const cells = dLine
+            .split('|')
+            .slice(1, -1)
+            .map((c) => c.trim());
+          const cellNodes: TipTapNodeJSON[] = cells.map((cellText, idx) => ({
+            type: 'tableCell',
+            attrs: { align: alignments[idx] ?? null },
+            content: [
+              {
+                type: 'paragraph',
+                content: parseInlineMarkdown(cellText)
+              }
+            ]
+          }));
+          rowNodes.push({
+            type: 'tableRow',
+            content: cellNodes
+          });
+        }
+
+        content.push({
+          type: 'table',
+          content: rowNodes
         });
+        continue;
       }
+    }
+
+    if (block.type === 'list') {
+      const lines = block.raw.split(/\r?\n/).filter((l) => l.trim().length > 0);
+      let currentType: 'task' | 'ordered' | 'bullet' | null = null;
+      let currentItems: TipTapNodeJSON[] = [];
+      let currentStart = 1;
+
+      const flushCurrentList = () => {
+        if (!currentType || currentItems.length === 0) return;
+        if (currentType === 'task') {
+          content.push({
+            type: 'taskList',
+            content: currentItems
+          });
+        } else if (currentType === 'ordered') {
+          content.push({
+            type: 'orderedList',
+            attrs: { start: currentStart },
+            content: currentItems
+          });
+        } else if (currentType === 'bullet') {
+          content.push({
+            type: 'bulletList',
+            content: currentItems
+          });
+        }
+        currentItems = [];
+        currentType = null;
+      };
+
+      for (const line of lines) {
+        const taskMatch = line.match(/^[ ]{0,3}(?:[-*+])[ \t]+\[([ xX/])\][ \t]*(.*)$/);
+        if (taskMatch) {
+          if (currentType !== 'task') {
+            flushCurrentList();
+            currentType = 'task';
+          }
+          const checked = taskMatch[1] === 'x' || taskMatch[1] === 'X';
+          const itemText = taskMatch[2]?.trim() ?? '';
+          currentItems.push({
+            type: 'taskItem',
+            attrs: { checked },
+            content: [
+              {
+                type: 'paragraph',
+                content: parseInlineMarkdown(itemText)
+              }
+            ]
+          });
+          continue;
+        }
+
+        const orderedMatch = line.match(/^[ ]{0,3}(\d+)[.)][ \t]+(.*)$/);
+        if (orderedMatch) {
+          if (currentType !== 'ordered') {
+            flushCurrentList();
+            currentType = 'ordered';
+            currentStart = parseInt(orderedMatch[1] || '1', 10);
+          }
+          const itemText = orderedMatch[2]?.trim() ?? '';
+          currentItems.push({
+            type: 'listItem',
+            content: [
+              {
+                type: 'paragraph',
+                content: parseInlineMarkdown(itemText)
+              }
+            ]
+          });
+          continue;
+        }
+
+        const bulletMatch = line.match(/^[ ]{0,3}(?:[-*+])[ \t]+(.*)$/);
+        if (bulletMatch) {
+          if (currentType !== 'bullet') {
+            flushCurrentList();
+            currentType = 'bullet';
+          }
+          const itemText = bulletMatch[1]?.trim() ?? '';
+          currentItems.push({
+            type: 'listItem',
+            content: [
+              {
+                type: 'paragraph',
+                content: parseInlineMarkdown(itemText)
+              }
+            ]
+          });
+          continue;
+        }
+
+        // Continuation line for previous item
+        if (currentItems.length > 0) {
+          const lastItem = currentItems[currentItems.length - 1];
+          const lastPara = lastItem?.content?.[0];
+          if (lastPara && lastPara.content) {
+            const addedNodes = parseInlineMarkdown(' ' + line.trim());
+            lastPara.content.push(...addedNodes);
+          }
+        }
+      }
+
+      flushCurrentList();
+      continue;
+    }
+
+    // Check if block is a standalone Image: ![alt|400|center](url) or ![alt](url)
+    const trimmed = block.raw.trim();
+    const imageMatch = trimmed.match(/^!\[([^\]|]*)(?:\|(\d+))?(?:\|(left|center|right))?\]\(([^\)]+)\)$/);
+    if (imageMatch) {
+      const alt = imageMatch[1] || '';
+      const width = imageMatch[2] ? parseInt(imageMatch[2], 10) : null;
+      const alignment = (imageMatch[3] as 'left' | 'center' | 'right') || 'center';
+      const src = imageMatch[4] || '';
+
       content.push({
-        type: 'bulletList',
-        content: listItems
+        type: 'image',
+        attrs: {
+          src,
+          alt,
+          width,
+          alignment
+        }
+      });
+      continue;
+    }
+
+    // Check if block is a standalone File Chip: [filename.ext](path)
+    const fileChipMatch = trimmed.match(/^\[([^\]]+\.(pdf|xlsx?|docx?|csv|zip|ts|js|png|jpg|jpeg|gif|svg))\]\(([^\)]+)\)$/i);
+    if (fileChipMatch) {
+      const name = fileChipMatch[1] || 'Attachment';
+      const ext = fileChipMatch[2]?.toUpperCase() || 'FILE';
+      const path = fileChipMatch[3] || '';
+
+      content.push({
+        type: 'fileChip',
+        attrs: {
+          name,
+          path,
+          fileType: ext,
+          size: 'Attachment',
+          missing: false
+        }
       });
       continue;
     }
 
     // Paragraph or generic text block
-    const paraText = block.raw.trim();
     content.push({
       type: 'paragraph',
-      content: paraText ? [{ type: 'text', text: paraText }] : []
+      content: parseInlineMarkdown(trimmed)
     });
   }
 
@@ -167,20 +496,20 @@ export function tipTapDocToMarkdown(doc: TipTapDocJSON): string {
   for (const node of doc.content) {
     if (node.type === 'heading') {
       const level = (node.attrs?.['level'] as number) || 1;
-      const text = getNodeText(node);
+      const text = serializeInlineNodes(node.content);
       blocks.push(`${'#'.repeat(level)} ${text}`);
       continue;
     }
 
     if (node.type === 'paragraph') {
-      const text = getNodeText(node);
+      const text = serializeInlineNodes(node.content);
       blocks.push(text);
       continue;
     }
 
     if (node.type === 'codeBlock') {
       const lang = (node.attrs?.['language'] as string) || '';
-      const text = getNodeText(node);
+      const text = getNodeRawText(node);
       blocks.push(`\`\`\`${lang}\n${text}\n\`\`\``);
       continue;
     }
@@ -191,7 +520,7 @@ export function tipTapDocToMarkdown(doc: TipTapDocJSON): string {
     }
 
     if (node.type === 'blockquote') {
-      const text = getNodeText(node);
+      const text = serializeInlineNodes(node.content);
       const quoted = text
         .split('\n')
         .map((l) => `> ${l}`)
@@ -200,12 +529,80 @@ export function tipTapDocToMarkdown(doc: TipTapDocJSON): string {
       continue;
     }
 
+    if (node.type === 'callout') {
+      const type = (node.attrs?.['type'] as string) || 'info';
+      const marker = (node.attrs?.['marker'] as string) || (node.attrs?.['folded'] ? '-' : '');
+      const title = (node.attrs?.['title'] as string) || '';
+      const headerLine = `> [!${type}]${marker}${title ? ` ${title}` : ''}`;
+
+      const bodyText = serializeInlineNodes(node.content);
+      if (bodyText) {
+        const bodyLines = bodyText
+          .split('\n')
+          .map((l) => `> ${l}`)
+          .join('\n');
+        blocks.push(`${headerLine}\n${bodyLines}`);
+      } else {
+        blocks.push(headerLine);
+      }
+      continue;
+    }
+
+    if (node.type === 'table') {
+      const rows = node.content ?? [];
+      if (rows.length > 0) {
+        const tableLines: string[] = [];
+        const headerRow = rows[0];
+        const headerCells = headerRow?.content ?? [];
+        const headers = headerCells.map((c) => serializeInlineNodes(c.content).trim());
+        tableLines.push(`| ${headers.join(' | ')} |`);
+
+        // Delimiter line
+        const delimiters = headerCells.map((c) => {
+          const align = c.attrs?.['align'];
+          if (align === 'center') return ':---:';
+          if (align === 'right') return '---:';
+          return '---';
+        });
+        tableLines.push(`| ${delimiters.join(' | ')} |`);
+
+        // Data rows
+        for (let r = 1; r < rows.length; r++) {
+          const dCells = rows[r]?.content ?? [];
+          const values = dCells.map((c) => serializeInlineNodes(c.content).trim());
+          tableLines.push(`| ${values.join(' | ')} |`);
+        }
+        blocks.push(tableLines.join('\n'));
+        continue;
+      }
+    }
+
+    if (node.type === 'image') {
+      const src = (node.attrs?.['src'] as string) || '';
+      const alt = (node.attrs?.['alt'] as string) || '';
+      const width = node.attrs?.['width'] as number | null;
+      const alignment = (node.attrs?.['alignment'] as string) || 'center';
+
+      let descriptor = alt;
+      if (width) descriptor += `|${width}`;
+      if (alignment && alignment !== 'center') descriptor += `|${alignment}`;
+      blocks.push(`![${descriptor}](${src})`);
+      continue;
+    }
+
+    if (node.type === 'fileChip') {
+      const name = (node.attrs?.['name'] as string) || 'Attachment';
+      const path = (node.attrs?.['path'] as string) || '';
+      blocks.push(`[${name}](${path})`);
+      continue;
+    }
+
     if (node.type === 'taskList') {
       const items: string[] = [];
       for (const item of node.content ?? []) {
         const checked = Boolean(item.attrs?.['checked']);
         const mark = checked ? 'x' : ' ';
-        const text = getNodeText(item);
+        const text = serializeInlineNodes(item.content);
         items.push(`- [${mark}] ${text}`);
       }
       blocks.push(items.join('\n'));
@@ -215,7 +612,7 @@ export function tipTapDocToMarkdown(doc: TipTapDocJSON): string {
     if (node.type === 'bulletList') {
       const items: string[] = [];
       for (const item of node.content ?? []) {
-        const text = getNodeText(item);
+        const text = serializeInlineNodes(item.content);
         items.push(`- ${text}`);
       }
       blocks.push(items.join('\n'));
@@ -226,15 +623,15 @@ export function tipTapDocToMarkdown(doc: TipTapDocJSON): string {
       const items: string[] = [];
       let idx = (node.attrs?.['start'] as number) || 1;
       for (const item of node.content ?? []) {
-        const text = getNodeText(item);
+        const text = serializeInlineNodes(item.content);
         items.push(`${idx++}. ${text}`);
       }
       blocks.push(items.join('\n'));
       continue;
     }
 
-    // Fallback text
-    const text = getNodeText(node);
+    // Fallback
+    const text = serializeInlineNodes(node.content) || getNodeRawText(node);
     if (text) {
       blocks.push(text);
     }
@@ -243,8 +640,8 @@ export function tipTapDocToMarkdown(doc: TipTapDocJSON): string {
   return blocks.join('\n\n') + '\n';
 }
 
-function getNodeText(node: TipTapNodeJSON): string {
+function getNodeRawText(node: TipTapNodeJSON): string {
   if (node.text) return node.text;
   if (!node.content) return '';
-  return node.content.map(getNodeText).join('');
+  return node.content.map(getNodeRawText).join('');
 }

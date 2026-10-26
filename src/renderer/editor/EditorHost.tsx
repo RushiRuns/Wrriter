@@ -18,17 +18,46 @@ import {
   HorizontalRuleNode
 } from './extensions/nodes';
 import { BoldMark, ItalicMark, StrikeMark, CodeMark } from './extensions/marks';
+import { CalloutNode } from './extensions/callout';
+import { TableNode, TableRowNode, TableHeaderNode, TableCellNode } from './extensions/table';
+import { ImageNode } from './extensions/image';
+import { FileChipNode } from './extensions/file-chip';
+import { WikilinkMark, WebLinkMark } from './extensions/links';
 import { MarkdownShortcutsExtension } from './extensions/markdown-shortcuts';
 import { PasteHandlerExtension } from './extensions/paste-handler';
 import { FindReplaceExtension, findReplacePluginKey } from './extensions/find-replace-extension';
 import { FindBar } from '../components/FindBar';
 import { markdownToTipTapDoc, tipTapDocToMarkdown } from './markdown-converter';
 import { planSave } from '../../shared/markdown/save';
+import { parseFrontmatter } from '../../shared/domain/frontmatter';
 import {
   extractTitleFromFirstLine,
   shouldRenameFileOnLeave,
   deriveFileNameFromTitle
 } from '../../shared/domain/titles';
+
+export function formatNoteDate(d: Date | number): string {
+  const date = typeof d === 'number' ? new Date(d) : d;
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  const day = date.getDate();
+  const month = months[date.getMonth()];
+  const year = date.getFullYear();
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${day} ${month} ${year} at ${hours}:${minutes}`;
+}
+
+export function hashString(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
 
 export interface FindBarState {
   isOpen: boolean;
@@ -59,6 +88,8 @@ export interface TabSession {
   initialTitle: string;
   isManualRenamed?: boolean;
   findBarState?: FindBarState;
+  dateLine?: string;
+  tags?: readonly string[];
 }
 
 export interface EditorHostProps {
@@ -108,6 +139,10 @@ export const EditorHost: React.FC<EditorHostProps> = ({
   const [totalMatches, setTotalMatches] = useState(0);
   const [skippedMatches, setSkippedMatches] = useState(0);
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
+
+  // Active note date line and tags row
+  const [activeDateLine, setActiveDateLine] = useState<string>('');
+  const [activeTags, setActiveTags] = useState<readonly string[]>([]);
 
   // Autosave timer
   const autosaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -221,16 +256,25 @@ export const EditorHost: React.FC<EditorHostProps> = ({
         HeadingNode,
         CodeBlockNode,
         BlockquoteNode,
+        CalloutNode,
+        TableNode,
+        TableRowNode,
+        TableHeaderNode,
+        TableCellNode,
         BulletListNode,
         OrderedListNode,
         ListItemNode,
         TaskListNode,
         TaskItemNode,
         HorizontalRuleNode,
+        ImageNode,
+        FileChipNode,
         BoldMark,
         ItalicMark,
         StrikeMark,
         CodeMark,
+        WikilinkMark,
+        WebLinkMark,
         MarkdownShortcutsExtension,
         PasteHandlerExtension,
         FindReplaceExtension
@@ -240,6 +284,120 @@ export const EditorHost: React.FC<EditorHostProps> = ({
           class: 'wrriter-prosemirror',
           spellcheck: 'true',
           lang: 'en'
+        },
+        handleClick(view, pos, event) {
+          const target = event.target as HTMLElement;
+
+          // 1. Task Item Checkbox Toggle
+          const chkBtn = target.closest('.chk') || target.closest('[data-task-toggle]');
+          if (chkBtn) {
+            event.preventDefault();
+            const $pos = view.state.doc.resolve(pos);
+            for (let d = $pos.depth; d > 0; d--) {
+              const node = $pos.node(d);
+              if (node.type.name === 'taskItem') {
+                const nodePos = $pos.before(d);
+                const tr = view.state.tr.setNodeMarkup(nodePos, undefined, {
+                  ...node.attrs,
+                  checked: !node.attrs['checked']
+                });
+                view.dispatch(tr);
+                return true;
+              }
+            }
+          }
+
+          // 2. Callout Fold Toggle
+          const foldBtn = target.closest('.fold') || target.closest('[data-callout-fold]');
+          if (foldBtn) {
+            event.preventDefault();
+            const $pos = view.state.doc.resolve(pos);
+            for (let d = $pos.depth; d > 0; d--) {
+              const node = $pos.node(d);
+              if (node.type.name === 'callout') {
+                const nodePos = $pos.before(d);
+                const tr = view.state.tr.setNodeMarkup(nodePos, undefined, {
+                  ...node.attrs,
+                  folded: !node.attrs['folded']
+                });
+                view.dispatch(tr);
+                return true;
+              }
+            }
+          }
+
+          // 3. Web link click (check address and open in browser)
+          const linkEl = target.closest('a.wl.web') as HTMLAnchorElement | null;
+          if (linkEl && linkEl.href) {
+            event.preventDefault();
+            try {
+              const parsed = new URL(linkEl.href);
+              if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+                window.open(linkEl.href, '_blank', 'noopener,noreferrer');
+              }
+            } catch {
+              // Ignore invalid address
+            }
+            return true;
+          }
+
+          // 4. Image Toolbar Actions (Align left, center, right, or remove)
+          const alignBtn = target.closest('.phbar .fb[data-align]') as HTMLElement | null;
+          if (alignBtn) {
+            event.preventDefault();
+            const align = alignBtn.getAttribute('data-align') as 'left' | 'center' | 'right';
+            const $pos = view.state.doc.resolve(pos);
+            for (let d = $pos.depth; d > 0; d--) {
+              const node = $pos.node(d);
+              if (node.type.name === 'image') {
+                const nodePos = $pos.before(d);
+                const tr = view.state.tr.setNodeMarkup(nodePos, undefined, {
+                  ...node.attrs,
+                  alignment: align
+                });
+                view.dispatch(tr);
+                return true;
+              }
+            }
+          }
+
+          const removeBtn = target.closest('.phbar .fb[data-action="remove"]') as HTMLElement | null;
+          if (removeBtn) {
+            event.preventDefault();
+            const $pos = view.state.doc.resolve(pos);
+            for (let d = $pos.depth; d > 0; d--) {
+              const node = $pos.node(d);
+              if (node.type.name === 'image') {
+                const nodePos = $pos.before(d);
+                const tr = view.state.tr.delete(nodePos, nodePos + node.nodeSize);
+                view.dispatch(tr);
+                return true;
+              }
+            }
+          }
+
+          return false;
+        },
+        handleDoubleClick(view, pos, event) {
+          const target = event.target as HTMLElement;
+          // Image double-click resets back to natural size
+          if (target.tagName === 'IMG' || target.closest('.phw')) {
+            event.preventDefault();
+            const $pos = view.state.doc.resolve(pos);
+            for (let d = $pos.depth; d > 0; d--) {
+              const node = $pos.node(d);
+              if (node.type.name === 'image') {
+                const nodePos = $pos.before(d);
+                const tr = view.state.tr.setNodeMarkup(nodePos, undefined, {
+                  ...node.attrs,
+                  width: null
+                });
+                view.dispatch(tr);
+                return true;
+              }
+            }
+          }
+          return false;
         }
       },
       onTransaction({ editor: currentEditor }) {
@@ -334,6 +492,8 @@ export const EditorHost: React.FC<EditorHostProps> = ({
         const fileName = activeNotePath.split('/').pop() ?? activeNotePath;
         const initialBase = fileName.replace(/\.md$/i, '');
         let title = initialBase;
+        let tags: readonly string[] = [];
+        const dateLine = formatNoteDate(Date.now());
 
         if (window.wrriter?.note?.read) {
           const res = await window.wrriter.note.read({ path: activeNotePath });
@@ -342,6 +502,9 @@ export const EditorHost: React.FC<EditorHostProps> = ({
             originalBytes = new Uint8Array(res.value.bytes);
             const firstLine = rawText.split(/\r?\n/)[0];
             title = extractTitleFromFirstLine(firstLine) || initialBase;
+
+            const fm = parseFrontmatter(rawText);
+            tags = fm.tags;
           }
         }
 
@@ -355,6 +518,8 @@ export const EditorHost: React.FC<EditorHostProps> = ({
           originalBytes,
           initialFileName: fileName,
           initialTitle: title,
+          tags,
+          dateLine,
           findBarState: {
             isOpen: false,
             isReplaceOpen: false,
@@ -371,10 +536,14 @@ export const EditorHost: React.FC<EditorHostProps> = ({
         editor.commands.setContent(docJson as any, { emitUpdate: false });
         targetTab.editorState = editor.state;
         onTitleChange?.(title);
+        setActiveTags(tags);
+        setActiveDateLine(dateLine);
       } else if (targetTab.editorState) {
         // Swap EditorState in O(1) time without re-mounting editor DOM
         editor.view.updateState(targetTab.editorState);
         onTitleChange?.(targetTab.title);
+        setActiveTags(targetTab.tags || []);
+        setActiveDateLine(targetTab.dateLine || '');
       }
 
       // Restore destination tab's findBarState
@@ -850,19 +1019,39 @@ export const EditorHost: React.FC<EditorHostProps> = ({
         style={{
           flex: 1,
           overflowY: 'auto',
-          overflowX: 'auto',
-          paddingBottom: 48
+          overflowX: 'auto'
         }}
       >
         <div
           className="col"
           style={{
+            '--col-gut': `${noteMargin}px`,
             paddingLeft: noteMargin,
             paddingRight: noteMargin,
-            minWidth: 360,
-            paddingTop: 40
-          }}
+            paddingTop: 88,
+            paddingBottom: 64,
+            minWidth: `calc(360px + ${noteMargin * 2}px)`
+          } as React.CSSProperties}
         >
+          {/* Centred Date Line: 13px third text, 16px above title */}
+          {activeDateLine && (
+            <div className="meta">{activeDateLine}</div>
+          )}
+
+          {/* Tags Row */}
+          {activeTags && activeTags.length > 0 && (
+            <div className="props">
+              {activeTags.map((tag) => {
+                const colorIdx = (hashString(tag) % 5) + 1;
+                return (
+                  <span key={tag} className={`htag c${colorIdx}`}>
+                    #{tag}
+                  </span>
+                );
+              })}
+            </div>
+          )}
+
           {/* TipTap Live Editor DOM Container */}
           <div ref={containerRef} className="editor-container" />
         </div>

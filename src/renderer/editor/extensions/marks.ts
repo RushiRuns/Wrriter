@@ -34,9 +34,9 @@ export const CodeMark = Mark.create({
   name: 'code',
   excludes: '_',
   parseHTML() {
-    return [{ tag: 'code' }];
+    return [{ tag: 'code' }, { tag: 'span.ic2' }];
   },
   renderHTML({ HTMLAttributes }) {
-    return ['code', mergeAttributes(HTMLAttributes, { class: 'inline-code' }), 0];
+    return ['code', mergeAttributes(HTMLAttributes, { class: 'ic2 mono inline-code' }), 0];
   }
 });

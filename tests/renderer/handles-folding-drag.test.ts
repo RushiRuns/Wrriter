@@ -149,9 +149,9 @@ describe('UI Slice 5: Handles, folding and dragging blocks', () => {
       expect(foldingState?.foldedPositions.has(headingTwoPos)).toBe(true);
 
       // Verify that decorations hide child section blocks
-      const plugin = editor.state.plugins.find((p) => p.key === headingFoldingPluginKey.key);
+      const plugin = headingFoldingPluginKey.get(editor.state);
       expect(plugin).toBeDefined();
-      const decos = plugin!.props.decorations!(editor.state);
+      const decos = plugin?.props.decorations?.call(plugin, editor.state);
       expect(decos).toBeDefined();
 
       // Verify that document content is completely unchanged and round-trips identically
@@ -287,12 +287,10 @@ describe('UI Slice 5: Handles, folding and dragging blocks', () => {
   describe('Handle Rules and Drag Thresholds', () => {
     it('enforces that headings show only fold arrow and NEVER a grip handle', () => {
       const editor = createTestEditor(sampleNoteMd);
-      const plugin = editor.state.plugins.find(
-        (p) => p.key === blockHandlesPluginKey.key
-      );
+      const plugin = blockHandlesPluginKey.get(editor.state);
       expect(plugin).toBeDefined();
 
-      const decos = plugin!.props.decorations!(editor.state);
+      const decos = plugin?.props.decorations?.call(plugin, editor.state);
       expect(decos).toBeDefined();
     });
 

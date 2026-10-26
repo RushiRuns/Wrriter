@@ -11,6 +11,7 @@ export interface FindMatch {
   readonly to: number;
   readonly text: string;
   readonly isProtected: boolean;
+  readonly marks?: readonly any[] | undefined;
 }
 
 export interface FindResult {
@@ -176,7 +177,8 @@ export function findMatchesInDoc(
           from: absoluteFrom,
           to: absoluteTo,
           text: match[0],
-          isProtected
+          isProtected,
+          marks: child.marks
         });
       }
 
@@ -208,10 +210,10 @@ export function replaceOneMatch(
     return false;
   }
 
-  const marks = tr.doc.resolve(match.from).marks();
+  const marks = match.marks ?? tr.doc.resolve(match.from).marks();
 
   if (replacementText) {
-    const newNode = schema.text(replacementText, marks);
+    const newNode = schema.text(replacementText, marks as any);
     tr.replaceWith(match.from, match.to, newNode);
   } else {
     tr.delete(match.from, match.to);
@@ -247,10 +249,12 @@ export function replaceAllMatches(
   // Process in descending order of 'from' so earlier positions are unaffected
   const sorted = [...eligible].sort((a, b) => b.from - a.from);
 
+  const defaultNode = replacementText ? schema.text(replacementText) : null;
+
   for (const match of sorted) {
-    const marks = tr.doc.resolve(match.from).marks();
     if (replacementText) {
-      const newNode = schema.text(replacementText, marks);
+      const marks = match.marks ?? tr.doc.resolve(match.from).marks();
+      const newNode = marks.length === 0 ? defaultNode! : schema.text(replacementText, marks as any);
       tr.replaceWith(match.from, match.to, newNode);
     } else {
       tr.delete(match.from, match.to);

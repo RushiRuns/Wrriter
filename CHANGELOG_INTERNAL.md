@@ -22,4 +22,6 @@
 
 [2026-10-26] - Packaging configured in electron-builder.yml: appId set to app.wrriter placeholder, target Windows x64 NSIS installer, current-user installation only (perMachine: false, allowElevation: false), asar packaging enabled with native .node unpacking, and zero auto-updater or analytics hooks. - none.
 
+[2026-10-26] - Standardized package.json scripts: commented dev placeholder pending wiring approval; typecheck running tsc -b across all 4 tsconfigs; build running typecheck then bundle; build:win bundling then running electron-builder; and placeholder scripts for checks:tokens, checks:contrast, checks:motion, and checks:dash. - none.
+
 

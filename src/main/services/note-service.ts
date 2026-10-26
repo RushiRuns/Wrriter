@@ -9,6 +9,8 @@ import { resolveInsideVault } from './vault-reader';
 import { sortNotesWithManualOrder, generateKeyBetween } from '../../shared/domain/ordering';
 import type { NoteListItem } from '../../shared/ipc/contracts';
 
+import { planSave } from '../../shared/markdown/save';
+
 export interface NoteServiceOptions {
   safeWriter?: SafeWriter | undefined;
   vaultReader?: VaultReader | undefined;
@@ -34,9 +36,20 @@ export class NoteService {
   }
 
   /**
-   * Atomically saves note bytes to disk via SafeWriter with fsync.
+   * Atomically saves note bytes to disk via planSave and SafeWriter with fsync.
+   * Only edited blocks are re-serialized, keeping line endings and BOM intact.
+   * If unchanged, skips write without touching disk or modified time.
    */
   async saveNote(vaultRoot: string, noteRelPath: string, text: string): Promise<Result<WriteOutcome>> {
+    const currentRes = await this.vaultReader.read(vaultRoot, noteRelPath);
+    if (currentRes.ok) {
+      const plan = planSave(currentRes.value.bytes, text);
+      if (plan.unchanged) {
+        return ok({ written: false, bytesWritten: 0 });
+      }
+      return this.safeWriter.write(vaultRoot, noteRelPath, Buffer.from(plan.bytes));
+    }
+
     return this.safeWriter.write(vaultRoot, noteRelPath, text);
   }
 

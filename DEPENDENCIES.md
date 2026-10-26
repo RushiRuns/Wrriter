@@ -59,8 +59,8 @@ Nothing that depends on one of these is built until it is decided.
 | File watcher | @parcel/watcher | Decided in day-one check on 50,000 files (ADR-W12) |
 | Worker type | Electron utility process | Decided in day-one check (ADR-W11) |
 | Vite and Electron wiring | Own Vite configs (main.vite.config.ts, workers.vite.config.ts, renderer.vite.config.ts) | Decided in M1 scaffold (zero extra packages) |
-| Markdown block splitting with exact source positions | markdown-it (token line maps), micromark or mdast (positions), TipTap's own markdown support | M2 spike against the sample notes. The winner must give the exact source text of every block so unedited blocks are written back byte for byte |
-| Frontmatter that keeps key order and comments | yaml (its Document API) | M2 spike: change one owned key, everything else stays byte for byte |
+| Markdown block splitting with exact source positions | markdown-it, micromark/mdast, TipTap, own code | Decided: Own pure TypeScript `blockSplitter` (zero dependencies, 100% slice invariant, ADR-W16) |
+| Frontmatter that keeps key order and comments | yaml Document API, own code | Decided: Own pure TypeScript surgical updater (zero dependencies, 100% byte-for-byte fidelity, ADR-W16) |
 | IPC argument validation | Own validators in `shared/ipc`, zod | M1. Could own code do it in a few lines per request? |
 | Renderer state | Plain React state and context | Decided: Plain React state & context (ADR-W13). No Zustand. Keypress state local |
 | Virtualised lists | TanStack Virtual, own code | M1, a list of 50,000 rows scrolling smoothly |

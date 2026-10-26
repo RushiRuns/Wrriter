@@ -60,7 +60,7 @@ Each of these exists exactly once. A second copy is a bug.
 | `Result`, `AppError`, `toMessage` | `shared/result.ts` | Typed results and plain error messages | M1 | Built |
 | `names` | `shared/domain/names.ts` | Windows-safe names, reserved names, 100-character cap, numbering on clash, case-only clash check | M1 | Built |
 | `titles` | `shared/domain/titles.ts` | Title from the first line, Untitled numbering, when a file follows its title | M2 | Planned |
-| `frontmatter` | `shared/domain/frontmatter.ts` | Read and edit the owned keys, keep every other key, comment and the order | M3 | Planned |
+| `frontmatter` | `shared/domain/frontmatter.ts` | Read and edit the owned keys, keep every other key, comment and the order | M2 / M3 | Built |
 | `wikilinks` | `shared/domain/wikilinks.ts` | Parse `[[...]]` forms, rewrite on rename keeping alias and heading | M3 | Planned |
 | `links` | `shared/domain/links.ts` | Resolve a plain link: same folder first, then most recently modified | M3 | Planned |
 | `tags` | `shared/domain/tags.ts` | Allowed characters, case folding, nesting by slash, rename and merge | M3 | Planned |
@@ -70,8 +70,8 @@ Each of these exists exactly once. A second copy is a bug.
 | `conflictNames` | `shared/domain/conflicts.ts` | Detect `sync-conflict` copies next to a note | M1 (shown), V2 (handled) | Planned |
 | `captureNames` | `shared/domain/names.ts` | `Quick note YYYY-MM-DD HH.mm`, `Pasted image YYYYMMDD-HHmmss.png` | M4 | Planned |
 | `imagePaths` | `shared/domain/image-paths.ts` | Relative image and attachment paths, percent-encoding, rewrite on move | M2 | Planned |
-| `blockSplitter` | `shared/markdown/blocks.ts` | Split a note into blocks with their exact source text | M2 | Planned |
-| `planSave` | `shared/markdown/save.ts` | Re-serialize only edited blocks, keep line endings, byte order mark and style | M2 | Planned |
+| `blockSplitter` | `shared/markdown/blocks.ts` | Split a note into blocks with their exact source text | M2 | Built |
+| `planSave` | `shared/markdown/save.ts` | Re-serialize only edited blocks, keep line endings, byte order mark and style | M2 | Built |
 | `lightIndexer` | `shared/markdown/light-index.ts` | Frontmatter, tags, wikilinks and first lines by pattern matching, for the index | M3 | Planned |
 
 ## Main Services (`src/main/services`)
@@ -224,7 +224,7 @@ Record every query here as it is written.
 | Motion check | Rejects durations > 300 ms or outside 4 approved speeds (`scripts/check-motion.mjs`) | M1 | Built |
 | Long-dash check | Fails on en-dash or em-dash in app UI text (`scripts/check-dash.mjs`) | M1 | Built |
 | Layer import check | The import rules in ARCHITECTURE.md (`scripts/check-rules.mjs`) | M1 | Built |
-| Round-trip check | The sample notes, byte for byte | M2 | Planned |
+| `Round-trip check` | The sample notes, byte for byte (`tests/samples/round-trip.test.ts`) | M2 | Built |
 | Random-stop test | Jobs interrupted 100 times | M3 | Planned |
 | Vault generator | The 50,000-note test vault (`tests/vault-gen/generate-vault.ts`) | M1 | Built |
 | Benchmark harness | Quick set every build, full set per milestone (`tests/bench/benchmark-suite.mjs`) | M1 | Built |

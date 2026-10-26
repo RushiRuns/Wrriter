@@ -216,13 +216,13 @@ Nothing that depends on a row is built until it is decided. Rows 15 to 17 are ne
 
 ### Markdown core and the round-trip check (first in M2)
 
-- [ ] Sample notes in `tests/samples/`, one for each line of the SCHEMA.md compatibility checklist. Krishna reviews them before they land
-- [ ] Spike: splitting a note into blocks with the exact source text of each (markdown-it, micromark or mdast, or TipTap's own markdown support), run against the sample notes. The result goes into DEPENDENCIES.md and an ADR
-- [ ] Spike: frontmatter with the yaml Document API. Changing one owned key leaves everything else byte for byte
-- [ ] `blockSplitter` and `planSave`: only edited blocks are turned back into markdown, in the note's own style, with its line endings, byte order mark and final newline kept
-- [ ] The round-trip check (the sample-note check) runs on every build and fails it: every sample opened and saved without editing stays byte for byte the same, and one edited paragraph is the only difference. If TipTap cannot keep a note intact, Antigravity stops and tells Krishna and does not patch around it
-- [ ] Note content is never run: raw HTML and script tags show as text, `dataview` and `dataviewjs` blocks show a Not run pill, Templater tags and inline fields stay as written
-- [ ] Everything on the pass-through list in SCHEMA.md (Note Body) is kept word for word
+- [x] Sample notes in `tests/samples/`, one for each line of the SCHEMA.md compatibility checklist. Krishna reviews them before they land
+- [x] Spike: splitting a note into blocks with the exact source text of each (markdown-it, micromark or mdast, or TipTap's own markdown support), run against the sample notes. The result goes into DEPENDENCIES.md and an ADR
+- [x] Spike: frontmatter with the yaml Document API. Changing one owned key leaves everything else byte for byte
+- [x] `blockSplitter` and `planSave`: only edited blocks are turned back into markdown, in the note's own style, with its line endings, byte order mark and final newline kept
+- [x] The round-trip check (the sample-note check) runs on every build and fails it: every sample opened and saved without editing stays byte for byte the same, and one edited paragraph is the only difference. If TipTap cannot keep a note intact, Antigravity stops and tells Krishna and does not patch around it
+- [x] Note content is never run: raw HTML and script tags show as text, `dataview` and `dataviewjs` blocks show a Not run pill, Templater tags and inline fields stay as written
+- [x] Everything on the pass-through list in SCHEMA.md (Note Body) is kept word for word
 
 ### The editor
 

@@ -13,7 +13,9 @@
     "exactOptionalPropertyTypes": true,
     "isolatedModules": true,
     "skipLibCheck": true,
-    "noEmit": true,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "outDir": "./out/types/shared",
     "composite": true,
     "paths": {
       "@shared/*": ["./src/shared/*"]

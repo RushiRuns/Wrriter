@@ -1,9 +1,9 @@
+/// <reference types="vite/client" />
+
 declare global {
   interface Window {
-    readonly wrriter?: import('../../preload/index').WrriterApi
+    readonly wrriter?: import('../../shared/ipc').WrriterApi;
   }
 }
 
-
-export {}
-
+export {};

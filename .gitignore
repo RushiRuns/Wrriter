@@ -23,6 +23,8 @@ yarn-error.log*
 *.sqlite-wal
 *.sqlite-shm
 tests/vault-gen/tmp/
+tests/vault-gen/sample-run/
+tests/vault-gen/test-vault-*/
 tests/bench/tmp/
 tests/day-one-tmp/
 test-vault/
@@ -34,3 +36,5 @@ Thumbs.db
 
 # folders
 /mockup images
+/tests/vault-gen
+

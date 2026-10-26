@@ -55,8 +55,8 @@ Each of these exists exactly once. A second copy is a bug.
 
 | Name | Location | Purpose | Milestone | Status |
 |---|---|---|---|---|
-| `Clock`, `TestClock` | `shared/domain/time.ts` | Injected time, local `today()`, fixed clock for tests | M1 | Planned |
-| `IdGenerator` | `shared/domain/ids.ts` | Injected UUID v4 for the vault id | M1 | Planned |
+| `Clock`, `SystemClock`, `TestClock` | `shared/clock.ts` | Injected time, local `today()`, fixed clock for tests | M1 | Built |
+| `IdGenerator`, `TestIdGenerator` | `shared/id-generator.ts` | Injected ID generator, sequential test generator | M1 | Built |
 | `Result`, `AppError`, `toMessage` | `shared/result.ts` | Typed results and plain error messages | M1 | Built |
 | `names` | `shared/domain/names.ts` | Windows-safe names, reserved names, 100-character cap, numbering on clash, case-only clash check | M1 | Planned |
 | `titles` | `shared/domain/titles.ts` | Title from the first line, Untitled numbering, when a file follows its title | M2 | Planned |
@@ -114,7 +114,23 @@ Record every request here as it is written, so a second one is not added for the
 
 | Request | Arguments | Result | Milestone | Status |
 |---|---|---|---|---|
-| (none yet) | | | | |
+| `window.minimize` | `{}` | `void` | M1 | Built |
+| `window.maximize` | `{}` | `void` | M1 | Built |
+| `window.close` | `{}` | `void` | M1 | Built |
+| `vault.open` | `{ path: string }` | `VaultInfo` | M1 | Built (Contract & Router) |
+| `vault.close` | `{}` | `void` | M1 | Built (Contract & Router) |
+| `vault.getActive` | `{}` | `VaultInfo \| null` | M1 | Built (Contract & Router) |
+| `note.read` | `{ path: string }` | `NoteContent` | M1 | Built (Contract & Router) |
+| `note.save` | `{ path: string, text: string }` | `SaveOutcome` | M1 | Built (Contract & Router) |
+| `note.setPinned` | `{ path: string, pinned: boolean }` | `void` | M1 | Built (Contract & Router) |
+| `note.delete` | `{ path: string }` | `void` | M1 | Built (Contract & Router) |
+| `folder.create` | `{ path: string }` | `void` | M1 | Built (Contract & Router) |
+| `folder.rename` | `{ oldPath: string, newPath: string }` | `void` | M1 | Built (Contract & Router) |
+| `folder.delete` | `{ path: string }` | `void` | M1 | Built (Contract & Router) |
+| `app.getTheme` | `{}` | `ThemeName` | M1 | Built |
+| `app.setTheme` | `{ theme: ThemeName }` | `void` | M1 | Built |
+| `app.getAccent` | `{}` | `AccentName` | M1 | Built |
+| `app.setAccent` | `{ accent: AccentName }` | `void` | M1 | Built |
 
 ## Index Queries
 
@@ -194,12 +210,13 @@ Record every query here as it is written.
 | Token check | Fails on raw colours, off-scale sizes, durations or curves outside the list | M1 | Planned |
 | Contrast check | 4.5:1 text, 3:1 large text, icons and outlines, all accents, both themes | M1 | Planned |
 | Long-dash check | Fails on a long dash in the app's own text | M1 | Planned |
-| Layer import check | The import rules in ARCHITECTURE.md | M1 | Planned |
+| Layer import check | The import rules in ARCHITECTURE.md (`scripts/check-rules.mjs`) | M1 | Built |
 | Round-trip check | The sample notes, byte for byte | M2 | Planned |
 | Random-stop test | Jobs interrupted 100 times | M3 | Planned |
-| Vault generator | The 50,000-note test vault | M1 | Planned |
-| Benchmark harness | Quick set every build, full set per milestone | M1 | Planned |
-| Lag monitor | Main process blocks and long window tasks over 50 ms, development only | M1 | Planned |
+| Vault generator | The 50,000-note test vault (`tests/vault-gen/generate-vault.ts`) | M1 | Built |
+| Benchmark harness | Quick set every build, full set per milestone (`tests/bench/benchmark-suite.mjs`) | M1 | Built |
+| Lag monitor | Main process blocks and long window tasks over 50 ms (`src/main/platform/lag-monitor.ts`, `src/renderer/lag-monitor.ts`) | M1 | Built |
+| Size report | Per-bundle raw/gzip assets and packaged size ceiling check (`scripts/size-report.mjs`) | M1 | Built |
 
 ---
 

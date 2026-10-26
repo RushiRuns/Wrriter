@@ -1,0 +1,38 @@
+{
+  "timestamp": "2026-10-26T05:14:51.266Z",
+  "machine": "AMD Ryzen 5 5600H, 8 GB RAM, NVMe SSD, Windows 11 Build 26200",
+  "mode": "full",
+  "metrics": {
+    "readNote10KbMs": {
+      "median": 0.17,
+      "p95": 0.25,
+      "target": 50
+    },
+    "readNote1MbMs": {
+      "median": 2.67,
+      "p95": 3.85,
+      "target": 150
+    },
+    "replaceAll5kMatchesMs": {
+      "median": 0.39,
+      "p95": 0.57,
+      "target": 1000
+    },
+    "sqliteQueryMs": {
+      "median": 0.12,
+      "p95": 0.14,
+      "target": 30
+    },
+    "fullRescanMs": {
+      "scannedFiles": 50000,
+      "median": 1275.65,
+      "p95": 1911.98,
+      "target": 3000
+    },
+    "packagedAppLaunchMs": {
+      "median": 321.65,
+      "p95": 658.6,
+      "target": 2000
+    }
+  }
+}

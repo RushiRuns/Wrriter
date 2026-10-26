@@ -25,5 +25,8 @@
     "src/workers/**/*",
     "src/preload/**/*",
     "*.vite.config.ts"
+  ],
+  "references": [
+    { "path": "./tsconfig.shared.json" }
   ]
 }

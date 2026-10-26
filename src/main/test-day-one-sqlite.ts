@@ -1,69 +1,88 @@
-import { app, utilityProcess } from 'electron'
-import { Worker } from 'worker_threads'
-import Database from 'better-sqlite3'
-import { join } from 'path'
+import { app, utilityProcess } from 'electron';
+import { Worker } from 'worker_threads';
+import Database from 'better-sqlite3';
+import { join } from 'path';
+import * as fs from 'fs';
 
 app.whenReady().then(async () => {
-  console.log('=== DAY-ONE CHECK 1: better-sqlite3 and Worker Types ===')
+  console.log('=== DAY-ONE CHECK 1: better-sqlite3 and Worker Types ===');
+  const results: Record<string, unknown> = {
+    timestamp: new Date().toISOString(),
+    platform: process.platform,
+    arch: process.arch
+  };
 
   // Test 1: Main Process
   try {
-    const db = new Database(':memory:')
+    const db = new Database(':memory:');
     const row = db.prepare('SELECT 1 + 1 AS solution, sqlite_version() AS version').get() as {
-      solution: number
-      version: string
-    }
+      solution: number;
+      version: string;
+    };
+    results['mainProcess'] = { ok: true, solution: row.solution, version: row.version };
     console.log(
       `[PASS] Main Process query succeeded: solution = ${row.solution}, SQLite version = ${row.version}`
-    )
-    db.close()
+    );
+    db.close();
   } catch (err: unknown) {
-    console.error(`[FAIL] Main Process query failed:`, err)
+    results['mainProcess'] = { ok: false, error: err instanceof Error ? err.message : String(err) };
+    console.error(`[FAIL] Main Process query failed:`, err);
   }
 
   // Test 2: Node worker_threads
-  const workerScript = join(__dirname, '../workers/index.js')
+  const workerScript = join(__dirname, '../workers/index.js');
   try {
     const threadResult = await new Promise<{ ok: boolean; rows?: unknown[]; error?: string }>(
       (resolve, reject) => {
-        const worker = new Worker(workerScript)
+        const worker = new Worker(workerScript);
         worker.on('message', (msg) => {
-          worker.terminate()
-          resolve(msg)
-        })
-        worker.on('error', reject)
+          worker.terminate();
+          resolve(msg);
+        });
+        worker.on('error', reject);
         worker.postMessage({
           type: 'query',
           sql: "SELECT 40 + 2 AS solution, 'worker_threads' AS env"
-        })
+        });
       }
-    )
-    console.log(`[PASS] Node worker_threads query succeeded:`, JSON.stringify(threadResult))
+    );
+    results['workerThreads'] = threadResult;
+    console.log(`[PASS] Node worker_threads query succeeded:`, JSON.stringify(threadResult));
   } catch (err: unknown) {
-    console.error(`[FAIL] Node worker_threads query failed:`, err)
+    results['workerThreads'] = { ok: false, error: err instanceof Error ? err.message : String(err) };
+    console.error(`[FAIL] Node worker_threads query failed:`, err);
   }
 
   // Test 3: Electron utilityProcess
   try {
     const utilityResult = await new Promise<{ ok: boolean; rows?: unknown[]; error?: string }>(
       (resolve, reject) => {
-        const child = utilityProcess.fork(workerScript)
+        const child = utilityProcess.fork(workerScript);
         child.on('message', (msg) => {
-          child.kill()
-          resolve(msg as { ok: boolean; rows?: unknown[]; error?: string })
-        })
+          child.kill();
+          resolve(msg as { ok: boolean; rows?: unknown[]; error?: string });
+        });
         child.on('error', reject)
         child.postMessage({
           type: 'query',
           sql: "SELECT 99 + 1 AS solution, 'utilityProcess' AS env"
-        })
+        });
       }
-    )
-    console.log(`[PASS] Electron utilityProcess query succeeded:`, JSON.stringify(utilityResult))
+    );
+    results['utilityProcess'] = utilityResult;
+    console.log(`[PASS] Electron utilityProcess query succeeded:`, JSON.stringify(utilityResult));
   } catch (err: unknown) {
-    console.error(`[FAIL] Electron utilityProcess query failed:`, err)
+    results['utilityProcess'] = { ok: false, error: err instanceof Error ? err.message : String(err) };
+    console.error(`[FAIL] Electron utilityProcess query failed:`, err);
   }
 
-  console.log('=== END DAY-ONE CHECK 1 ===')
-  app.quit()
-})
+  try {
+    const resultsPath = join(process.cwd(), 'tests/day-one/results-sqlite.json');
+    fs.writeFileSync(resultsPath, JSON.stringify(results, null, 2), 'utf8');
+  } catch (e) {
+    console.error('Failed to write results file:', e);
+  }
+
+  console.log('=== END DAY-ONE CHECK 1 ===');
+  app.quit();
+});

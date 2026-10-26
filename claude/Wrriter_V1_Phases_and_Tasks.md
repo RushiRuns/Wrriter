@@ -103,30 +103,30 @@ Nothing that depends on a row is built until it is decided. Rows 15 to 17 are ne
 
 ### Scaffold (enough to package an app for the day-one checks)
 
-- [ ] Electron, React, TypeScript (strict, `noUncheckedIndexedAccess`) and Vite. Pick the Vite and Electron wiring (electron-vite, vite-plugin-electron or own config) and record it in DEPENDENCIES.md
-- [ ] Source layout exactly as ARCHITECTURE.md: `shared/` with its own tsconfig (no DOM, no Node), `main/`, `workers/`, `preload/`, `renderer/`, `tests/`, `docs/decisions/`
-- [ ] electron-builder NSIS, current user only, so every check runs on the packaged app and never on the dev build
-- [ ] Security baseline in every window: context isolation on, Node off, sandbox on, a strict Content Security Policy, navigation and new windows denied, every permission request denied
-- [ ] Preload bridge that exposes `window.wrriter` with the fixed request list from `shared/ipc` and nothing else. The router checks the sender and every argument. Pick own validators or zod
-- [ ] `Result`, `AppError`, `toMessage`, `Clock`, `TestClock` and `IdGenerator` in `shared/`
-- [ ] Lint and build checks from the first commit: no synchronous file call in the main process after startup, no floating promises, the layer import rules
-- [ ] ADRs W01 to W05 and W07 to W10 written (ARCHITECTURE.md, Decision Records). W06, W11 and W12 follow the checks below
+- [x] Electron, React, TypeScript (strict, `noUncheckedIndexedAccess`) and Vite. Pick the Vite and Electron wiring (electron-vite, vite-plugin-electron or own config) and record it in DEPENDENCIES.md
+- [x] Source layout exactly as ARCHITECTURE.md: `shared/` with its own tsconfig (no DOM, no Node), `main/`, `workers/`, `preload/`, `renderer/`, `tests/`, `docs/decisions/`
+- [x] electron-builder NSIS, current user only, so every check runs on the packaged app and never on the dev build
+- [x] Security baseline in every window: context isolation on, Node off, sandbox on, a strict Content Security Policy, navigation and new windows denied, every permission request denied
+- [x] Preload bridge that exposes `window.wrriter` with the fixed request list from `shared/ipc` and nothing else. The router checks the sender and every argument. Pick own validators or zod
+- [x] `Result`, `AppError`, `toMessage`, `Clock`, `TestClock` and `IdGenerator` in `shared/`
+- [x] Lint and build checks from the first commit: no synchronous file call in the main process after startup, no floating promises, the layer import rules
+- [x] ADRs W01 to W05 and W07 to W10 written (ARCHITECTURE.md, Decision Records). W06, W11 and W12 follow the checks below
 
 ### Day-one checks (reported to Krishna before any feature is built)
 
-- [ ] better-sqlite3 installs inside the packaged app on Windows and runs one query in the main process and one inside a worker, for each worker type being considered (utility process, worker thread). ADR-W11 records the choice
-- [ ] The vault generator makes the 50,000-note test vault. The file watcher survives 50,000 files created at once, with no freeze and no lost track, and the full rescan by modified time and size runs when Windows reports lost events. ADR-W12 records the library (chokidar, @parcel/watcher or `fs.watch`)
-- [ ] Both results reported to Krishna in plain words. If either fails, Antigravity stops and tells Krishna before choosing another approach
-- [ ] Window check on Windows 10 and 11, with a frameless window, three drawn buttons and 16 px corners: dragging, double-click to maximise, Win+arrow keys, drag to the edge to snap, resizing from every edge and corner, and the corners when maximised. The report says what happens to the snap layouts flyout and whether a workaround exists. Question 1 decides the fallback. ADR-W06 records the result
+- [x] better-sqlite3 installs inside the packaged app on Windows and runs one query in the main process and one inside a worker, for each worker type being considered (utility process, worker thread). ADR-W11 records the choice
+- [x] The vault generator makes the 50,000-note test vault. The file watcher survives 50,000 files created at once, with no freeze and no lost track, and the full rescan by modified time and size runs when Windows reports lost events. ADR-W12 records the library (chokidar, @parcel/watcher or `fs.watch`)
+- [x] Both results reported to Krishna in plain words. If either fails, Antigravity stops and tells Krishna before choosing another approach
+- [x] Window check on Windows 10 and 11, with a frameless window, three drawn buttons and 16 px corners: dragging, double-click to maximise, Win+arrow keys, drag to the edge to snap, resizing from every edge and corner, and the corners when maximised. The report says what happens to the snap layouts flyout and whether a workaround exists. Question 1 decides the fallback. ADR-W06 records the result
 
 ### Benchmark harness (right after the day-one checks)
 
-- [ ] Vault generator complete: 50,000 notes, some of 1 MB, one note with 200 headings, 5,000 notes that link to one note, nested folders
-- [ ] Scripted benchmarks against the packaged app, and one command that runs them all and writes the results to a file in the repo
-- [ ] The quick set runs on every build and fails it at 20% worse than the stored baseline. The full set runs on the reference machine once per milestone
-- [ ] Lag monitor in development builds: every main process block and every window long task over 50 ms, with where it came from
-- [ ] Size report on every build
-- [ ] First numbers recorded in PERFORMANCE.md (Measured Baselines), then the budget tuned once with Krishna. From then on a number changes only by Krishna's decision
+- [x] Vault generator complete: 50,000 notes, some of 1 MB, one note with 200 headings, 5,000 notes that link to one note, nested folders
+- [x] Scripted benchmarks against the packaged app, and one command that runs them all and writes the results to a file in the repo
+- [x] The quick set runs on every build and fails it at 20% worse than the stored baseline. The full set runs on the reference machine once per milestone
+- [x] Lag monitor in development builds: every main process block and every window long task over 50 ms, with where it came from
+- [x] Size report on every build
+- [x] First numbers recorded in PERFORMANCE.md (Measured Baselines), then the budget tuned once with Krishna. From then on a number changes only by Krishna's decision
 
 ### Tokens, motion foundations and build checks (before any animated feature)
 

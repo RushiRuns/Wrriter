@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-10-26T04:59:13.782Z",
+  "platform": "win32",
+  "arch": "x64",
+  "mainProcess": {
+    "ok": true,
+    "solution": 2,
+    "version": "3.53.2"
+  },
+  "workerThreads": {
+    "ok": true,
+    "rows": [
+      {
+        "solution": 42,
+        "env": "worker_threads"
+      }
+    ]
+  },
+  "utilityProcess": {
+    "ok": true,
+    "rows": [
+      {
+        "solution": 100,
+        "env": "utilityProcess"
+      }
+    ]
+  }
+}

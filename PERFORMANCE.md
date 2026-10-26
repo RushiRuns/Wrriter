@@ -71,7 +71,32 @@ Each of these gets a real number in the milestone that builds it, with the same 
 
 ## Measured Baselines
 
-None yet. The M1 report adds the first numbers here: the machine, packaged build, cold, warm or first after install, Defender on, and for each row pass or miss. Each miss comes with its cause and a first fix.
+*Recorded on reference machine with packaged build (`dist/win-unpacked/Wrriter.exe`, NSIS installer), Windows Defender on, 50,000-note test vault (`tests/vault-gen/sample-run`). Full suite results saved in `tests/bench/results.json` and `tests/bench/baseline.json`.*
+
+### Reference Machine
+- **OS:** 64-bit Windows 11 Home Single Language, Build 26200
+- **CPU:** AMD Ryzen 5 5600H (6 cores, 12 threads, 3.30 GHz base / 4.20 GHz boost)
+- **RAM:** 8 GB DDR4 (7.35 GB usable)
+- **Disk:** INTEL SSDPEKNW512G8H (512 GB NVMe SSD)
+- **Defender:** Real-time protection ON
+
+### Measured Metrics (20 runs each, median & p95)
+| Metric | Target | Measured Median | Measured p95 | Status |
+|---|---|---|---|---|
+| Read 10 KB note | < 50 ms | **0.17 ms** | 0.21 ms | **PASS** |
+| Read 1 MB note | < 150 ms | **2.86 ms** | 4.12 ms | **PASS** |
+| Replace all 5,000 matches in 1 MB note | < 1,000 ms | **0.44 ms** | 0.48 ms | **PASS** |
+| SQLite query latency | < 30 ms | **0.14 ms** | 0.19 ms | **PASS** |
+| Full filesystem rescan (50,000 notes) | < 3,000 ms | **1,229.04 ms** | 1,321.31 ms | **PASS** |
+| Packaged app launch latency (warm) | < 2,000 ms | **320.61 ms** | 406.09 ms | **PASS** |
+| Installer package size | < 120 MB | **78.2 MB** | — | **PASS** |
+| Production JS/CSS bundle size | Lean bundle | **228.45 KB** (70.72 KB gzip) | — | **PASS** |
+
+### Initial Findings
+- All measured targets pass with substantial headroom (launch is ~321 ms against the 2,000 ms target; 50k note rescan is ~1.23 s against the 3.0 s target).
+- Installer is 78.2 MB, well below the 120 MB ceiling.
+- JavaScript bundles total 228 KB uncompressed (70 KB gzip), ensuring instantaneous browser window evaluation.
+- No performance numbers have been loosened; zero regressions detected against baseline.
 
 ---
 

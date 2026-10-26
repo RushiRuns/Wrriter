@@ -1,5 +1,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+import { ComponentGallery } from '../../components/gallery';
 import { startWindowLagMonitor } from '../../lag-monitor';
 
 startWindowLagMonitor();
@@ -9,7 +10,7 @@ if (container) {
   const root = createRoot(container);
   root.render(
     <React.StrictMode>
-      <div>Wrriter</div>
+      <ComponentGallery />
     </React.StrictMode>
   );
 }

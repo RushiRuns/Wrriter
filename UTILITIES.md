@@ -182,11 +182,14 @@ Record every query here as it is written.
 
 | Name | Purpose | Milestone | Status |
 |---|---|---|---|
-| `tokens.css` | The one token list, ported from the UI reference | M1 | Planned |
-| `motion` helpers | Speeds and curves from the tokens for Web Animations calls, the 70% leave rule | M1 | Planned |
-| `useReducedMotion()` | Windows setting plus the Motion setting | M1 | Planned |
-| Slow-motion switch | Development only, every duration five times longer | M1 | Planned |
-| `flipGlide` | Work out the final layout first, then glide items with transform | M1 | Planned |
+| `tokens.css` | The one token list, ported from the UI reference (`src/renderer/styles/tokens.css`) | M1 | Built |
+| `components.css` | Shared component styling from UI hand-off 2 (`src/renderer/styles/components.css`) | M1 | Built |
+| `motion` helpers | Speeds and curves from the tokens for Web Animations calls, 70% leave rule (`src/renderer/motion/index.ts`) | M1 | Built |
+| `useReducedMotion()` | Windows setting plus the Motion setting (`src/renderer/motion/index.ts`) | M1 | Built |
+| Slow-motion switch | Development only, every duration five times longer (`src/renderer/motion/index.ts`) | M1 | Built |
+| `flipGlide` | Work out final layout first, then glide items with transform (`src/renderer/motion/index.ts`) | M1 | Built |
+| Icons (`icons.tsx`) | 53 inline SVG icons copied directly from UI hand-off 2 (`src/renderer/components/icons.tsx`) | M1 | Built |
+| Component gallery | Interactive preview of shared components, light/dark, 5 accents (`src/renderer/components/gallery/Gallery.tsx`) | M1 | Built |
 
 ## Platform Adapters (`src/main/platform`)
 
@@ -207,9 +210,10 @@ Record every query here as it is written.
 
 | Name | Purpose | Milestone | Status |
 |---|---|---|---|
-| Token check | Fails on raw colours, off-scale sizes, durations or curves outside the list | M1 | Planned |
-| Contrast check | 4.5:1 text, 3:1 large text, icons and outlines, all accents, both themes | M1 | Planned |
-| Long-dash check | Fails on a long dash in the app's own text | M1 | Planned |
+| Token check | Fails on raw colours, off-scale sizes, durations outside list (`scripts/check-tokens.mjs`) | M1 | Built |
+| Contrast check | 4.5:1 text, 3:1 large text, icons and outlines, all accents, both themes (`scripts/check-contrast.mjs`) | M1 | Built |
+| Motion check | Rejects durations > 300 ms or outside 4 approved speeds (`scripts/check-motion.mjs`) | M1 | Built |
+| Long-dash check | Fails on en-dash or em-dash in app UI text (`scripts/check-dash.mjs`) | M1 | Built |
 | Layer import check | The import rules in ARCHITECTURE.md (`scripts/check-rules.mjs`) | M1 | Built |
 | Round-trip check | The sample notes, byte for byte | M2 | Planned |
 | Random-stop test | Jobs interrupted 100 times | M3 | Planned |

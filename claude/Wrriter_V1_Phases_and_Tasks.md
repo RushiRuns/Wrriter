@@ -130,14 +130,14 @@ Nothing that depends on a row is built until it is decided. Rows 15 to 17 are ne
 
 ### Tokens, motion foundations and build checks (before any animated feature)
 
-- [ ] `tokens.css` ported from the UI reference: colours for light and dark, the five accents and the text colour on each, the type, space and size scales, the two radii, the shadows, the four speeds and three curves
-- [ ] `data-theme` and `data-accent` on the app root. Inside the note pane the accent is replaced by the grey, except callouts, tags and the colour set
-- [ ] Build checks: token check, contrast check (4.5:1 text, 3:1 large text, icons and outlines, all five accents, both themes), motion check, long-dash check
-- [ ] Motion helpers, `useReducedMotion()` (the Windows setting plus the Motion setting), `flipGlide`, and the hidden slow-motion switch (every duration five times longer, development only)
-- [ ] Confirm the Windows Animation effects setting reaches the app as reduced motion on Windows 10 and 11 (Features 8)
-- [ ] Inter bundled. Code font stack: Cascadia Code, Cascadia Mono, Consolas
-- [ ] Icon set copied from the UI reference as inline SVG
-- [ ] Development component gallery: every shared component and view, fake data, light and dark, all five accents
+- [x] `tokens.css` ported from the UI reference: colours for light and dark, the five accents and the text colour on each, the type, space and size scales, the two radii, the shadows, the four speeds and three curves
+- [x] `data-theme` and `data-accent` on the app root. Inside the note pane the accent is replaced by the grey, except callouts, tags and the colour set
+- [x] Build checks: token check, contrast check (4.5:1 text, 3:1 large text, icons and outlines, all five accents, both themes), motion check, long-dash check
+- [x] Motion helpers, `useReducedMotion()` (the Windows setting plus the Motion setting), `flipGlide`, and the hidden slow-motion switch (every duration five times longer, development only)
+- [x] Confirm the Windows Animation effects setting reaches the app as reduced motion on Windows 10 and 11 (Features 8)
+- [x] Inter bundled. Code font stack: Cascadia Code, Cascadia Mono, Consolas
+- [x] Icon set copied from the UI reference as inline SVG
+- [x] Development component gallery: every shared component and view, fake data, light and dark, all five accents
 
 ### Files on disk and safety
 

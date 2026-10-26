@@ -1,1 +1,464 @@
-/* Tokens will be ported from the UI reference in M2 */
+@import '@fontsource-variable/inter';
+
+/* ==========================================================================
+   Wrriter Design Tokens
+   Ported directly from Wrriter UI hand-off 2 (Exact styling)
+   ========================================================================== */
+
+.wr {
+  /* Colour: Neutral macOS greys, white list and editor, sky as default accent.
+     Text greys are held at 4.5:1 or better on every pane. */
+  --bar: #EEEDEB;
+  --bar-hi: #F4F3F1;
+  --bar-glint: rgba(255, 255, 255, .75);
+  --side: #F5F4F2;
+  --list: #FFFFFF;
+  --ed: #FFFFFF;
+  --tab: #FFFFFF;
+  --field: #FFFFFF;
+  --line: rgba(0, 0, 0, .08);
+  --div: rgba(0, 0, 0, .14);
+
+  --tx: #1D1D1F;
+  --tx2: #5E5E5E;
+  --tx3: #6B6B6B;
+
+  --hov: rgba(0, 0, 0, .05);
+  --pop: #FFFFFF;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .06), 0 8px 28px rgba(0, 0, 0, .12);
+
+  --accent: #2F96E0;
+  --soft: rgba(47, 150, 224, .14);
+  --selbg: rgba(47, 150, 224, .26);
+  --onacc: #FFFFFF;
+  --link: #1B73B3;
+  --lul: rgba(27, 115, 179, .4);
+
+  --tile: rgba(0, 0, 0, .05);
+  --hash: color-mix(in srgb, var(--accent) 35%, var(--tx));
+
+  --vault-p: #456EB8;
+  --vault-w: #2F7A62;
+  --ok: #2E8B57;
+
+  --shadow-bar: 0 10px 24px -14px rgba(0, 0, 0, .35);
+  --shadow-tab: 0 0 0 1px var(--line), 0 1px 2px rgba(0, 0, 0, .08), 0 3px 8px -3px rgba(0, 0, 0, .10);
+
+  /* Spacing scale: 4 8 12 16 24 32 48 64 */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+
+  /* Type scale: 11 13 15 18 24 38, three weights, line heights */
+  --fs-label: 11px;
+  --fs-small: 13px;
+  --fs-ui: 15px;
+  --fs-read: 18px;
+  --fs-h2: 24px;
+  --fs-title: 38px;
+
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semi: 600;
+  --fw-bold: 700;
+  --fw-heavy: 800;
+
+  --lh-label: 16px;
+  --lh-small: 18px;
+  --lh-ui: 20px;
+  --lh-read: 30px;
+  --lh-callout: 26px;
+  --lh-h2: 32px;
+  --lh-title: 48px;
+
+  --ls-label: .06em;
+  --ls-head: -.02em;
+  --ls-display: -.03em;
+
+  /* Shape: two radii, plus full for dots and circles */
+  --r-s: 8px;
+  --r-l: 16px;
+  --r-full: 999px;
+
+  /* Sizes on the 4px grid */
+  --ctl: 32px;
+  --tile-size: 48px;
+  --col: 4000px;
+  --col-min: 360px;
+  --col-gut: var(--s-5);
+  --tb-h: 40px;
+  --tb-ctl: 28px;
+  --wc-d: 24px;
+  --sbt-w: 28px;
+  --tabs-h: 32px;
+
+  /* Toolbar and pane geometry */
+  --band: var(--tb-h);
+  --sidew: 248px;
+  --listw: 320px;
+  --wc-w: calc(3 * var(--wc-d) + 2 * var(--s-2));
+  --bar-edge: inset 0 1px 0 var(--bar-glint), inset 0 -1px 0 var(--line);
+
+  /* Motion: four speeds, three curves (Features 8) and bar timing from Features 1 */
+  --t-instant: 0ms;
+  --t-fast: 100ms;
+  --t-base: 180ms;
+  --t-slow: 280ms;
+
+  --ease-arrive: cubic-bezier(.16, 1, .3, 1);
+  --ease-move: cubic-bezier(.4, 0, .2, 1);
+  --ease-leave: cubic-bezier(.4, 0, 1, 1);
+
+  --bar-fade: 150ms;
+  --bar-delay: 500ms;
+
+  /* One selected / active look for tile, folder row, note row and tag chip */
+  --chk: #2A8AD8;
+  --ink: var(--link);
+  --sel-bg: var(--soft);
+  --sel-ring: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
+
+  /* Selected folder row and selected note row */
+  --pick: var(--selbg);
+  --pick-1: var(--tx);
+  --pick-2: color-mix(in srgb, var(--tx) 84%, transparent);
+  --fold: var(--d1);
+
+  /* One hover look for clickable items */
+  --hov-fill: inset 0 0 0 999px var(--hov);
+
+  /* Note elements */
+  --fs-sec: 32px;
+  --lh-sec: 36px;
+  --fs-sub: 23px;
+  --lh-sub: 30px;
+  --fs-quote: 30px;
+  --lh-quote: 38px;
+  --fs-code: 13px;
+  --lh-code: 22px;
+
+  /* Five accent inks */
+  --hc: #E8604C;
+  --hl: #8B6FD6;
+  --ha: #D9921B;
+  --hm: #2FA58A;
+  --hs: #2F96E0;
+
+  /* Tag colours: five soft tones, each 4.5:1 on the page */
+  --tc1: #C15343;
+  --tc2: #2A836F;
+  --tc3: #2B7BB6;
+  --tc4: #7F66C2;
+  --tc5: #9B6B1C;
+
+  /* Danger text in menus and five highlight colours */
+  --dgr: #C42B1C;
+  --mk1: #FFEB99;
+  --mk2: #C8EDD3;
+  --mk3: #C6E1F8;
+  --mk4: #FAD0D8;
+  --mk5: #E2D7F7;
+
+  --i1: var(--accent);
+  --i2: var(--hc);
+  --k1: 67%;
+  --k2: 69%;
+
+  --d1: color-mix(in srgb, var(--i1) var(--k1), var(--tx));
+  --d2: color-mix(in srgb, var(--i2) var(--k2), var(--tx));
+  --t1: color-mix(in srgb, var(--i1) 15%, var(--ed));
+  --t2: color-mix(in srgb, var(--i2) 15%, var(--ed));
+  --tg: color-mix(in srgb, var(--tx) 7%, var(--ed));
+
+  --code: rgba(0, 0, 0, .06);
+  --fpaper: #FFFFFF;
+  --fshadow: 0 1px 1px rgba(0, 0, 0, .14), 0 5px 12px rgba(0, 0, 0, .12);
+}
+
+/* ==========================================================================
+   Dark Theme
+   ========================================================================== */
+
+.wr[data-theme="dark"] {
+  --bar: #323232;
+  --bar-hi: #3A3A3A;
+  --bar-glint: rgba(255, 255, 255, .05);
+  --hash: color-mix(in srgb, var(--accent) 78%, var(--tx));
+  --side: #2B2B2B;
+  --list: #232323;
+  --ed: #1E1E1E;
+  --tab: #1E1E1E;
+  --field: rgba(255, 255, 255, .07);
+  --line: rgba(255, 255, 255, .08);
+  --div: rgba(255, 255, 255, .14);
+  --tx: #F2F2F2;
+  --tx2: #A6A6A6;
+  --tx3: #9C9C9C;
+  --hov: rgba(255, 255, 255, .06);
+  --pop: #353535;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 10px 32px rgba(0, 0, 0, .5);
+  --accent: #5BB8F2;
+  --soft: rgba(91, 184, 242, .18);
+  --selbg: rgba(91, 184, 242, .32);
+  --onacc: #062235;
+  --link: #8CD0F8;
+  --lul: rgba(140, 208, 248, .45);
+  --tile: rgba(255, 255, 255, .06);
+  --chk: #3391E3;
+  --hc: #FF8A75;
+  --hl: #B6A0F7;
+  --ha: #F0BE55;
+  --hm: #52CDAA;
+  --hs: #66BDF5;
+  --code: rgba(255, 255, 255, .1);
+  --fpaper: #2E2E2E;
+  --fshadow: 0 1px 1px rgba(0, 0, 0, .45), 0 5px 12px rgba(0, 0, 0, .4);
+  --k1: 100%;
+  --k2: 100%;
+  --t1: color-mix(in srgb, var(--i1) 17%, var(--ed));
+  --t2: color-mix(in srgb, var(--i2) 17%, var(--ed));
+  --tg: color-mix(in srgb, var(--tx) 9%, var(--ed));
+  --tc1: #EE8879;
+  --tc2: #63BCA7;
+  --tc3: #63B0E8;
+  --tc4: #A893E0;
+  --tc5: #E2AD54;
+  --dgr: #FF8A75;
+  --mk1: rgba(255, 214, 70, .32);
+  --mk2: rgba(80, 200, 130, .30);
+  --mk3: rgba(90, 160, 240, .34);
+  --mk4: rgba(240, 110, 140, .34);
+  --mk5: rgba(170, 140, 245, .36);
+}
+
+/* ==========================================================================
+   Accents (Light Theme)
+   ========================================================================== */
+
+.wr[data-accent="yellow"] {
+  --accent: #FFE066;
+  --soft: rgba(255, 224, 102, .42);
+  --selbg: rgba(255, 224, 102, .7);
+  --onacc: #2A2208;
+  --link: var(--tx);
+  --lul: #FFE066;
+  --pick: #FFE066;
+  --pick-1: #1D1D1F;
+  --pick-2: rgba(29, 29, 31, .76);
+  --fold: #AD8500;
+  --qm: #9C7F00;
+  --i2: var(--hs);
+  --k1: 57%;
+  --k2: 67%;
+}
+
+.wr[data-accent="coral"] {
+  --accent: #E8604C;
+  --soft: rgba(232, 96, 76, .14);
+  --selbg: rgba(232, 96, 76, .26);
+  --onacc: #FFFFFF;
+  --link: #C2432F;
+  --lul: rgba(194, 67, 47, .4);
+  --i2: var(--hs);
+  --k1: 69%;
+  --k2: 67%;
+}
+
+.wr[data-accent="mint"] {
+  --accent: #2FA58A;
+  --soft: rgba(47, 165, 138, .16);
+  --selbg: rgba(47, 165, 138, .28);
+  --onacc: #FFFFFF;
+  --link: #1F7F69;
+  --lul: rgba(31, 127, 105, .4);
+  --i2: var(--hc);
+  --k1: 64%;
+  --k2: 69%;
+}
+
+.wr[data-accent="lilac"] {
+  --accent: #8B6FD6;
+  --soft: rgba(139, 111, 214, .15);
+  --selbg: rgba(139, 111, 214, .28);
+  --onacc: #FFFFFF;
+  --link: #6A4FC0;
+  --lul: rgba(106, 79, 192, .4);
+  --i2: var(--ha);
+  --k1: 77%;
+  --k2: 57%;
+}
+
+/* ==========================================================================
+   Accents (Dark Theme)
+   ========================================================================== */
+
+.wr[data-theme="dark"][data-accent="yellow"] {
+  --accent: #FFE27A;
+  --soft: rgba(255, 226, 122, .20);
+  --selbg: rgba(255, 226, 122, .34);
+  --onacc: #1D1700;
+  --link: var(--tx);
+  --lul: #FFE27A;
+  --pick-f: #6A5418;
+  --pick: #8C6D1C;
+  --pick-1: #FFFFFF;
+  --pick-2: rgba(255, 255, 255, .95);
+  --fold: #FFE27A;
+  --qm: #FFE27A;
+}
+
+.wr[data-theme="dark"][data-accent="coral"] {
+  --accent: #FF8A75;
+  --soft: rgba(255, 138, 117, .18);
+  --selbg: rgba(255, 138, 117, .32);
+  --onacc: #2B1410;
+  --link: #FFA391;
+  --lul: rgba(255, 163, 145, .45);
+}
+
+.wr[data-theme="dark"][data-accent="mint"] {
+  --accent: #52CDAA;
+  --soft: rgba(82, 205, 170, .18);
+  --selbg: rgba(82, 205, 170, .32);
+  --onacc: #06241C;
+  --link: #7FE0C4;
+  --lul: rgba(127, 224, 196, .45);
+}
+
+.wr[data-theme="dark"][data-accent="lilac"] {
+  --accent: #B6A0F7;
+  --soft: rgba(182, 160, 247, .19);
+  --selbg: rgba(182, 160, 247, .34);
+  --onacc: #1D1238;
+  --link: #C9B9FA;
+  --lul: rgba(201, 185, 250, .45);
+}
+
+/* ==========================================================================
+   Note Pane Accent Suppression (Neutral Note Surface Rule)
+   Inside the note pane, the accent is replaced by a grey of the text colour.
+   Specific coloured elements keep their own declared custom properties:
+   callouts, tags, highlights, colour set, five-dot divider, file chips.
+   ========================================================================== */
+
+main.ed, .ed {
+  --accent: var(--tx3);
+  --soft: color-mix(in srgb, var(--tx) 8%, transparent);
+  --selbg: color-mix(in srgb, var(--tx) 16%, transparent);
+  --link: var(--tx);
+  --lul: var(--tx3);
+  --ink: var(--tx);
+  --fold: var(--tx3);
+  --qm: var(--tx2);
+  --sel-bg: color-mix(in srgb, var(--tx) 9%, transparent);
+  --sel-ring: inset 0 0 0 1px color-mix(in srgb, var(--tx) 55%, transparent);
+  --g1c: var(--tx2);
+}
+
+main.ed .li.n2 .num, .ed .li.n2 .num {
+  background: color-mix(in srgb, var(--tx) 7%, transparent);
+}
+
+main.ed .tail, .ed .tail {
+  caret-color: var(--tx);
+}
+
+/* ==========================================================================
+   Base Structure & Typography
+   ========================================================================== */
+
+:where(.wr) * {
+  box-sizing: border-box;
+}
+
+:where(.wr) button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+:where(.wr) h1, :where(.wr) h2, :where(.wr) p, :where(.wr) ul {
+  margin: 0;
+  padding: 0;
+}
+
+.wr {
+  width: 100%;
+  font-family: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color: var(--tx);
+  font-size: var(--fs-ui);
+  line-height: var(--lh-ui);
+  font-weight: var(--fw-regular);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.wr svg {
+  display: block;
+  flex: none;
+}
+
+.wr button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.mono {
+  font-family: 'Cascadia Code', 'Cascadia Mono', Consolas, ui-monospace, Menlo, monospace;
+}
+
+/* Icon baseline */
+.ic {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.ic.xl { width: 24px; height: 24px; }
+.ic.m { width: 16px; height: 16px; }
+.ic.xs { width: 12px; height: 12px; stroke-width: 2.2; }
+
+/* ==========================================================================
+   Motion Controls & Accessibility
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .wr * {
+    transition-duration: var(--t-instant) !important;
+    animation-duration: var(--t-instant) !important;
+  }
+  .vmenu, .lmenu, .sm {
+    animation: none !important;
+  }
+}
+
+.wr[data-reduced-motion="true"] * {
+  transition-duration: var(--t-instant) !important;
+  animation-duration: var(--t-instant) !important;
+}
+.wr[data-reduced-motion="true"] .vmenu,
+.wr[data-reduced-motion="true"] .lmenu,
+.wr[data-reduced-motion="true"] .sm {
+  animation: none !important;
+}
+
+/* Hidden slow-motion switch (every duration 5x longer, development only) */
+.wr[data-slow-motion="true"] {
+  --t-fast: 500ms;
+  --t-base: 900ms;
+  --t-slow: 1400ms;
+  --bar-fade: 750ms;
+}

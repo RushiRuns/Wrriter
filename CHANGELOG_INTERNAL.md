@@ -18,4 +18,6 @@
 
 [2026-10-26] - Source tree directory layout established according to ARCHITECTURE.md: created all architectural subfolders under src/shared/ (domain, markdown, ipc), src/main/ (app, windows, ipc, services, store, platform), src/renderer/ (windows/capture, windows/settings, features, editor, components, motion), tests/ (samples, bench), and docs/decisions/. Added .gitkeep to all empty folders to track them in git. - none.
 
+[2026-10-26] - Minimal compile-and-launch files created: pure Result and AppError types in src/shared/result.ts (exact SYSTEM.md section 3 match); empty contextBridge in src/preload/index.ts; minimal single-instance 800x600 hidden window shell in src/main/index.ts shown on ready-to-show with context isolation, sandbox, node integration off, and no remote content; minimal index.html and index.tsx rendering "Wrriter" text; tokens.css stubbed for M2. Removed premature UI shell code. - none.
+
 

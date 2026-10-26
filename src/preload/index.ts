@@ -1,22 +1,7 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge } from 'electron'
 
-// Preload bridge exposes window.wrriter with fixed request list only
-const api = {
-  window: {
-    minimize: (): void => {
-      ipcRenderer.send('window.minimize')
-    },
-    maximize: (): void => {
-      ipcRenderer.send('window.maximize')
-    },
-    close: (): void => {
-      ipcRenderer.send('window.close')
-    },
-    isMaximized: (): Promise<boolean> => {
-      return ipcRenderer.invoke('window.isMaximized')
-    }
-  }
-} as const
+// Preload bridge: the fixed IPC request list from src/shared/ipc goes here
+const api = {}
 
 contextBridge.exposeInMainWorld('wrriter', api)
 

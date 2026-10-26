@@ -1,0 +1,52 @@
+:root {
+  /* Theme tokens - Dark default */
+  --bg-app: #18181A;
+  --bg-sidebar: #1F1F23;
+  --bg-card: #27272C;
+  --bg-hover: #323238;
+  
+  --tx-primary: #F4F4F6;
+  --tx-secondary: #A1A1AA;
+  --tx-muted: #71717A;
+  
+  --border-subtle: #2E2E33;
+  --border-strong: #3F3F46;
+  
+  /* Accents */
+  --accent-yellow: #EAB308;
+  --accent-sky: #0EA5E9;
+  --accent-coral: #F97316;
+  --accent-mint: #10B981;
+  --accent-lilac: #A855F7;
+  
+  --accent-current: var(--accent-yellow);
+  
+  /* Radii */
+  --r-window: 16px;
+  --r-btn: 6px;
+  --r-circle: 9999px;
+  
+  /* Motion */
+  --dur-instant: 0ms;
+  --dur-fast: 100ms;
+  --dur-base: 180ms;
+  --dur-slow: 280ms;
+  
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-in: cubic-bezier(0.3, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+}
+
+[data-theme='light'] {
+  --bg-app: #FFFFFF;
+  --bg-sidebar: #F7F7F8;
+  --bg-card: #FFFFFF;
+  --bg-hover: #EFEFEF;
+  
+  --tx-primary: #18181A;
+  --tx-secondary: #71717A;
+  --tx-muted: #A1A1AA;
+  
+  --border-subtle: #E4E4E7;
+  --border-strong: #D4D4D8;
+}

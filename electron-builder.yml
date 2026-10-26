@@ -1,0 +1,19 @@
+appId: app.wrriter
+productName: Wrriter
+directories:
+  output: dist
+  buildResources: build
+files:
+  - out/**/*
+  - node_modules/**/*
+  - package.json
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false

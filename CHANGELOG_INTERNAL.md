@@ -20,4 +20,6 @@
 
 [2026-10-26] - Minimal compile-and-launch files created: pure Result and AppError types in src/shared/result.ts (exact SYSTEM.md section 3 match); empty contextBridge in src/preload/index.ts; minimal single-instance 800x600 hidden window shell in src/main/index.ts shown on ready-to-show with context isolation, sandbox, node integration off, and no remote content; minimal index.html and index.tsx rendering "Wrriter" text; tokens.css stubbed for M2. Removed premature UI shell code. - none.
 
+[2026-10-26] - Packaging configured in electron-builder.yml: appId set to app.wrriter placeholder, target Windows x64 NSIS installer, current-user installation only (perMachine: false, allowElevation: false), asar packaging enabled with native .node unpacking, and zero auto-updater or analytics hooks. - none.
+
 

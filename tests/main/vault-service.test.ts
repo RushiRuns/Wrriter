@@ -176,7 +176,9 @@ describe('VaultService & checkVaultContainment', () => {
 
       const r1 = await vaultService.openVault({ path: v1Path });
       const r2 = await vaultService.openVault({ path: v2Path });
-      expect(r1.ok && r2.ok).toBe(true);
+      expect(r1.ok).toBe(true);
+      expect(r2.ok).toBe(true);
+      if (!r1.ok || !r2.ok) return;
 
       const listRes = await vaultService.listVaults();
       expect(listRes.ok).toBe(true);
@@ -277,7 +279,10 @@ describe('VaultService & checkVaultContainment', () => {
 
       // Vault is initially marked unavailable
       let list = await vaultService.listVaults();
-      expect(list.ok && list.value[0]?.isAvailable).toBe(false);
+      expect(list.ok).toBe(true);
+      if (list.ok) {
+        expect(list.value[0]?.isAvailable).toBe(false);
+      }
 
       // Locate vault to new location
       const locateRes = await vaultService.locateVault({
@@ -288,8 +293,11 @@ describe('VaultService & checkVaultContainment', () => {
 
       // Now marked available again
       list = await vaultService.listVaults();
-      expect(list.ok && list.value[0]?.isAvailable).toBe(true);
-      expect(list.ok && list.value[0]?.path).toBe(path.resolve(newPath));
+      expect(list.ok).toBe(true);
+      if (list.ok) {
+        expect(list.value[0]?.isAvailable).toBe(true);
+        expect(list.value[0]?.path).toBe(path.resolve(newPath));
+      }
     });
   });
 

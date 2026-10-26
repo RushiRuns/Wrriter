@@ -195,14 +195,14 @@ Nothing that depends on a row is built until it is decided. Rows 15 to 17 are ne
 
 **Done when**
 
-- [ ] The day-one checks and the window check were each reported to Krishna in plain words, and ADR-W06, W11 and W12 are written
-- [ ] The quick benchmark set runs on every build, and the first numbers are in PERFORMANCE.md
-- [ ] The motion foundations and every build check existed before the first animated feature
-- [ ] An existing folder of notes opens as a vault, and comparing every file before and after shows nothing changed except the new `.wrriter` folder
-- [ ] A fresh install shows the two vault buttons
-- [ ] Two vaults can be added and switched, and removing one leaves its folder untouched on disk
-- [ ] Renaming a vault folder in File Explorer shows it as unavailable with Locate and Remove, with no crash and nothing deleted
-- [ ] The SafeWriter kill test passes 100 times
+- [x] The day-one checks and the window check were each reported to Krishna in plain words, and ADR-W06, W11 and W12 are written
+- [x] The quick benchmark set runs on every build, and the first numbers are in PERFORMANCE.md
+- [x] The motion foundations and every build check existed before the first animated feature
+- [x] An existing folder of notes opens as a vault, and comparing every file before and after shows nothing changed except the new `.wrriter` folder
+- [x] A fresh install shows the two vault buttons
+- [x] Two vaults can be added and switched, and removing one leaves its folder untouched on disk
+- [x] Renaming a vault folder in File Explorer shows it as unavailable with Locate and Remove, with no crash and nothing deleted
+- [x] The SafeWriter kill test passes 100 times
 - [x] Scrolling the 50,000-note test vault stays smooth, and expanding a folder in it feels instant
 - [x] A folder renamed in File Explorer updates in the tree while Wrriter is open
 - [x] Pinning a note does not change the note file

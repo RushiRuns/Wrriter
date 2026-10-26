@@ -90,7 +90,7 @@ Each of these exists exactly once. A second copy is a bug.
 | `AttachmentService` | Copy in, reuse identical files, names, missing file state | M4 | Planned |
 | `ImportService` | Import notes and folders (as a job with a cancel button) | M4 | Planned |
 | `SettingsService` | Read and write settings, apply them live | M2 | Planned |
-| `WindowService` | Create, restore and destroy windows, saved state for first paint | M1 | Planned |
+| `WindowService` | Create, restore and destroy windows, saved state for first paint (`src/main/services/window-service.ts`) | M1 | Built |
 
 ## Stores and Workers
 
@@ -117,6 +117,8 @@ Record every request here as it is written, so a second one is not added for the
 | `window.minimize` | `{}` | `void` | M1 | Built |
 | `window.maximize` | `{}` | `void` | M1 | Built |
 | `window.close` | `{}` | `void` | M1 | Built |
+| `window.setPaneWidths` | `{ sidebarWidth: number, listWidth: number }` | `void` | M1 | Built |
+| `window.firstPaintComplete` | `{}` | `void` | M1 | Built |
 | `vault.open` | `{ path: string }` | `VaultInfo` | M1 | Built (Contract & Router) |
 | `vault.close` | `{}` | `void` | M1 | Built (Contract & Router) |
 | `vault.getActive` | `{}` | `VaultInfo \| null` | M1 | Built (Contract & Router) |
@@ -127,6 +129,7 @@ Record every request here as it is written, so a second one is not added for the
 | `folder.create` | `{ path: string }` | `void` | M1 | Built (Contract & Router) |
 | `folder.rename` | `{ oldPath: string, newPath: string }` | `void` | M1 | Built (Contract & Router) |
 | `folder.delete` | `{ path: string }` | `void` | M1 | Built (Contract & Router) |
+| `app.getStartupState` | `{}` | `StartupState` | M1 | Built |
 | `app.getTheme` | `{}` | `ThemeName` | M1 | Built |
 | `app.setTheme` | `{ theme: ThemeName }` | `void` | M1 | Built |
 | `app.getAccent` | `{}` | `AccentName` | M1 | Built |
@@ -144,7 +147,7 @@ Record every query here as it is written.
 
 | Name | Purpose | Milestone | Status |
 |---|---|---|---|
-| `WindowShell` | Frameless rounded window, the 40 px toolbar, the three window buttons | M1 | Planned |
+| `WindowShell` | Frameless rounded window, the 40 px toolbar, the three window buttons (`src/renderer/components/WindowShell.tsx`) | M1 | Built |
 | `NameField` | The note name field in the toolbar, rename in place | M2 | Planned |
 | `Tile`, `TileGrid` | Icon tiles, three to a row, tiles come from a list | M1 | Planned |
 | `FolderRow` | Folder row with the icon that turns into the expand chevron on hover | M1 | Planned |

@@ -3,8 +3,35 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';" />
     <title>Wrriter</title>
+    <script>
+      (function() {
+        try {
+          const params = new URLSearchParams(window.location.search);
+          const theme = params.get('theme') || 'dark';
+          const accent = params.get('accent') || 'yellow';
+          const sidebarWidth = params.get('sidebarWidth') || '248';
+          const listWidth = params.get('listWidth') || '320';
+          const doc = document.documentElement;
+          doc.className = 'wr';
+          doc.dataset.theme = theme;
+          doc.dataset.accent = accent;
+          doc.style.setProperty('--sidew', sidebarWidth + 'px');
+          doc.style.setProperty('--listw', listWidth + 'px');
+        } catch (_) {}
+      })();
+    </script>
+    <style>
+      html, body, #root {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        user-select: none;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

@@ -13,8 +13,10 @@ import type {
   SaveNoteArgs,
   SaveOutcome,
   SetAccentArgs,
+  SetPaneWidthsArgs,
   SetPinnedArgs,
   SetThemeArgs,
+  StartupState,
   ThemeName,
   VaultInfo
 } from './contracts';
@@ -31,6 +33,8 @@ export interface WrriterApi {
     minimize(): Promise<Result<void>>;
     maximize(): Promise<Result<void>>;
     close(): Promise<Result<void>>;
+    setPaneWidths(args: SetPaneWidthsArgs): Promise<Result<void>>;
+    firstPaintComplete(): Promise<Result<void>>;
   };
   readonly vault: {
     open(args: OpenVaultArgs): Promise<Result<VaultInfo>>;
@@ -49,6 +53,7 @@ export interface WrriterApi {
     delete(args: DeleteFolderArgs): Promise<Result<void>>;
   };
   readonly app: {
+    getStartupState(): Promise<Result<StartupState>>;
     getTheme(): Promise<Result<ThemeName>>;
     setTheme(args: SetThemeArgs): Promise<Result<void>>;
     getAccent(): Promise<Result<AccentName>>;

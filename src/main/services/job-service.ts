@@ -45,7 +45,10 @@ export class JobService {
   /**
    * Resumes and finishes pending jobs on startup.
    */
-  async resumePendingJobs(vaultId: string, defaultHandler: JobExecutionCallbacks['fileHandler']): Promise<void> {
+  async resumePendingJobs(
+    vaultId: string,
+    defaultHandler: JobExecutionCallbacks['fileHandler'] = async () => null
+  ): Promise<void> {
     const jobs = await this.store.loadJobs(vaultId);
     for (const job of jobs) {
       if (job.status === 'pending' || job.status === 'running') {

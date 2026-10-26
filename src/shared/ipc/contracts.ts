@@ -9,7 +9,7 @@ import {
 } from './validators';
 
 export type ThemeName = 'light' | 'dark' | 'system';
-export type AccentName = 'yellow' | 'red' | 'blue' | 'green' | 'purple';
+export type AccentName = 'sky' | 'yellow' | 'coral' | 'mint' | 'lilac';
 
 export interface VaultInfo {
   readonly vaultId: string;
@@ -26,10 +26,40 @@ export interface SaveOutcome {
   readonly written: boolean;
 }
 
+export interface FirstPaintNoteSummary {
+  readonly path: string;
+  readonly title: string;
+  readonly preview: string;
+  readonly modified: number;
+  readonly pinned?: boolean;
+  readonly hasImage?: boolean;
+}
+
+export interface StartupState {
+  readonly theme: 'light' | 'dark';
+  readonly accent: AccentName;
+  readonly windowState: {
+    readonly width: number;
+    readonly height: number;
+    readonly isMaximized: boolean;
+    readonly sidebarWidth: number;
+    readonly listWidth: number;
+  };
+  readonly activeVault: VaultInfo | null;
+  readonly firstPaintNotes: readonly FirstPaintNoteSummary[];
+}
+
 // 1. window.*
 export type WindowMinimizeArgs = Record<string, never>;
 export type WindowMaximizeArgs = Record<string, never>;
 export type WindowCloseArgs = Record<string, never>;
+export type FirstPaintCompleteArgs = Record<string, never>;
+export interface SetPaneWidthsArgs {
+  readonly sidebarWidth: number;
+  readonly listWidth: number;
+}
+export type GetStartupStateArgs = Record<string, never>;
+
 
 // 2. vault.*
 export interface OpenVaultArgs {
@@ -88,6 +118,8 @@ export interface IpcChannelTable {
   'window.minimize': { args: WindowMinimizeArgs; result: void };
   'window.maximize': { args: WindowMaximizeArgs; result: void };
   'window.close': { args: WindowCloseArgs; result: void };
+  'window.setPaneWidths': { args: SetPaneWidthsArgs; result: void };
+  'window.firstPaintComplete': { args: FirstPaintCompleteArgs; result: void };
   'vault.open': { args: OpenVaultArgs; result: VaultInfo };
   'vault.close': { args: CloseVaultArgs; result: void };
   'vault.getActive': { args: GetActiveVaultArgs; result: VaultInfo | null };
@@ -98,6 +130,7 @@ export interface IpcChannelTable {
   'folder.create': { args: CreateFolderArgs; result: void };
   'folder.rename': { args: RenameFolderArgs; result: void };
   'folder.delete': { args: DeleteFolderArgs; result: void };
+  'app.getStartupState': { args: GetStartupStateArgs; result: StartupState };
   'app.getTheme': { args: GetThemeArgs; result: ThemeName };
   'app.setTheme': { args: SetThemeArgs; result: void };
   'app.getAccent': { args: GetAccentArgs; result: AccentName };
@@ -111,6 +144,16 @@ export const IPC_VALIDATORS: { readonly [K in IpcChannel]: Validator<IpcChannelT
   'window.minimize': validateEmptyArgs,
   'window.maximize': validateEmptyArgs,
   'window.close': validateEmptyArgs,
+  'window.firstPaintComplete': validateEmptyArgs,
+
+  'window.setPaneWidths': (input: unknown): Result<SetPaneWidthsArgs> => {
+    if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });
+    const sidebarWidth = typeof input['sidebarWidth'] === 'number' && !isNaN(input['sidebarWidth']) ? input['sidebarWidth'] : null;
+    const listWidth = typeof input['listWidth'] === 'number' && !isNaN(input['listWidth']) ? input['listWidth'] : null;
+    if (sidebarWidth === null) return err({ kind: 'validation', field: 'sidebarWidth', reason: 'expected number' });
+    if (listWidth === null) return err({ kind: 'validation', field: 'listWidth', reason: 'expected number' });
+    return ok({ sidebarWidth, listWidth });
+  },
 
   'vault.open': (input: unknown): Result<OpenVaultArgs> => {
     if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });
@@ -177,6 +220,8 @@ export const IPC_VALIDATORS: { readonly [K in IpcChannel]: Validator<IpcChannelT
     return ok({ path: path.value });
   },
 
+  'app.getStartupState': validateEmptyArgs,
+
   'app.getTheme': validateEmptyArgs,
 
   'app.setTheme': (input: unknown): Result<SetThemeArgs> => {
@@ -193,9 +238,10 @@ export const IPC_VALIDATORS: { readonly [K in IpcChannel]: Validator<IpcChannelT
   'app.setAccent': (input: unknown): Result<SetAccentArgs> => {
     if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });
     const accent = input['accent'];
-    if (accent !== 'yellow' && accent !== 'red' && accent !== 'blue' && accent !== 'green' && accent !== 'purple') {
-      return err({ kind: 'validation', field: 'accent', reason: 'expected yellow, red, blue, green, or purple' });
+    if (accent !== 'sky' && accent !== 'yellow' && accent !== 'coral' && accent !== 'mint' && accent !== 'lilac') {
+      return err({ kind: 'validation', field: 'accent', reason: 'expected sky, yellow, coral, mint, or lilac' });
     }
     return ok({ accent });
   }
 };
+

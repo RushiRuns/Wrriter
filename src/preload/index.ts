@@ -10,6 +10,7 @@ import type {
   RenameFolderArgs,
   SaveNoteArgs,
   SetAccentArgs,
+  SetPaneWidthsArgs,
   SetPinnedArgs,
   SetThemeArgs,
   WrriterApi
@@ -27,7 +28,9 @@ const api: WrriterApi = {
   window: {
     minimize: () => invoke('window.minimize', {}),
     maximize: () => invoke('window.maximize', {}),
-    close: () => invoke('window.close', {})
+    close: () => invoke('window.close', {}),
+    setPaneWidths: (args: SetPaneWidthsArgs) => invoke('window.setPaneWidths', args),
+    firstPaintComplete: () => invoke('window.firstPaintComplete', {})
   },
   vault: {
     open: (args: OpenVaultArgs) => invoke('vault.open', args),
@@ -46,6 +49,7 @@ const api: WrriterApi = {
     delete: (args: DeleteFolderArgs) => invoke('folder.delete', args)
   },
   app: {
+    getStartupState: () => invoke('app.getStartupState', {}),
     getTheme: () => invoke('app.getTheme', {}),
     setTheme: (args: SetThemeArgs) => invoke('app.setTheme', args),
     getAccent: () => invoke('app.getAccent', {}),

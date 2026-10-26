@@ -6,6 +6,10 @@ export interface WindowFactoryOptions {
   height?: number;
   minWidth?: number;
   minHeight?: number;
+  x?: number;
+  y?: number;
+  backgroundColor?: string;
+  query?: Record<string, string>;
   htmlPath: string;
 }
 
@@ -33,7 +37,7 @@ export function configureSessionSecurity(): void {
       responseHeaders: {
         ...details.responseHeaders,
         'Content-Security-Policy': [
-          "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: wrriter-vault:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none';"
+          "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: wrriter-vault:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none';"
         ]
       }
     });
@@ -58,8 +62,10 @@ export function createSecureWindow(options: WindowFactoryOptions): BrowserWindow
     height: options.height ?? 800,
     minWidth: options.minWidth ?? 800,
     minHeight: options.minHeight ?? 600,
+    ...(options.x !== undefined ? { x: options.x } : {}),
+    ...(options.y !== undefined ? { y: options.y } : {}),
     frame: false,
-    backgroundColor: '#18181A',
+    backgroundColor: options.backgroundColor ?? '#18181A',
     show: false,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -84,9 +90,15 @@ export function createSecureWindow(options: WindowFactoryOptions): BrowserWindow
 
   // Load target file or dev URL
   if (process.env['ELECTRON_RENDERER_URL']) {
-    window.loadURL(process.env['ELECTRON_RENDERER_URL']);
+    const devUrl = new URL(process.env['ELECTRON_RENDERER_URL']);
+    if (options.query) {
+      for (const [k, v] of Object.entries(options.query)) {
+        devUrl.searchParams.set(k, v);
+      }
+    }
+    window.loadURL(devUrl.toString());
   } else {
-    window.loadFile(options.htmlPath);
+    window.loadFile(options.htmlPath, options.query ? { query: options.query } : undefined);
   }
 
   // Prevent white flash: show only when first frame is ready
@@ -96,3 +108,4 @@ export function createSecureWindow(options: WindowFactoryOptions): BrowserWindow
 
   return window;
 }
+

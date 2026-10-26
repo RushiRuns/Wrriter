@@ -78,4 +78,47 @@ export class VaultReader {
       return err({ kind: 'unexpected', message: error?.message ?? 'Failed to read bytes' });
     }
   }
+
+  /**
+   * Scans the vault for markdown notes (excluding dot folders and attachments),
+   * returning notes sorted by modified time descending for list rendering.
+   */
+  async listNotes(
+    vaultRoot: string
+  ): Promise<Result<Array<{ path: string; title: string; preview: string; modified: number }>>> {
+    try {
+      const results: Array<{ path: string; title: string; preview: string; modified: number }> = [];
+
+      const scan = async (currentDir: string, relPrefix = ''): Promise<void> => {
+        const entries = await fs.promises.readdir(currentDir, { withFileTypes: true });
+        for (const entry of entries) {
+          if (entry.name.startsWith('.') || entry.name.toLowerCase() === 'attachments') {
+            continue;
+          }
+          const fullPath = path.join(currentDir, entry.name);
+          const relPath = relPrefix ? `${relPrefix}/${entry.name}` : entry.name;
+
+          if (entry.isDirectory()) {
+            await scan(fullPath, relPath);
+          } else if (entry.isFile() && entry.name.endsWith('.md')) {
+            const stat = await fs.promises.stat(fullPath);
+            const title = entry.name.slice(0, -3);
+            results.push({
+              path: relPath,
+              title,
+              preview: '',
+              modified: stat.mtimeMs
+            });
+          }
+        }
+      };
+
+      await scan(vaultRoot);
+      results.sort((a, b) => b.modified - a.modified);
+      return ok(results);
+    } catch (error: any) {
+      return ok([]);
+    }
+  }
 }
+

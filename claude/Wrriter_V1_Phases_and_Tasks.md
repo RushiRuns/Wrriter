@@ -160,10 +160,10 @@ Nothing that depends on a row is built until it is decided. Rows 15 to 17 are ne
 
 ### Startup
 
-- [ ] Before the first window: read settings and create the window hidden, in the theme's background colour. Nothing else. The single-instance lock joins in M4
-- [ ] The window is shown when its first frame is ready. The right theme is applied before the first frame with no fade, and there is no white flash
-- [ ] First paint from saved state: pane widths and the first page of the note list. Open tabs join in M2
-- [ ] After the first paint, when idle: start the watcher and bring the list up to date. The index worker joins in M3
+- [x] Before the first window: read settings and create the window hidden, in the theme's background colour. Nothing else. The single-instance lock joins in M4
+- [x] The window is shown when its first frame is ready. The right theme is applied before the first frame with no fade, and there is no white flash
+- [x] First paint from saved state: pane widths and the first page of the note list. Open tabs join in M2
+- [x] After the first paint, when idle: start the watcher and bring the list up to date. The index worker joins in M3
 
 ### Vaults
 

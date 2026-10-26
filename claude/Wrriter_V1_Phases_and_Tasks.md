@@ -241,14 +241,14 @@ Nothing that depends on a row is built until it is decided. Rows 15 to 17 are ne
 
 ### Find and replace in a note
 
-- [ ] `FindBar` over the top right of the note column: Ctrl+F opens find, Ctrl+H adds the replace box. A count such as 3 of 12, previous and next, Match case, Whole word, Replace, Replace all and close
-- [ ] Selected text fills the find box. The last search and both toggles are remembered until Wrriter closes
-- [ ] Find matches the text as shown, not the markdown symbols behind it. Code is searched. Properties are not
-- [ ] Replaced text takes the formatting of the first character it replaces. Wikilinks and pass-through text are highlighted, never replaced, and counted as skipped
-- [ ] Replace all is one undo step. A replace that changes nothing writes nothing
-- [ ] A match inside a folded heading unfolds it
-- [ ] Each tab, and in M4 each pop-out, has its own bar. Find in note and Replace in note are palette commands
-- [ ] Replace all of 5,000 matches in a 1 MB note in under 1 s, measured and reported
+- [x] `FindBar` over the top right of the note column: Ctrl+F opens find, Ctrl+H adds the replace box. A count such as 3 of 12, previous and next, Match case, Whole word, Replace, Replace all and close
+- [x] Selected text fills the find box. The last search and both toggles are remembered until Wrriter closes
+- [x] Find matches the text as shown, not the markdown symbols behind it. Code is searched. Properties are not
+- [x] Replaced text takes the formatting of the first character it replaces. Wikilinks and pass-through text are highlighted, never replaced, and counted as skipped
+- [x] Replace all is one undo step. A replace that changes nothing writes nothing
+- [x] A match inside a folded heading unfolds it
+- [x] Each tab, and in M4 each pop-out, has its own bar. Find in note and Replace in note are palette commands
+- [x] Replace all of 5,000 matches in a 1 MB note in under 1 s, measured and reported
 
 ### The note column and its elements (UI slice 3)
 

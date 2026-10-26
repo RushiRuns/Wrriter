@@ -20,6 +20,8 @@ import {
 import { BoldMark, ItalicMark, StrikeMark, CodeMark } from './extensions/marks';
 import { MarkdownShortcutsExtension } from './extensions/markdown-shortcuts';
 import { PasteHandlerExtension } from './extensions/paste-handler';
+import { FindReplaceExtension, findReplacePluginKey } from './extensions/find-replace-extension';
+import { FindBar } from '../components/FindBar';
 import { markdownToTipTapDoc, tipTapDocToMarkdown } from './markdown-converter';
 import { planSave } from '../../shared/markdown/save';
 import {
@@ -27,6 +29,24 @@ import {
   shouldRenameFileOnLeave,
   deriveFileNameFromTitle
 } from '../../shared/domain/titles';
+
+export interface FindBarState {
+  isOpen: boolean;
+  isReplaceOpen: boolean;
+  searchTerm: string;
+  replaceText: string;
+  matchCase: boolean;
+  wholeWord: boolean;
+  activeIndex: number;
+}
+
+// Session memory persists last search term and toggles until Wrriter closes
+const sessionFindMemory = {
+  searchTerm: '',
+  replaceText: '',
+  matchCase: false,
+  wholeWord: false
+};
 
 export interface TabSession {
   readonly path: string;
@@ -38,6 +58,7 @@ export interface TabSession {
   initialFileName: string;
   initialTitle: string;
   isManualRenamed?: boolean;
+  findBarState?: FindBarState;
 }
 
 export interface EditorHostProps {
@@ -70,6 +91,23 @@ export const EditorHost: React.FC<EditorHostProps> = ({
 
   const [activeTabPath, setActiveTabPath] = useState<string | null>(activeNotePath);
   const [tabsList, setTabsList] = useState<readonly TabSession[]>([]);
+
+  // Find & Replace state for the currently active tab
+  const [findBarState, setFindBarState] = useState<FindBarState>({
+    isOpen: false,
+    isReplaceOpen: false,
+    searchTerm: sessionFindMemory.searchTerm,
+    replaceText: sessionFindMemory.replaceText,
+    matchCase: sessionFindMemory.matchCase,
+    wholeWord: sessionFindMemory.wholeWord,
+    activeIndex: 0
+  });
+  const findBarStateRef = useRef<FindBarState>(findBarState);
+  findBarStateRef.current = findBarState;
+
+  const [totalMatches, setTotalMatches] = useState(0);
+  const [skippedMatches, setSkippedMatches] = useState(0);
+  const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
 
   // Autosave timer
   const autosaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -194,13 +232,22 @@ export const EditorHost: React.FC<EditorHostProps> = ({
         StrikeMark,
         CodeMark,
         MarkdownShortcutsExtension,
-        PasteHandlerExtension
+        PasteHandlerExtension,
+        FindReplaceExtension
       ],
       editorProps: {
         attributes: {
           class: 'wrriter-prosemirror',
           spellcheck: 'true',
           lang: 'en'
+        }
+      },
+      onTransaction({ editor: currentEditor }) {
+        const frState = findReplacePluginKey.getState(currentEditor.state);
+        if (frState) {
+          setTotalMatches(frState.matches.length);
+          setSkippedMatches(frState.skippedMatches);
+          setCurrentMatchIndex(frState.activeIndex);
         }
       },
       onUpdate({ editor: currentEditor }) {
@@ -267,6 +314,7 @@ export const EditorHost: React.FC<EditorHostProps> = ({
         const prevTab = tabsRef.current.get(prevPath);
         if (prevTab) {
           prevTab.editorState = editor.state;
+          prevTab.findBarState = { ...findBarStateRef.current };
           if (scrollRef.current) {
             prevTab.scrollTop = scrollRef.current.scrollTop;
           }
@@ -306,7 +354,16 @@ export const EditorHost: React.FC<EditorHostProps> = ({
           isDirty: false,
           originalBytes,
           initialFileName: fileName,
-          initialTitle: title
+          initialTitle: title,
+          findBarState: {
+            isOpen: false,
+            isReplaceOpen: false,
+            searchTerm: sessionFindMemory.searchTerm,
+            replaceText: sessionFindMemory.replaceText,
+            matchCase: sessionFindMemory.matchCase,
+            wholeWord: sessionFindMemory.wholeWord,
+            activeIndex: 0
+          }
         };
         tabsRef.current.set(activeNotePath, targetTab);
 
@@ -318,6 +375,39 @@ export const EditorHost: React.FC<EditorHostProps> = ({
         // Swap EditorState in O(1) time without re-mounting editor DOM
         editor.view.updateState(targetTab.editorState);
         onTitleChange?.(targetTab.title);
+      }
+
+      // Restore destination tab's findBarState
+      if (targetTab.findBarState) {
+        setFindBarState(targetTab.findBarState);
+        findBarStateRef.current = targetTab.findBarState;
+        if (targetTab.findBarState.isOpen) {
+          editor.commands.setFindState({
+            searchTerm: targetTab.findBarState.searchTerm,
+            replaceText: targetTab.findBarState.replaceText,
+            options: {
+              matchCase: targetTab.findBarState.matchCase,
+              wholeWord: targetTab.findBarState.wholeWord
+            },
+            activeIndex: targetTab.findBarState.activeIndex
+          });
+        } else {
+          editor.commands.clearFind();
+        }
+      } else {
+        const defaultState: FindBarState = {
+          isOpen: false,
+          isReplaceOpen: false,
+          searchTerm: sessionFindMemory.searchTerm,
+          replaceText: sessionFindMemory.replaceText,
+          matchCase: sessionFindMemory.matchCase,
+          wholeWord: sessionFindMemory.wholeWord,
+          activeIndex: 0
+        };
+        targetTab.findBarState = defaultState;
+        setFindBarState(defaultState);
+        findBarStateRef.current = defaultState;
+        editor.commands.clearFind();
       }
 
       // Restore scroll position
@@ -430,6 +520,296 @@ export const EditorHost: React.FC<EditorHostProps> = ({
     }
   };
 
+  // Scrolls active match into view and unfolds heading if folded
+  const scrollToActiveMatch = useCallback(() => {
+    setTimeout(() => {
+      const activeEl = containerRef.current?.querySelector('.wr-find-match-active');
+      if (activeEl) {
+        activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+      const editor = editorRef.current;
+      if (editor) {
+        const frState = findReplacePluginKey.getState(editor.state);
+        const activeMatch = frState?.matches[frState.activeIndex];
+        if (activeMatch) {
+          const matchPos = activeMatch.from;
+          window.dispatchEvent(new CustomEvent('wrriter:unfold-at', { detail: { pos: matchPos } }));
+        }
+      }
+    }, 0);
+  }, []);
+
+  const handleOpenFind = useCallback(
+    (openReplace = false) => {
+      const editor = editorRef.current;
+      if (!editor) return;
+
+      let term = findBarStateRef.current.searchTerm;
+      // Pre-fill find input with editor's selected text if non-empty
+      const { from, to } = editor.state.selection;
+      if (from < to) {
+        const selected = editor.state.doc.textBetween(from, to, ' ');
+        if (selected.trim() && !selected.includes('\n') && selected.length <= 100) {
+          term = selected;
+        }
+      } else if (!term) {
+        term = sessionFindMemory.searchTerm;
+      }
+
+      const updated: FindBarState = {
+        isOpen: true,
+        isReplaceOpen: openReplace ? true : findBarStateRef.current.isReplaceOpen,
+        searchTerm: term,
+        replaceText: findBarStateRef.current.replaceText || sessionFindMemory.replaceText,
+        matchCase: findBarStateRef.current.matchCase || sessionFindMemory.matchCase,
+        wholeWord: findBarStateRef.current.wholeWord || sessionFindMemory.wholeWord,
+        activeIndex: 0
+      };
+
+      sessionFindMemory.searchTerm = updated.searchTerm;
+      sessionFindMemory.replaceText = updated.replaceText;
+      sessionFindMemory.matchCase = updated.matchCase;
+      sessionFindMemory.wholeWord = updated.wholeWord;
+
+      setFindBarState(updated);
+      findBarStateRef.current = updated;
+
+      editor.commands.setFindState({
+        searchTerm: updated.searchTerm,
+        replaceText: updated.replaceText,
+        options: {
+          matchCase: updated.matchCase,
+          wholeWord: updated.wholeWord
+        },
+        activeIndex: 0
+      });
+
+      const activeTab = tabsRef.current.get(activePathRef.current ?? '');
+      if (activeTab) {
+        activeTab.findBarState = updated;
+      }
+
+      scrollToActiveMatch();
+    },
+    [scrollToActiveMatch]
+  );
+
+  const handleCloseFind = useCallback(() => {
+    const editor = editorRef.current;
+    const updated: FindBarState = {
+      ...findBarStateRef.current,
+      isOpen: false
+    };
+
+    setFindBarState(updated);
+    findBarStateRef.current = updated;
+
+    if (editor) {
+      editor.commands.clearFind();
+      editor.commands.focus();
+    }
+
+    const activeTab = tabsRef.current.get(activePathRef.current ?? '');
+    if (activeTab) {
+      activeTab.findBarState = updated;
+    }
+  }, []);
+
+  const handleSearchChange = useCallback(
+    (term: string) => {
+      const editor = editorRef.current;
+      sessionFindMemory.searchTerm = term;
+
+      const updated: FindBarState = {
+        ...findBarStateRef.current,
+        searchTerm: term,
+        activeIndex: 0
+      };
+
+      setFindBarState(updated);
+      findBarStateRef.current = updated;
+
+      if (editor) {
+        editor.commands.setFindState({
+          searchTerm: term,
+          options: {
+            matchCase: updated.matchCase,
+            wholeWord: updated.wholeWord
+          },
+          activeIndex: 0
+        });
+      }
+
+      const activeTab = tabsRef.current.get(activePathRef.current ?? '');
+      if (activeTab) {
+        activeTab.findBarState = updated;
+      }
+
+      scrollToActiveMatch();
+    },
+    [scrollToActiveMatch]
+  );
+
+  const handleReplaceChange = useCallback((replacement: string) => {
+    sessionFindMemory.replaceText = replacement;
+
+    const updated: FindBarState = {
+      ...findBarStateRef.current,
+      replaceText: replacement
+    };
+
+    setFindBarState(updated);
+    findBarStateRef.current = updated;
+
+    const activeTab = tabsRef.current.get(activePathRef.current ?? '');
+    if (activeTab) {
+      activeTab.findBarState = updated;
+    }
+  }, []);
+
+  const handleToggleMatchCase = useCallback(() => {
+    const editor = editorRef.current;
+    const nextVal = !findBarStateRef.current.matchCase;
+    sessionFindMemory.matchCase = nextVal;
+
+    const updated: FindBarState = {
+      ...findBarStateRef.current,
+      matchCase: nextVal,
+      activeIndex: 0
+    };
+
+    setFindBarState(updated);
+    findBarStateRef.current = updated;
+
+    if (editor) {
+      editor.commands.setFindState({
+        options: {
+          matchCase: nextVal,
+          wholeWord: updated.wholeWord
+        },
+        activeIndex: 0
+      });
+    }
+
+    const activeTab = tabsRef.current.get(activePathRef.current ?? '');
+    if (activeTab) {
+      activeTab.findBarState = updated;
+    }
+
+    scrollToActiveMatch();
+  }, [scrollToActiveMatch]);
+
+  const handleToggleWholeWord = useCallback(() => {
+    const editor = editorRef.current;
+    const nextVal = !findBarStateRef.current.wholeWord;
+    sessionFindMemory.wholeWord = nextVal;
+
+    const updated: FindBarState = {
+      ...findBarStateRef.current,
+      wholeWord: nextVal,
+      activeIndex: 0
+    };
+
+    setFindBarState(updated);
+    findBarStateRef.current = updated;
+
+    if (editor) {
+      editor.commands.setFindState({
+        options: {
+          matchCase: updated.matchCase,
+          wholeWord: nextVal
+        },
+        activeIndex: 0
+      });
+    }
+
+    const activeTab = tabsRef.current.get(activePathRef.current ?? '');
+    if (activeTab) {
+      activeTab.findBarState = updated;
+    }
+
+    scrollToActiveMatch();
+  }, [scrollToActiveMatch]);
+
+  const handleToggleReplace = useCallback(() => {
+    const updated: FindBarState = {
+      ...findBarStateRef.current,
+      isReplaceOpen: !findBarStateRef.current.isReplaceOpen
+    };
+
+    setFindBarState(updated);
+    findBarStateRef.current = updated;
+
+    const activeTab = tabsRef.current.get(activePathRef.current ?? '');
+    if (activeTab) {
+      activeTab.findBarState = updated;
+    }
+  }, []);
+
+  const handleNextMatch = useCallback(() => {
+    const editor = editorRef.current;
+    if (editor) {
+      editor.commands.findNext();
+      scrollToActiveMatch();
+    }
+  }, [scrollToActiveMatch]);
+
+  const handlePrevMatch = useCallback(() => {
+    const editor = editorRef.current;
+    if (editor) {
+      editor.commands.findPrev();
+      scrollToActiveMatch();
+    }
+  }, [scrollToActiveMatch]);
+
+  const handleReplaceCurrent = useCallback(() => {
+    const editor = editorRef.current;
+    if (editor) {
+      editor.commands.replaceCurrent(findBarStateRef.current.replaceText);
+      scrollToActiveMatch();
+    }
+  }, [scrollToActiveMatch]);
+
+  const handleReplaceAll = useCallback(() => {
+    const editor = editorRef.current;
+    if (editor) {
+      editor.commands.replaceAll(findBarStateRef.current.replaceText);
+    }
+  }, []);
+
+  // Keyboard shortcut listener (Ctrl+F, Ctrl+H, F3, Shift+F3) & Palette commands
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f' && !e.shiftKey && !e.altKey) {
+        e.preventDefault();
+        handleOpenFind(false);
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'h' && !e.shiftKey && !e.altKey) {
+        e.preventDefault();
+        handleOpenFind(true);
+      } else if (e.key === 'F3') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          handlePrevMatch();
+        } else {
+          handleNextMatch();
+        }
+      }
+    };
+
+    const handleFindPaletteCommand = () => handleOpenFind(false);
+    const handleReplacePaletteCommand = () => handleOpenFind(true);
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('wrriter:find-in-note', handleFindPaletteCommand);
+    window.addEventListener('wrriter:replace-in-note', handleReplacePaletteCommand);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('wrriter:find-in-note', handleFindPaletteCommand);
+      window.removeEventListener('wrriter:replace-in-note', handleReplacePaletteCommand);
+    };
+  }, [handleOpenFind, handleNextMatch, handlePrevMatch]);
+
   return (
     <div
       style={{
@@ -440,6 +820,29 @@ export const EditorHost: React.FC<EditorHostProps> = ({
         position: 'relative'
       }}
     >
+      {/* Floating Find and Replace Bar (Ctrl+F / Ctrl+H) */}
+      <FindBar
+        isOpen={findBarState.isOpen}
+        isReplaceOpen={findBarState.isReplaceOpen}
+        searchTerm={findBarState.searchTerm}
+        replaceText={findBarState.replaceText}
+        matchCase={findBarState.matchCase}
+        wholeWord={findBarState.wholeWord}
+        currentIndex={currentMatchIndex}
+        totalMatches={totalMatches}
+        skippedMatches={skippedMatches}
+        onSearchChange={handleSearchChange}
+        onReplaceChange={handleReplaceChange}
+        onToggleMatchCase={handleToggleMatchCase}
+        onToggleWholeWord={handleToggleWholeWord}
+        onToggleReplace={handleToggleReplace}
+        onNext={handleNextMatch}
+        onPrev={handlePrevMatch}
+        onReplaceCurrent={handleReplaceCurrent}
+        onReplaceAll={handleReplaceAll}
+        onClose={handleCloseFind}
+      />
+
       {/* Scrollable Note Content Column */}
       <div
         ref={scrollRef}

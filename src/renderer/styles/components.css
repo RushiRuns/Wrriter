@@ -1215,3 +1215,23 @@
   color: var(--tx3);
   flex: none;
 }
+
+/* --------------------------------------------------------------------------
+   Find and Replace in Note
+   -------------------------------------------------------------------------- */
+.wr-find-match {
+  background-color: var(--soft);
+  border-radius: 2px;
+}
+
+.wr-find-match-active {
+  background-color: var(--selbg);
+  outline: 1.5px solid var(--accent);
+  border-radius: 2px;
+}
+
+.wr-find-match-protected {
+  background-color: color-mix(in srgb, var(--tx3) 22%, transparent);
+  border-radius: 2px;
+}
+

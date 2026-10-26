@@ -166,7 +166,7 @@ Record every query here as it is written.
 | `Tooltip` | Tooltips after about half a second | M2 | Planned |
 | `Dialog` | Confirmations such as deleting a folder | M1 | Built |
 | `Palette` | Command palette and quick switcher overlay | M2 to M3 | Planned |
-| `FindBar` | Find and replace in a note | M2 | Planned |
+| `FindBar` | Find and replace floating bar over note column with toggles and counts (`src/renderer/components/FindBar.tsx`) | M2 | Built |
 | `SettingsWindow` | Settings, including Note margin and the shortcut list | M2 | Planned |
 | `FileChip` | The ticket-shaped file chip, and the missing file state | M4 | Planned |
 | `Icon` | The icon set copied from the UI reference (`src/renderer/components/icons.tsx`) | M1 | Built |
@@ -177,6 +177,7 @@ Record every query here as it is written.
 | Name | Purpose | Milestone | Status |
 |---|---|---|---|
 | `EditorHost` | One live TipTap editor, hidden tabs kept without a drawn editor (`src/renderer/editor/EditorHost.tsx`) | M2 | Built |
+| `FindReplace` | ProseMirror search, decoration highlights, protected pass-through/wikilink skipping, mark-preserving replacement (`src/renderer/editor/find-replace-core.ts`, `src/renderer/editor/extensions/find-replace-extension.ts`) | M2 | Built |
 | Element nodes and marks | Headings, lists, tasks, blockquote, codeblock, hr, bold, italic, strike, code (`src/renderer/editor/extensions/`) | M2 | Built |
 | `Callout` | Callout node, types, fold, the colour mixes from the UI reference | M2 | Planned |
 | `BlockHandles` | Fold arrow as handle for headings, grab areas for callouts, grip for other blocks | M2 | Planned |

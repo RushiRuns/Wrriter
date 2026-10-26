@@ -5,6 +5,7 @@ import {
   FolderOpenIcon,
   ChevronRightIcon
 } from './icons';
+import { ContextMenu } from './menu/ContextMenu';
 import { getFileNameValidationError } from '../../shared/domain/names';
 
 export interface FolderTreeProps {
@@ -48,7 +49,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
 
   const renameInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Close context menu on window click or Escape
+  // Close context menu on window click, Escape, or close-all event
   useEffect(() => {
     const handleOutside = () => setContextMenu(null);
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -59,12 +60,20 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
         setNewFolderModal(null);
       }
     };
+    const handleCloseAll = (e: Event) => {
+      const customEvent = e as CustomEvent<{ except?: string }>;
+      if (customEvent.detail?.except !== 'folder-context-menu') {
+        setContextMenu(null);
+      }
+    };
 
     window.addEventListener('click', handleOutside);
     window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('wrriter:close-all-menus', handleCloseAll);
     return () => {
       window.removeEventListener('click', handleOutside);
       window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('wrriter:close-all-menus', handleCloseAll);
     };
   }, []);
 
@@ -333,59 +342,52 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
 
       {/* Context Menu */}
       {contextMenu && (
-        <div
-          className="lmenu"
-          style={{
-            position: 'fixed',
-            left: Math.min(contextMenu.x, window.innerWidth - 220),
-            top: Math.min(contextMenu.y, window.innerHeight - 150),
-            minWidth: 200,
-            zIndex: 100,
-            animation: 'lin var(--t-fast) var(--ease-arrive) both'
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <li
-            className="vi"
-            style={{ cursor: 'pointer', height: 32, padding: '0 8px', borderRadius: 8 }}
-            onClick={() => {
-              const parentPath = contextMenu.folder?.relPath ?? null;
-              setContextMenu(null);
-              setNewFolderModal({ parentRelPath: parentPath });
-              setNewFolderName('');
-              setNewFolderError(null);
-            }}
-          >
-            <span className="vn">New folder</span>
-          </li>
-
-          {contextMenu.folder && (
-            <>
-              <li
-                className="vi"
-                style={{ cursor: 'pointer', height: 32, padding: '0 8px', borderRadius: 8, display: 'flex', justifyContent: 'space-between' }}
-                onClick={() => handleStartRename(contextMenu.folder!)}
-              >
-                <span className="vn">Rename</span>
-                <span style={{ fontSize: 'var(--fs-small)', color: 'var(--tx3)' }}>F2</span>
-              </li>
-
-              <li className="vmd" style={{ height: 1, margin: '4px 0', backgroundColor: 'var(--line)' }} />
-
-              <li
-                className="vi"
-                style={{ cursor: 'pointer', height: 32, padding: '0 8px', borderRadius: 8, color: 'var(--dgr)' }}
-                onClick={() => {
-                  const targetFolder = contextMenu.folder!;
-                  setContextMenu(null);
-                  setDeleteConfirm({ folder: targetFolder });
-                }}
-              >
-                <span className="vn" style={{ color: 'var(--dgr)' }}>Delete folder</span>
-              </li>
-            </>
-          )}
-        </div>
+        <ContextMenu
+          isOpen={true}
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={() => setContextMenu(null)}
+          items={[
+            {
+              id: 'new-folder',
+              label: 'New folder',
+              onClick: () => {
+                const parentPath = contextMenu.folder?.relPath ?? null;
+                setNewFolderModal({ parentRelPath: parentPath });
+                setNewFolderName('');
+                setNewFolderError(null);
+              }
+            },
+            ...(contextMenu.folder
+              ? [
+                  {
+                    id: 'rename',
+                    label: 'Rename',
+                    shortcut: 'F2',
+                    onClick: () => handleStartRename(contextMenu.folder!)
+                  },
+                  {
+                    id: 'explorer',
+                    label: 'Show in File Explorer',
+                    onClick: () => {
+                      if (contextMenu.folder?.relPath && window.wrriter?.showItemInFolder) {
+                        void window.wrriter.showItemInFolder(contextMenu.folder.relPath);
+                      }
+                    }
+                  },
+                  { id: 'div-1', label: '', isDivider: true },
+                  {
+                    id: 'delete',
+                    label: 'Delete folder',
+                    isDanger: true,
+                    onClick: () => {
+                      setDeleteConfirm({ folder: contextMenu.folder! });
+                    }
+                  }
+                ]
+              : [])
+          ]}
+        />
       )}
 
       {/* Confirmation Dialog for Delete Folder */}

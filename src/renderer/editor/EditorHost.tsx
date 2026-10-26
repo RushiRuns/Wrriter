@@ -30,7 +30,13 @@ import { HeadingFoldingExtension, headingFoldingPluginKey } from './extensions/h
 import { KeyboardMoveExtension } from './extensions/keyboard-move';
 import { BlockHandlesExtension } from './extensions/block-handles';
 import { BlockDragExtension } from './extensions/block-drag';
+import { SlashMenuExtension, type SlashMenuState } from './extensions/slash-menu';
+import { SLASH_MENU_ITEMS } from './extensions/slash-menu-items';
+import { FloatingToolbarExtension, type FloatingToolbarState } from './extensions/floating-toolbar';
 import { FindBar } from '../components/FindBar';
+import { SlashMenu } from '../components/SlashMenu';
+import { FloatingToolbar } from '../components/FloatingToolbar';
+import { ContextMenu } from '../components/menu/ContextMenu';
 import { markdownToTipTapDoc, tipTapDocToMarkdown } from './markdown-converter';
 import { planSave } from '../../shared/markdown/save';
 import { parseFrontmatter } from '../../shared/domain/frontmatter';
@@ -147,6 +153,11 @@ export const EditorHost: React.FC<EditorHostProps> = ({
   // Active note date line and tags row
   const [activeDateLine, setActiveDateLine] = useState<string>('');
   const [activeTags, setActiveTags] = useState<readonly string[]>([]);
+
+  // UI Slice 4: Slash menu and Floating toolbar state
+  const [slashMenuState, setSlashMenuState] = useState<SlashMenuState | null>(null);
+  const [floatingToolbarState, setFloatingToolbarState] = useState<FloatingToolbarState | null>(null);
+  const [tabContextMenu, setTabContextMenu] = useState<{ x: number; y: number; tabPath: string } | null>(null);
 
   // "Drag to move" tooltip setting
   const [dragHintShown, setDragHintShown] = useState(false);
@@ -314,6 +325,12 @@ export const EditorHost: React.FC<EditorHostProps> = ({
         BlockDragExtension.configure({
           getDragHintShown: () => dragHintShownRef.current,
           onSetDragHintShown: handleSetDragHintShown
+        }),
+        SlashMenuExtension.configure({
+          onStateChange: (state) => setSlashMenuState(state)
+        }),
+        FloatingToolbarExtension.configure({
+          onStateChange: (state) => setFloatingToolbarState(state)
         })
       ],
       editorProps: {
@@ -705,8 +722,8 @@ export const EditorHost: React.FC<EditorHostProps> = ({
   };
 
   // Close tab handler
-  const handleCloseTab = async (e: React.MouseEvent, path: string) => {
-    e.stopPropagation();
+  const handleCloseTab = async (e: React.MouseEvent | null, path: string) => {
+    if (e) e.stopPropagation();
     const tab = tabsRef.current.get(path);
     if (tab) {
       if (tab.isDirty) {
@@ -725,6 +742,49 @@ export const EditorHost: React.FC<EditorHostProps> = ({
       notifyTabs();
     }
   };
+
+  const handleCloseOtherTabs = useCallback(
+    async (keepPath: string) => {
+      for (const [path, tab] of tabsRef.current.entries()) {
+        if (path !== keepPath) {
+          if (tab.isDirty) await saveTabSession(tab);
+          await checkRenameOnLeave(tab);
+        }
+      }
+      const keepTab = tabsRef.current.get(keepPath);
+      const remaining = new Map<string, TabSession>();
+      if (keepTab) remaining.set(keepPath, keepTab);
+      tabsRef.current = remaining;
+      notifyTabs();
+      if (activeTabPath !== keepPath) {
+        handleSelectTab(keepPath);
+      }
+    },
+    [activeTabPath, handleSelectTab, notifyTabs, saveTabSession, checkRenameOnLeave]
+  );
+
+  const handleCloseTabsToRight = useCallback(
+    async (targetPath: string) => {
+      const keys = Array.from(tabsRef.current.keys());
+      const targetIndex = keys.indexOf(targetPath);
+      if (targetIndex === -1) return;
+
+      const toClose = keys.slice(targetIndex + 1);
+      for (const path of toClose) {
+        const tab = tabsRef.current.get(path);
+        if (tab) {
+          if (tab.isDirty) await saveTabSession(tab);
+          await checkRenameOnLeave(tab);
+          tabsRef.current.delete(path);
+        }
+      }
+      notifyTabs();
+      if (activeTabPath && toClose.includes(activeTabPath)) {
+        handleSelectTab(targetPath);
+      }
+    },
+    [activeTabPath, handleSelectTab, notifyTabs, saveTabSession, checkRenameOnLeave]
+  );
 
   // Scrolls active match into view and unfolds heading if folded
   const scrollToActiveMatch = useCallback(() => {
@@ -1030,12 +1090,56 @@ export const EditorHost: React.FC<EditorHostProps> = ({
       }
     };
 
+    // Palette commands for Slash Menu items
+    const slashListeners: [string, () => void][] = SLASH_MENU_ITEMS.map((item) => [
+      item.paletteCommand,
+      () => {
+        if (editorRef.current) {
+          item.action(editorRef.current);
+        }
+      }
+    ]);
+
+    // Palette commands for formatting and block conversions
+    const formatListeners: [string, () => void][] = [
+      ['wrriter:format-bold', () => (editorRef.current?.chain().focus() as any)?.toggleBold().run()],
+      ['wrriter:format-italic', () => (editorRef.current?.chain().focus() as any)?.toggleItalic().run()],
+      ['wrriter:format-strikethrough', () => (editorRef.current?.chain().focus() as any)?.toggleStrike().run()],
+      ['wrriter:format-code', () => (editorRef.current?.chain().focus() as any)?.toggleCode().run()],
+      ['wrriter:format-link', () => {
+        if (editorRef.current) {
+          const url = window.prompt('Enter link URL:');
+          if (url) (editorRef.current.chain().focus() as any).setLink({ href: url }).run();
+        }
+      }],
+      ['wrriter:format-clear', () => editorRef.current?.chain().focus().unsetAllMarks().clearNodes().run()],
+      ['wrriter:turn-into-paragraph', () => (editorRef.current?.chain().focus() as any)?.setParagraph().run()],
+      ['wrriter:turn-into-heading-1', () => (editorRef.current?.chain().focus() as any)?.setHeading({ level: 1 }).run()],
+      ['wrriter:turn-into-heading-2', () => (editorRef.current?.chain().focus() as any)?.setHeading({ level: 2 }).run()],
+      ['wrriter:turn-into-heading-3', () => (editorRef.current?.chain().focus() as any)?.setHeading({ level: 3 }).run()],
+      ['wrriter:turn-into-quote', () => (editorRef.current?.chain().focus() as any)?.toggleBlockquote().run()],
+      ['wrriter:turn-into-code-block', () => (editorRef.current?.chain().focus() as any)?.toggleCodeBlock().run()],
+      ['wrriter:turn-into-bullet-list', () => (editorRef.current?.chain().focus() as any)?.toggleBulletList().run()],
+      ['wrriter:turn-into-numbered-list', () => (editorRef.current?.chain().focus() as any)?.toggleOrderedList().run()],
+      ['wrriter:turn-into-task-list', () => (editorRef.current?.chain().focus() as any)?.toggleTaskList().run()]
+    ];
+
+    const handleCloseAllMenus = (e: Event) => {
+      const customEvent = e as CustomEvent<{ except?: string }>;
+      if (customEvent.detail?.except !== 'slash-menu') setSlashMenuState(null);
+      if (customEvent.detail?.except !== 'floating-toolbar') setFloatingToolbarState(null);
+      if (customEvent.detail?.except !== 'tab-context-menu') setTabContextMenu(null);
+    };
+
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('wrriter:find-in-note', handleFindPaletteCommand);
     window.addEventListener('wrriter:replace-in-note', handleReplacePaletteCommand);
     window.addEventListener('wrriter:fold-all', handleFoldAll);
     window.addEventListener('wrriter:unfold-all', handleUnfoldAll);
     window.addEventListener('wrriter:unfold-at', handleUnfoldAt);
+    window.addEventListener('wrriter:close-all-menus', handleCloseAllMenus);
+    slashListeners.forEach(([event, handler]) => window.addEventListener(event, handler));
+    formatListeners.forEach(([event, handler]) => window.addEventListener(event, handler));
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
@@ -1044,6 +1148,9 @@ export const EditorHost: React.FC<EditorHostProps> = ({
       window.removeEventListener('wrriter:fold-all', handleFoldAll);
       window.removeEventListener('wrriter:unfold-all', handleUnfoldAll);
       window.removeEventListener('wrriter:unfold-at', handleUnfoldAt);
+      window.removeEventListener('wrriter:close-all-menus', handleCloseAllMenus);
+      slashListeners.forEach(([event, handler]) => window.removeEventListener(event, handler));
+      formatListeners.forEach(([event, handler]) => window.removeEventListener(event, handler));
     };
   }, [handleOpenFind, handleNextMatch, handlePrevMatch]);
 
@@ -1125,6 +1232,57 @@ export const EditorHost: React.FC<EditorHostProps> = ({
         </div>
       </div>
 
+      {/* Slash Menu and Floating Toolbar Overlays */}
+      <SlashMenu
+        editor={editorRef.current}
+        menuState={slashMenuState}
+        onClose={() => setSlashMenuState(null)}
+      />
+
+      <FloatingToolbar
+        editor={editorRef.current}
+        toolbarState={floatingToolbarState}
+        onClose={() => setFloatingToolbarState(null)}
+      />
+
+      {/* Tab Context Menu */}
+      {tabContextMenu && (
+        <ContextMenu
+          isOpen={true}
+          x={tabContextMenu.x}
+          y={tabContextMenu.y}
+          onClose={() => setTabContextMenu(null)}
+          items={[
+            {
+              id: 'close-tab',
+              label: 'Close tab',
+              shortcut: 'Ctrl+W',
+              onClick: () => handleCloseTab(null, tabContextMenu.tabPath)
+            },
+            {
+              id: 'close-other-tabs',
+              label: 'Close other tabs',
+              onClick: () => handleCloseOtherTabs(tabContextMenu.tabPath)
+            },
+            {
+              id: 'close-tabs-right',
+              label: 'Close tabs to the right',
+              onClick: () => handleCloseTabsToRight(tabContextMenu.tabPath)
+            },
+            { id: 'div-1', label: '', isDivider: true },
+            {
+              id: 'show-in-explorer',
+              label: 'Show in File Explorer',
+              onClick: () => {
+                if (window.wrriter?.showItemInFolder) {
+                  void window.wrriter.showItemInFolder(tabContextMenu.tabPath);
+                }
+              }
+            }
+          ]}
+        />
+      )}
+
       {/* 32px TabStrip along the bottom of the editor pane */}
       <div
         style={{
@@ -1150,6 +1308,10 @@ export const EditorHost: React.FC<EditorHostProps> = ({
               key={tab.path}
               className={`tab ${isActive ? 'on' : ''}`}
               onClick={() => handleSelectTab(tab.path)}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setTabContextMenu({ x: e.clientX, y: e.clientY, tabPath: tab.path });
+              }}
               style={{
                 height: 24,
                 padding: '0 8px 0 10px',

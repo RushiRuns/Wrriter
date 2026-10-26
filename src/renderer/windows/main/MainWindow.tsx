@@ -21,6 +21,8 @@ import { VirtualList } from '../../components/VirtualList';
 import { NotesPaneMenu } from '../../components/NotesPaneMenu';
 import { Notice } from '../../components/Notice';
 import { EditorHost } from '../../editor/EditorHost';
+import { EditorMenu } from '../../components/menu/EditorMenu';
+import { ContextMenu } from '../../components/menu/ContextMenu';
 import { formatDefaultTitle, deriveFileNameFromTitle } from '../../../shared';
 import type {
   FolderNode,
@@ -53,8 +55,9 @@ export const MainWindow: React.FC = () => {
   const [noteContent, setNoteContent] = useState('');
   const [noteDate, setNoteDate] = useState<number>(Date.now());
 
-  // Notes pane 3-dot menu and context menu state
+  // Notes pane 3-dot menu, editor menu, and context menu state
   const [notesMenuOpen, setNotesMenuOpen] = useState(false);
+  const [editorMenuOpen, setEditorMenuOpen] = useState(false);
   const [noteContextMenu, setNoteContextMenu] = useState<{ x: number; y: number; note: NoteListItem } | null>(null);
   const [showNewFolderModal, setShowNewFolderModal] = useState(false);
   const [newFolderNameInput, setNewFolderNameInput] = useState('');
@@ -136,22 +139,36 @@ export const MainWindow: React.FC = () => {
     void refreshNotes(selectedFolder, nextSort);
   };
 
-  // Close context menu on outside click or escape
+  // Close context menu and floating menus on outside click, escape, or close-all event
   useEffect(() => {
-    const handleOutside = () => setNoteContextMenu(null);
+    const handleOutside = () => {
+      setNoteContextMenu(null);
+      setEditorMenuOpen(false);
+    };
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setNoteContextMenu(null);
+        setEditorMenuOpen(false);
         setNotesMenuOpen(false);
         setVaultMenuOpen(false);
         setShowNewFolderModal(false);
       }
     };
+    const handleCloseAllMenus = (e: Event) => {
+      const customEvent = e as CustomEvent<{ except?: string }>;
+      if (customEvent.detail?.except !== 'editor-menu') setEditorMenuOpen(false);
+      if (customEvent.detail?.except !== 'note-context-menu') setNoteContextMenu(null);
+      if (customEvent.detail?.except !== 'notes-pane-menu') setNotesMenuOpen(false);
+      if (customEvent.detail?.except !== 'vault-menu') setVaultMenuOpen(false);
+    };
+
     window.addEventListener('click', handleOutside);
     window.addEventListener('keydown', handleKey);
+    window.addEventListener('wrriter:close-all-menus', handleCloseAllMenus);
     return () => {
       window.removeEventListener('click', handleOutside);
       window.removeEventListener('keydown', handleKey);
+      window.removeEventListener('wrriter:close-all-menus', handleCloseAllMenus);
     };
   }, []);
 
@@ -771,35 +788,42 @@ export const MainWindow: React.FC = () => {
 
         {/* Note Context Menu (Right Click on Note Row) */}
         {noteContextMenu && (
-          <div
-            className="lmenu"
-            style={{
-              position: 'fixed',
-              left: Math.min(noteContextMenu.x, window.innerWidth - 200),
-              top: Math.min(noteContextMenu.y, window.innerHeight - 120),
-              minWidth: 180,
-              zIndex: 100,
-              animation: 'lin var(--t-fast) var(--ease-arrive) both'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <li
-              className="vi"
-              style={{ cursor: 'pointer', height: 32, padding: '0 8px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8 }}
-              onClick={() => void handleTogglePinNote(noteContextMenu.note)}
-            >
-              <PinIcon style={{ width: 14, height: 14 }} />
-              <span className="vn">{noteContextMenu.note.pinned ? 'Unpin note' : 'Pin note'}</span>
-            </li>
-            <li className="vmd" style={{ height: 1, margin: '4px 0', backgroundColor: 'var(--line)' }} />
-            <li
-              className="vi"
-              style={{ cursor: 'pointer', height: 32, padding: '0 8px', borderRadius: 8, color: 'var(--dgr)' }}
-              onClick={() => void handleDeleteNote(noteContextMenu.note)}
-            >
-              <span className="vn" style={{ color: 'var(--dgr)' }}>Delete note</span>
-            </li>
-          </div>
+          <ContextMenu
+            isOpen={true}
+            x={noteContextMenu.x}
+            y={noteContextMenu.y}
+            onClose={() => setNoteContextMenu(null)}
+            items={[
+              {
+                id: 'pin',
+                label: noteContextMenu.note.pinned ? 'Unpin note' : 'Pin note',
+                icon: <PinIcon style={{ width: 14, height: 14 }} />,
+                onClick: () => void handleTogglePinNote(noteContextMenu.note)
+              },
+              {
+                id: 'dup',
+                label: 'Duplicate',
+                shortcut: 'M3',
+                isDisabled: true
+              },
+              {
+                id: 'explorer',
+                label: 'Show in File Explorer',
+                onClick: () => {
+                  if (window.wrriter?.showItemInFolder) {
+                    void window.wrriter.showItemInFolder(noteContextMenu.note.path);
+                  }
+                }
+              },
+              { id: 'div-1', label: '', isDivider: true },
+              {
+                id: 'del',
+                label: 'Delete note',
+                isDanger: true,
+                onClick: () => void handleDeleteNote(noteContextMenu.note)
+              }
+            ]}
+          />
         )}
 
         {/* Resizer Handle for Notes List */}
@@ -828,16 +852,35 @@ export const MainWindow: React.FC = () => {
         }}
       >
         {/* Editor 3-dot button in top right corner */}
-        <div className="nmore">
-          <button
-            type="button"
-            className="ib"
-            title="Note options"
-            style={{ width: 32, height: 32, cursor: 'pointer', background: 'none', border: 'none' }}
-          >
-            <MoreDotsIcon />
-          </button>
-        </div>
+        {(() => {
+          const selectedNote = notes.find((n) => n.path === selectedNotePath);
+          return (
+            <div className="nmore">
+              <button
+                type="button"
+                className="ib"
+                title="Note options"
+                onClick={() => setEditorMenuOpen((prev) => !prev)}
+                style={{ width: 32, height: 32, cursor: 'pointer', background: 'none', border: 'none' }}
+              >
+                <MoreDotsIcon />
+              </button>
+              <EditorMenu
+                isOpen={editorMenuOpen}
+                onClose={() => setEditorMenuOpen(false)}
+                isPinned={selectedNote?.pinned ?? false}
+                onTogglePin={() => selectedNote && void handleTogglePinNote(selectedNote)}
+                onFindInNote={() => window.dispatchEvent(new CustomEvent('wrriter:find-in-note'))}
+                onShowInExplorer={() => {
+                  if (selectedNotePath && window.wrriter?.showItemInFolder) {
+                    void window.wrriter.showItemInFolder(selectedNotePath);
+                  }
+                }}
+                onDeleteNote={() => selectedNote && void handleDeleteNote(selectedNote)}
+              />
+            </div>
+          );
+        })()}
 
         {/* Live TipTap Editor Host */}
         <EditorHost

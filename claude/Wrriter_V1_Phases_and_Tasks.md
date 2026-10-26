@@ -284,12 +284,12 @@ Nothing that depends on a row is built until it is decided. Rows 15 to 17 are ne
 
 ### Menus, slash menu and floating toolbar (UI slice 4)
 
-- [ ] `Menu`: one look for every menu, one open at a time, closed by a click outside or a choice
-- [ ] Editor three-dot menu: Pin or Unpin, Duplicate (works from M3), Find in note, Pop out (works from M4), Show in File Explorer, Delete note. Move to folder, Archive, Share and Export as wait on decision 4
-- [ ] Right-click menus for notes, folders, tabs and vaults (not drawn in the mockup, shown to Krishna)
-- [ ] `SlashMenu`: twelve items in four groups, filtering by name and related words, keys that wrap, the no-match state, flipping above near the bottom, every inserted block with its placeholder and the caret in place
-- [ ] `FloatingToolbar`: block type, list type, bold, italic, strikethrough, link and more. Fades at Fast, never follows the selection, stays inside the pane
-- [ ] Every slash menu and toolbar item is also a palette command
+- [x] `Menu`: one look for every menu, one open at a time, closed by a click outside or a choice
+- [x] Editor three-dot menu: Pin or Unpin, Duplicate (works from M3), Find in note, Pop out (works from M4), Show in File Explorer, Delete note. Move to folder, Archive, Share and Export as wait on decision 4
+- [x] Right-click menus for notes, folders, tabs and vaults (not drawn in the mockup, shown to Krishna)
+- [x] `SlashMenu`: twelve items in four groups, filtering by name and related words, keys that wrap, the no-match state, flipping above near the bottom, every inserted block with its placeholder and the caret in place
+- [x] `FloatingToolbar`: block type, list type, bold, italic, strikethrough, link and more. Fades at Fast, never follows the selection, stays inside the pane
+- [x] Every slash menu and toolbar item is also a palette command
 
 ### Tabs, navigation and the palette
 

@@ -53,16 +53,25 @@ export const NotesPaneMenu: React.FC<NotesPaneMenuProps> = ({
       }
     };
 
+    const handleCloseAll = (e: Event) => {
+      const customEvent = e as CustomEvent<{ except?: string }>;
+      if (customEvent.detail?.except !== 'notes-pane-menu') {
+        onClose();
+      }
+    };
+
     // Register after current tick to avoid immediate closing from trigger click
     const timer = setTimeout(() => {
       window.addEventListener('click', handleOutsideClick);
       window.addEventListener('keydown', handleKeyDown);
+      window.addEventListener('wrriter:close-all-menus', handleCloseAll);
     }, 0);
 
     return () => {
       clearTimeout(timer);
       window.removeEventListener('click', handleOutsideClick);
       window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('wrriter:close-all-menus', handleCloseAll);
     };
   }, [isOpen, onClose]);
 

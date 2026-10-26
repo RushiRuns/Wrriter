@@ -1653,5 +1653,259 @@
   background: color-mix(in srgb, var(--tx) 6%, transparent);
 }
 
+/* ==========================================================================
+   UI Slice 4: Menus, Slash Menu and Floating Toolbar
+   ========================================================================== */
 
+/* Editor Three-Dot Menu */
+.lmenu.ed {
+  position: absolute;
+  top: calc(var(--band) + var(--s-4) + var(--ctl) - var(--s-1));
+  right: var(--s-4);
+  min-width: 272px;
+  z-index: 50;
+  list-style: none;
+  margin: 0;
+  padding: var(--s-2);
+  border-radius: var(--r-l);
+  background: var(--pop);
+  box-shadow: 0 0 0 1px var(--line), var(--shadow);
+  transform-origin: top right;
+  animation: lin var(--t-fast) var(--ease-arrive) both;
+}
 
+/* Right-click Context Menu */
+.lmenu.ctx {
+  position: fixed;
+  z-index: 1000;
+  min-width: 200px;
+  list-style: none;
+  margin: 0;
+  padding: var(--s-2);
+  border-radius: var(--r-l);
+  background: var(--pop);
+  box-shadow: 0 0 0 1px var(--line), var(--shadow);
+  transform-origin: top left;
+  animation: lin var(--t-fast) var(--ease-arrive) both;
+}
+
+/* Slash Menu */
+.sm {
+  position: absolute;
+  z-index: 40;
+  width: 344px;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--r-l);
+  background: var(--pop);
+  box-shadow: 0 0 0 1px var(--line), var(--shadow);
+  transform-origin: top left;
+  animation: lin var(--t-fast) var(--ease-arrive) both;
+}
+
+.sm.flip-above {
+  transform-origin: bottom left;
+  animation: vin var(--t-fast) var(--ease-arrive) both;
+}
+
+.sml {
+  max-height: 388px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--s-2);
+  scrollbar-width: thin;
+  scrollbar-color: var(--div) transparent;
+}
+
+.smg {
+  padding: var(--s-2) var(--s-2) var(--s-1);
+  font-size: var(--fs-label);
+  line-height: var(--lh-label);
+  font-weight: var(--fw-semi);
+  letter-spacing: var(--ls-label);
+  text-transform: uppercase;
+  color: var(--tx2);
+}
+
+.smg.off, .smi.off, .smo.off {
+  display: none;
+}
+
+.smi {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  width: 100%;
+  padding: var(--s-1) var(--s-2);
+  border-radius: var(--r-s);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--t-fast) var(--ease-move), box-shadow var(--t-fast) var(--ease-move);
+}
+
+.smi:hover {
+  box-shadow: var(--hov-fill);
+}
+
+.smi.sel {
+  background: var(--sel-bg);
+  box-shadow: var(--sel-ring);
+}
+
+.smi.sel .smd, .smi.sel .smk, .smi.sel .smt {
+  color: var(--tx);
+}
+
+.smt {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-s);
+  background: var(--tile);
+  color: var(--tx2);
+}
+
+.smx {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.smn {
+  font-size: var(--fs-ui);
+  line-height: var(--lh-ui);
+  font-weight: var(--fw-semi);
+  color: var(--tx);
+}
+
+.smd {
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+  color: var(--tx2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.smk {
+  flex: none;
+  margin-left: auto;
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+  color: var(--tx2);
+  font-variant-numeric: tabular-nums;
+}
+
+.smo {
+  padding: var(--s-4);
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+  color: var(--tx2);
+  text-align: center;
+}
+
+.smf {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-4);
+  border-top: 1px solid var(--line);
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+  color: var(--tx2);
+}
+
+/* Floating Format Toolbar */
+.ftb {
+  position: absolute;
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+  padding: 4px;
+  border-radius: var(--r-l);
+  background: var(--pop);
+  box-shadow: 0 0 0 1px var(--line), var(--shadow);
+  animation: lin var(--t-fast) var(--ease-arrive) both;
+  user-select: none;
+}
+
+.ftb-btn {
+  height: var(--ctl);
+  min-width: var(--ctl);
+  padding: 0 var(--s-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-1);
+  border: none;
+  background: transparent;
+  border-radius: var(--r-s);
+  color: var(--tx2);
+  font-family: var(--font-sans);
+  font-size: var(--fs-small);
+  cursor: pointer;
+  transition: box-shadow var(--t-fast) var(--ease-move), color var(--t-fast) var(--ease-move), background var(--t-fast) var(--ease-move);
+}
+
+.ftb-btn:hover {
+  box-shadow: var(--hov-fill);
+  color: var(--tx);
+}
+
+.ftb-btn.active {
+  background: var(--sel-bg);
+  box-shadow: var(--sel-ring);
+  color: var(--tx);
+}
+
+.ftb-div {
+  width: 1px;
+  height: 20px;
+  background: var(--line);
+  margin: 0 2px;
+  flex: none;
+}
+
+.ftb-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 1000;
+  padding: 4px;
+  border-radius: var(--r-s);
+  background: var(--pop);
+  box-shadow: 0 0 0 1px var(--line), var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: lin var(--t-fast) var(--ease-arrive) both;
+}
+
+.ftb-dd-item {
+  width: 100%;
+  padding: 6px var(--s-2);
+  border: none;
+  background: transparent;
+  border-radius: var(--r-s);
+  font-family: var(--font-sans);
+  font-size: var(--fs-small);
+  color: var(--tx);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--t-fast) var(--ease-move);
+}
+
+.ftb-dd-item:hover {
+  background: var(--hov-fill);
+}
+
+.ftb-dd-item.active {
+  background: var(--sel-bg);
+  font-weight: var(--fw-semi);
+}

@@ -185,8 +185,8 @@ Record every query here as it is written.
 | `FileChip` | Ticket-shaped file chip with notched sides and type badge (`src/renderer/editor/extensions/file-chip.ts`) | M2 | Built |
 | `BlockHandles` | Fold arrow as handle for headings, grab areas for callouts, grip for other blocks (`src/renderer/editor/extensions/block-handles.ts`, `heading-folding.ts`) | M2 | Built |
 | `BlockDrag` | Drag, drop line, auto-scroll, Escape, fold during drag, section moves, Alt+Up/Down (`src/renderer/editor/extensions/block-drag.ts`, `keyboard-move.ts`) | M2 | Built |
-| `SlashMenu` | The twelve-item slash menu | M2 | Planned |
-| `FloatingToolbar` | The format pill over selected text | M2 | Planned |
+| `SlashMenu` | The twelve-item slash menu (`src/renderer/editor/extensions/slash-menu.ts`, `SlashMenu.tsx`) | M2 | Built |
+| `FloatingToolbar` | The format pill over selected text (`src/renderer/editor/extensions/floating-toolbar.ts`, `FloatingToolbar.tsx`) | M2 | Built |
 | `PasteToMarkdown` | Web content turned into markdown, never inserted as HTML (`src/renderer/editor/extensions/paste-handler.ts`) | M2 | Built |
 | `TypingTouches` | Caret glide, selection fade, new-letter fade, skipped when typing is fast | M2 | Planned |
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { VaultInfo, VaultListItem } from '../../shared/ipc';
 import { CheckmarkIcon, FolderAddIcon } from './icons';
+import { ContextMenu } from './menu/ContextMenu';
 
 export interface VaultMenuProps {
   isOpen: boolean;
@@ -52,6 +53,17 @@ export const VaultMenu: React.FC<VaultMenuProps> = ({
       setErrorMsg(null);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    const handleCloseAll = (e: Event) => {
+      const customEvent = e as CustomEvent<{ except?: string }>;
+      if (customEvent.detail?.except !== 'vault-menu') {
+        onClose();
+      }
+    };
+    window.addEventListener('wrriter:close-all-menus', handleCloseAll);
+    return () => window.removeEventListener('wrriter:close-all-menus', handleCloseAll);
+  }, [onClose]);
 
   if (!isOpen) return null;
 
@@ -335,72 +347,48 @@ export const VaultMenu: React.FC<VaultMenuProps> = ({
 
       {/* Vault Right-Click Context Menu */}
       {contextMenu && (
-        <div
-          style={{
-            position: 'fixed',
-            zIndex: 60,
-            left: Math.min(contextMenu.x, window.innerWidth - 220),
-            top: Math.min(contextMenu.y, window.innerHeight - 160),
-            backgroundColor: 'var(--pop)',
-            border: '1px solid var(--line)',
-            borderRadius: 'var(--r-s)',
-            boxShadow: 'var(--shadow)',
-            padding: '4px',
-            minWidth: 200,
-            listStyle: 'none'
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {contextMenu.vault.isAvailable ? (
-            <>
-              <button
-                type="button"
-                className="vi"
-                onClick={() => handleStartRename(contextMenu.vault)}
-                style={{ textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer' }}
-              >
-                <span className="vn">Rename display name</span>
-              </button>
-              <button
-                type="button"
-                className="vi"
-                onClick={() => handleShowInExplorer(contextMenu.vault.id)}
-                style={{ textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer' }}
-              >
-                <span className="vn">Show in File Explorer</span>
-              </button>
-              <div className="vmd" />
-              <button
-                type="button"
-                className="vi dg"
-                onClick={() => handleRemoveVault(contextMenu.vault.id)}
-                style={{ textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer' }}
-              >
-                <span className="vn">Remove from Wrriter</span>
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                type="button"
-                className="vi"
-                onClick={() => handleLocateVault(contextMenu.vault.id)}
-                style={{ textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer' }}
-              >
-                <span className="vn">Locate vault...</span>
-              </button>
-              <div className="vmd" />
-              <button
-                type="button"
-                className="vi dg"
-                onClick={() => handleRemoveVault(contextMenu.vault.id)}
-                style={{ textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer' }}
-              >
-                <span className="vn">Remove from list</span>
-              </button>
-            </>
-          )}
-        </div>
+        <ContextMenu
+          isOpen={true}
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={() => setContextMenu(null)}
+          items={
+            contextMenu.vault.isAvailable
+              ? [
+                  {
+                    id: 'rename',
+                    label: 'Rename display name',
+                    onClick: () => handleStartRename(contextMenu.vault)
+                  },
+                  {
+                    id: 'explorer',
+                    label: 'Show in File Explorer',
+                    onClick: () => handleShowInExplorer(contextMenu.vault.id)
+                  },
+                  { id: 'div-1', label: '', isDivider: true },
+                  {
+                    id: 'remove',
+                    label: 'Remove from Wrriter',
+                    isDanger: true,
+                    onClick: () => handleRemoveVault(contextMenu.vault.id)
+                  }
+                ]
+              : [
+                  {
+                    id: 'locate',
+                    label: 'Locate vault...',
+                    onClick: () => handleLocateVault(contextMenu.vault.id)
+                  },
+                  { id: 'div-1', label: '', isDivider: true },
+                  {
+                    id: 'remove',
+                    label: 'Remove from list',
+                    isDanger: true,
+                    onClick: () => handleRemoveVault(contextMenu.vault.id)
+                  }
+                ]
+          }
+        />
       )}
     </>
   );

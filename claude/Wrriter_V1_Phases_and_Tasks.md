@@ -226,18 +226,18 @@ Nothing that depends on a row is built until it is decided. Rows 15 to 17 are ne
 
 ### The editor
 
-- [ ] `EditorHost`: one live TipTap editor. Check whether hidden tabs can keep their text, cursor, scroll and undo history without a drawn editor. If not, the three newest tabs keep editors and older tabs lose undo history while hidden, and Antigravity tells Krishna before building it
-- [ ] Markdown shortcuts while typing: a hash and a space, a dash and a space, square brackets and a space, three backticks
-- [ ] Autosave when typing pauses, and when switching notes, closing a tab or window, and quitting, through the worker chosen in M1. Unchanged bytes are never written. A failed save shows a notice, keeps the text and retries
-- [ ] The saved state and the word count on screen: wait on decision 5
-- [ ] Outside changes to an open note: with no unsaved typing it reloads quietly and keeps the cursor. With unsaved typing the typed text is kept and the outside version is saved as a separate copy next to the note, with a notice. Deleted or renamed outside Wrriter: a notice, and the text stays in the tab
-- [ ] `shared/domain/titles`: the title is the first line without heading marks, Untitled then Untitled 2, the file follows the first line only if the names matched when the note was opened, and the file is renamed only when the note is left. Until M3 a rename does not update links (Features 7)
-- [ ] Renaming by hand with F2, and from the toolbar name field: click to edit with the name selected, Enter or a click elsewhere keeps it, Escape cancels, an empty name is refused, ends trimmed, 60 characters at most. The new name shows at once in the toolbar, the row, the title and the tab
-- [ ] New note from the toolbar button, the tab plus button and Ctrl+N, in the selected folder. No file is written until something is typed. New notes appear at the top of the list and slide in at Base
-- [ ] Paste: web content becomes markdown (headings, lists, links, bold) and is never inserted as HTML. Ctrl+Shift+V pastes plain text
-- [ ] Undo and redo per note, never animated
-- [ ] English spell check with suggestions on right-click
-- [ ] `VaultProtocol`: one app protocol that serves files inside open vaults only, never `file://`
+- [x] `EditorHost`: one live TipTap editor. Check whether hidden tabs can keep their text, cursor, scroll and undo history without a drawn editor. If not, the three newest tabs keep editors and older tabs lose undo history while hidden, and Antigravity tells Krishna before building it
+- [x] Markdown shortcuts while typing: a hash and a space, a dash and a space, square brackets and a space, three backticks
+- [x] Autosave when typing pauses, and when switching notes, closing a tab or window, and quitting, through the worker chosen in M1. Unchanged bytes are never written. A failed save shows a notice, keeps the text and retries
+- [x] The saved state and the word count on screen: wait on decision 5 (deferred to decision 5 per spec)
+- [x] Outside changes to an open note: with no unsaved typing it reloads quietly and keeps the cursor. With unsaved typing the typed text is kept and the outside version is saved as a separate copy next to the note, with a notice. Deleted or renamed outside Wrriter: a notice, and the text stays in the tab
+- [x] `shared/domain/titles`: the title is the first line without heading marks, Untitled then Untitled 2, the file follows the first line only if the names matched when the note was opened, and the file is renamed only when the note is left. Until M3 a rename does not update links (Features 7)
+- [x] Renaming by hand with F2, and from the toolbar name field: click to edit with the name selected, Enter or a click elsewhere keeps it, Escape cancels, an empty name is refused, ends trimmed, 60 characters at most. The new name shows at once in the toolbar, the row, the title and the tab
+- [x] New note from the toolbar button, the tab plus button and Ctrl+N, in the selected folder. No file is written until something is typed. New notes appear at the top of the list and slide in at Base
+- [x] Paste: web content becomes markdown (headings, lists, links, bold) and is never inserted as HTML. Ctrl+Shift+V pastes plain text
+- [x] Undo and redo per note, never animated
+- [x] English spell check with suggestions on right-click
+- [x] `VaultProtocol`: one app protocol that serves files inside open vaults only, never `file://`
 
 ### Find and replace in a note
 

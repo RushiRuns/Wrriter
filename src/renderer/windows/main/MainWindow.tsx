@@ -19,6 +19,9 @@ import { FolderTree } from '../../components/FolderTree';
 import { NoteRow } from '../../components/NoteRow';
 import { VirtualList } from '../../components/VirtualList';
 import { NotesPaneMenu } from '../../components/NotesPaneMenu';
+import { Notice } from '../../components/Notice';
+import { EditorHost } from '../../editor/EditorHost';
+import { formatDefaultTitle, deriveFileNameFromTitle } from '../../../shared';
 import type {
   FolderNode,
   NoteListItem,
@@ -56,6 +59,7 @@ export const MainWindow: React.FC = () => {
   const [showNewFolderModal, setShowNewFolderModal] = useState(false);
   const [newFolderNameInput, setNewFolderNameInput] = useState('');
   const [newFolderInputError, setNewFolderInputError] = useState<string | null>(null);
+  const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
 
   // Settings state (defaults per SCHEMA.md)
   const [sortBy, setSortBy] = useState<'manual' | 'modified' | 'title'>('manual');
@@ -297,27 +301,6 @@ export const MainWindow: React.FC = () => {
     window.addEventListener('mouseup', onMouseUp);
   };
 
-  // Create new note action
-  const handleCreateNewNote = async () => {
-    const parentFolder = selectedFolder ? `${selectedFolder}/` : '';
-    const noteFileName = `${parentFolder}Untitled ${Date.now()}.md`;
-    const initialText = `# Untitled Note\n\nStart typing your note here...`;
-
-    if (window.wrriter?.note?.save) {
-      const res = await window.wrriter.note.save({
-        path: noteFileName,
-        text: initialText
-      });
-      if (res.ok) {
-        await refreshNotes();
-        await refreshFolders();
-        setSelectedNotePath(noteFileName);
-        setNoteTitle('Untitled Note');
-        setNoteContent(initialText);
-        setNoteDate(Date.now());
-      }
-    }
-  };
 
   // Pin/Unpin note action
   const handleTogglePinNote = async (note: NoteListItem) => {
@@ -356,20 +339,63 @@ export const MainWindow: React.FC = () => {
     }
   };
 
-  // In-place rename from toolbar
-  const handleRenameNote = async (newName: string) => {
+  // In-place rename from toolbar or F2
+  const handleRenameNote = useCallback(async (newName: string) => {
     if (!selectedNotePath) return;
-    setNoteTitle(newName);
-    // In M1, updating title in note text
-    const updatedBody = noteContent ? noteContent.replace(/^#\s+.*$/m, `# ${newName}`) : `# ${newName}\n\n`;
-    if (window.wrriter?.note?.save) {
-      await window.wrriter.note.save({
-        path: selectedNotePath,
-        text: updatedBody
-      });
-      await refreshNotes();
+    const folder = selectedNotePath.includes('/') ? selectedNotePath.slice(0, selectedNotePath.lastIndexOf('/')) : '';
+    const newFileName = deriveFileNameFromTitle(newName);
+    const newPath = folder ? `${folder}/${newFileName}` : newFileName;
+
+    if (newPath === selectedNotePath) {
+      setNoteTitle(newName);
+      return;
     }
-  };
+
+    if (window.wrriter?.folder?.rename) {
+      const res = await window.wrriter.folder.rename({
+        oldPath: selectedNotePath,
+        newPath
+      });
+      if (res.ok) {
+        setSelectedNotePath(newPath);
+        setNoteTitle(newName);
+        await refreshNotes();
+      }
+    }
+  }, [selectedNotePath, refreshNotes]);
+
+  // Create new note action (Ctrl+N, Compose button, tab plus)
+  const handleCreateNewNote = useCallback(() => {
+    const folder = selectedFolder;
+    const defaultTitle = formatDefaultTitle(notes.map((n) => n.title));
+    const newFileName = `${defaultTitle}.md`;
+    const newPath = folder ? `${folder}/${newFileName}` : newFileName;
+
+    const newNoteItem: NoteListItem = {
+      path: newPath,
+      title: defaultTitle,
+      preview: '',
+      modified: Date.now(),
+      pinned: false,
+      hasImage: false
+    };
+
+    setNotes((prev) => [newNoteItem, ...prev]);
+    setSelectedNotePath(newPath);
+    setNoteTitle(defaultTitle);
+  }, [selectedFolder, notes]);
+
+  // Global Ctrl+N keyboard shortcut
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'n' && !e.shiftKey && !e.altKey) {
+        e.preventDefault();
+        handleCreateNewNote();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleCreateNewNote]);
 
   // Group notes into pinned and unpinned
   const pinnedNotes = notes.filter((n) => n.pinned);
@@ -813,69 +839,29 @@ export const MainWindow: React.FC = () => {
           </button>
         </div>
 
-        {/* Scrollable Note Content Column */}
-        <div className="edscroll">
-          <div
-            className="col"
-            style={{
-              paddingLeft: noteMargin,
-              paddingRight: noteMargin,
-              minWidth: 360
-            }}
-          >
-            <div className="meta">
-              {new Date(noteDate).toLocaleDateString(undefined, {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-              })}
-            </div>
-            <h1 className="ed1" style={{ textAlign: 'center' }}>
-              {noteTitle}
-            </h1>
-            <div style={{ fontSize: 18, lineHeight: '30px', color: 'var(--tx)', marginTop: 24, whiteSpace: 'pre-wrap' }}>
-              {noteContent || (
-                <span style={{ color: 'var(--tx3)' }}>
-                  Empty note ready for writing. Type / for commands.
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* 32px Tabs Strip along the bottom of the editor pane */}
-        <div
-          style={{
-            position: 'absolute',
-            left: 0,
-            right: 0,
-            bottom: 0,
-            height: 'var(--tab-h, 32px)',
-            display: 'flex',
-            alignItems: 'center',
-            padding: '0 16px',
-            borderTop: '1px solid var(--div)',
-            backgroundColor: 'var(--ed)'
+        {/* Live TipTap Editor Host */}
+        <EditorHost
+          activeNotePath={selectedNotePath}
+          noteMargin={noteMargin}
+          onTitleChange={(title) => {
+            setNoteTitle(title);
+            setNotes((prev) => prev.map((n) => (n.path === selectedNotePath ? { ...n, title } : n)));
           }}
-        >
-          <div
-            className="tab on"
-            style={{
-              height: 24,
-              padding: '0 12px',
-              borderRadius: 8,
-              fontSize: 'var(--fs-small)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              color: 'var(--tx)',
-              backgroundColor: 'color-mix(in srgb, var(--tx) 6%, transparent)'
-            }}
-          >
-            <span>{noteTitle}</span>
-          </div>
-        </div>
+          onSelectTab={(path) => {
+            setSelectedNotePath(path);
+            if (path) {
+              const matched = notes.find((n) => n.path === path);
+              if (matched) {
+                setNoteTitle(matched.title);
+              }
+            }
+          }}
+          onPathChange={(_oldPath, newPath) => {
+            setSelectedNotePath(newPath);
+            void refreshNotes();
+          }}
+          onNotice={(msg) => setNoticeMessage(msg)}
+        />
       </main>
 
       {/* New Folder Modal (triggered from 3-dot menu) */}
@@ -990,6 +976,11 @@ export const MainWindow: React.FC = () => {
             </div>
           </form>
         </div>
+      )}
+
+      {/* Temporary Notice Banner */}
+      {noticeMessage && (
+        <Notice message={noticeMessage} onDismiss={() => setNoticeMessage(null)} />
       )}
     </WindowShell>
   );

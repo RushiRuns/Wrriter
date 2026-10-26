@@ -10,12 +10,16 @@ import { SafeWriter } from './services/safe-writer';
 import { JobsStore } from './store/jobs-store';
 import { JobService } from './services/job-service';
 import { VaultService } from './services/vault-service';
+import { registerVaultProtocolPrivileges, setupVaultProtocolHandler } from './platform/vault-protocol';
 
 // 1. Single-instance lock
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
   app.quit();
 }
+
+// Register privileged schemes before app ready
+registerVaultProtocolPrivileges();
 
 const appDataDir = app.getPath('userData');
 const safeWriter = new SafeWriter();
@@ -50,6 +54,7 @@ app.whenReady().then(async () => {
   }
   startMainLagMonitor();
   ipcRouter.initialize();
+  setupVaultProtocolHandler(vaultService);
 
   // Create main window with settings pre-read and hidden in theme background color
   await windowService.createMainWindow();

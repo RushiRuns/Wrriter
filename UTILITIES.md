@@ -59,7 +59,7 @@ Each of these exists exactly once. A second copy is a bug.
 | `IdGenerator`, `TestIdGenerator` | `shared/id-generator.ts` | Injected ID generator, sequential test generator | M1 | Built |
 | `Result`, `AppError`, `toMessage` | `shared/result.ts` | Typed results and plain error messages | M1 | Built |
 | `names` | `shared/domain/names.ts` | Windows-safe names, reserved names, 100-character cap, numbering on clash, case-only clash check | M1 | Built |
-| `titles` | `shared/domain/titles.ts` | Title from the first line, Untitled numbering, when a file follows its title | M2 | Planned |
+| `titles` | `shared/domain/titles.ts` | Title from the first line, Untitled numbering, when a file follows its title | M2 | Built |
 | `frontmatter` | `shared/domain/frontmatter.ts` | Read and edit the owned keys, keep every other key, comment and the order | M2 / M3 | Built |
 | `wikilinks` | `shared/domain/wikilinks.ts` | Parse `[[...]]` forms, rewrite on rename keeping alias and heading | M3 | Planned |
 | `links` | `shared/domain/links.ts` | Resolve a plain link: same folder first, then most recently modified | M3 | Planned |
@@ -176,15 +176,15 @@ Record every query here as it is written.
 
 | Name | Purpose | Milestone | Status |
 |---|---|---|---|
-| `EditorHost` | One live TipTap editor, hidden tabs kept without a drawn editor | M2 | Planned |
-| Element nodes and marks | Every element in UI hand-off section 6 | M2 | Planned |
+| `EditorHost` | One live TipTap editor, hidden tabs kept without a drawn editor (`src/renderer/editor/EditorHost.tsx`) | M2 | Built |
+| Element nodes and marks | Headings, lists, tasks, blockquote, codeblock, hr, bold, italic, strike, code (`src/renderer/editor/extensions/`) | M2 | Built |
 | `Callout` | Callout node, types, fold, the colour mixes from the UI reference | M2 | Planned |
 | `BlockHandles` | Fold arrow as handle for headings, grab areas for callouts, grip for other blocks | M2 | Planned |
 | `BlockDrag` | Drag, drop line, auto-scroll, Escape, fold during drag, section moves | M2 | Planned |
 | `SlashMenu` | The twelve-item slash menu | M2 | Planned |
 | `FloatingToolbar` | The format pill over selected text | M2 | Planned |
 | `ImageBlock` | Resize, left, centre, right, the selected look | M2 | Planned |
-| `PasteToMarkdown` | Web content turned into markdown, never inserted as HTML | M2 | Planned |
+| `PasteToMarkdown` | Web content turned into markdown, never inserted as HTML (`src/renderer/editor/extensions/paste-handler.ts`) | M2 | Built |
 | `TypingTouches` | Caret glide, selection fade, new-letter fade, skipped when typing is fast | M2 | Planned |
 
 ## Motion and UI Helpers (`src/renderer/motion`, `src/renderer/styles`)
@@ -210,10 +210,10 @@ Record every query here as it is written.
 | `LoginItem` | Start with Windows, hidden | M4 | Planned |
 | `RecycleBin` | Delete to the Windows Recycle Bin (`src/main/platform/recycle-bin.ts`) | M1 | Built |
 | `ShellOpen` | Open in the default app, show in File Explorer, web links after checking | M4 | Planned |
-| `VaultProtocol` | The one app protocol serving files inside open vaults | M2 | Planned |
+| `VaultProtocol` | The one app protocol serving files inside open vaults (`src/main/platform/vault-protocol.ts`) | M2 | Built |
 | `DragOut` | Drag a note out as a .md file | M4 | Planned |
 | `ImageDownloader` | The one network call: an image dropped from a website | M4 | Planned |
-| `SpellCheck` | English spell check with suggestions | M2 | Planned |
+| `SpellCheck` | English spell check with suggestions on right-click (`src/main/services/window-service.ts`) | M2 | Built |
 
 ## Build Checks and Test Tools
 

@@ -1,4 +1,4 @@
-import { BrowserWindow, nativeTheme } from 'electron';
+import { BrowserWindow, nativeTheme, Menu, MenuItem } from 'electron';
 import * as path from 'path';
 import { AppDataStore, type AppSettings, type WindowState, type KnownVault, type FirstPaintState } from '../store/app-data-store';
 import { createSecureWindow } from '../windows/window-factory';
@@ -140,7 +140,50 @@ export class WindowService {
       }
     });
 
-    // 6. Track window movements and resizing
+    // 6. Context menu with English spell check suggestions and editing commands
+    win.webContents.on('context-menu', (_event, params) => {
+      const menu = new Menu();
+
+      // Suggestions for misspelled word
+      if (params.dictionarySuggestions && params.dictionarySuggestions.length > 0) {
+        for (const suggestion of params.dictionarySuggestions) {
+          menu.append(
+            new MenuItem({
+              label: suggestion,
+              click: () => win.webContents.replaceMisspelling(suggestion)
+            })
+          );
+        }
+      }
+
+      if (params.misspelledWord) {
+        menu.append(
+          new MenuItem({
+            label: 'Add to dictionary',
+            click: () => win.webContents.session.addWordToSpellCheckerDictionary(params.misspelledWord)
+          })
+        );
+      }
+
+      if (params.isEditable) {
+        if (params.dictionarySuggestions.length > 0 || params.misspelledWord) {
+          menu.append(new MenuItem({ type: 'separator' }));
+        }
+        menu.append(new MenuItem({ role: 'undo' }));
+        menu.append(new MenuItem({ role: 'redo' }));
+        menu.append(new MenuItem({ type: 'separator' }));
+        menu.append(new MenuItem({ role: 'cut' }));
+        menu.append(new MenuItem({ role: 'copy' }));
+        menu.append(new MenuItem({ role: 'paste' }));
+        menu.append(new MenuItem({ role: 'selectAll' }));
+      }
+
+      if (menu.items.length > 0) {
+        menu.popup();
+      }
+    });
+
+    // 7. Track window movements and resizing
     const trackBounds = () => {
       if (!win.isDestroyed() && !win.isMinimized()) {
         const bounds = win.getBounds();

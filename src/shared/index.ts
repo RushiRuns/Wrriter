@@ -6,3 +6,4 @@ export * from './markdown/blocks';
 export * from './markdown/save';
 export * from './markdown/pass-through';
 export * from './domain/frontmatter';
+export * from './domain/titles';

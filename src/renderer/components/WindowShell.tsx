@@ -49,6 +49,17 @@ export const WindowShell: React.FC<WindowShellProps> = ({
     }
   }, [isEditingName]);
 
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F2' && !isEditingName && noteName) {
+        e.preventDefault();
+        setIsEditingName(true);
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [isEditingName, noteName]);
+
   const commitRename = () => {
     setIsEditingName(false);
     const trimmed = editedName.trim().slice(0, 60);

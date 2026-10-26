@@ -7,8 +7,11 @@
   "license": "MIT",
   "// electron": "Pinned to 42.11.18: latest stable Electron version with matching better-sqlite3 prebuilt binary (ABI 146)",
   "scripts": {
-    "dev": "vite build --config vite.main.config.ts && vite build --config vite.preload.config.ts && electron .",
-    "build": "vite build --config vite.main.config.ts && vite build --config vite.preload.config.ts && vite build --config vite.renderer.config.ts",
+    "build:main": "vite build --config main.vite.config.ts",
+    "build:workers": "vite build --config workers.vite.config.ts",
+    "build:renderer": "vite build --config renderer.vite.config.ts",
+    "build": "npm run build:main && npm run build:workers && npm run build:renderer",
+    "dev": "npm run build:main && npm run build:workers && npm run build:renderer && electron .",
     "postinstall": "electron-builder install-app-deps",
     "package": "npm run build && electron-builder --win --dir",
     "check:types": "tsc -b",

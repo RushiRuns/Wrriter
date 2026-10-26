@@ -3,14 +3,14 @@ import { resolve } from 'path'
 
 export default defineConfig({
   build: {
-    outDir: 'out/main',
-    emptyOutDir: true,
+    outDir: 'out',
+    emptyOutDir: false,
     ssr: true,
     rollupOptions: {
       input: {
-        index: resolve(__dirname, 'src/main/index.ts'),
-        'worker-index': resolve(__dirname, 'src/workers/index/index.ts'),
-        'test-day-one-sqlite': resolve(__dirname, 'src/main/test-day-one-sqlite.ts')
+        'main/index': resolve(__dirname, 'src/main/index.ts'),
+        'preload/index': resolve(__dirname, 'src/preload/index.ts'),
+        'main/test-day-one-sqlite': resolve(__dirname, 'src/main/test-day-one-sqlite.ts')
       },
       output: {
         entryFileNames: '[name].js',
@@ -24,7 +24,9 @@ export default defineConfig({
         'node:path',
         'path',
         'node:fs',
-        'fs'
+        'fs',
+        'node:module',
+        'module'
       ]
     }
   },

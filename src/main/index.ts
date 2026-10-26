@@ -1,5 +1,17 @@
 import { app, BrowserWindow, ipcMain, session } from 'electron'
 import { join } from 'path'
+import { enableCompileCache } from 'node:module'
+
+// Support V8 code caching flag: enable by default, disable when --no-code-cache passed
+if (process.argv.includes('--no-code-cache') || process.env['NODE_DISABLE_COMPILE_CACHE']) {
+  app.commandLine.appendSwitch('js-flags', '--bypass-compiler-cache')
+} else {
+  try {
+    enableCompileCache()
+  } catch {
+    // V8 compile cache fallback
+  }
+}
 
 // 1. Single running copy check
 const gotTheLock = app.requestSingleInstanceLock()
@@ -41,7 +53,7 @@ function createWindow(): void {
   if (process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+    mainWindow.loadFile(join(__dirname, '../renderer/windows/main/index.html'))
   }
 
   mainWindow.on('closed', () => {
@@ -77,7 +89,7 @@ app.whenReady().then(async () => {
       log(`[FAIL] Packaged Main Process: ${err instanceof Error ? err.message : String(err)}`)
     }
 
-    const workerScript = join(__dirname, 'worker-index.js')
+    const workerScript = join(__dirname, '../workers/index.js')
     try {
       const threadResult = await new Promise<{ ok: boolean; rows?: unknown[]; error?: string }>(
         (resolve, reject) => {

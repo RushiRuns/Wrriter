@@ -51,7 +51,7 @@ Nothing that depends on one of these is built until it is decided.
 |---|---|---|
 | File watcher | @parcel/watcher | Decided in day-one check on 50,000 files (ADR-W12) |
 | Worker type | Electron utility process | Decided in day-one check (ADR-W11) |
-| Vite and Electron wiring | electron-vite | Decided in M1 scaffold |
+| Vite and Electron wiring | Own Vite configs (main.vite.config.ts, workers.vite.config.ts, renderer.vite.config.ts) | Decided in M1 scaffold (zero extra packages) |
 | Markdown block splitting with exact source positions | markdown-it (token line maps), micromark or mdast (positions), TipTap's own markdown support | M2 spike against the sample notes. The winner must give the exact source text of every block so unedited blocks are written back byte for byte |
 | Frontmatter that keeps key order and comments | yaml (its Document API) | M2 spike: change one owned key, everything else stays byte for byte |
 | IPC argument validation | Own validators in `shared/ipc`, zod | M1. Could own code do it in a few lines per request? |

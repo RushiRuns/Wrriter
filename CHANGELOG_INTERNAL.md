@@ -14,4 +14,6 @@
 
 [2026-10-26] - Four tsconfig files created with project references: root tsconfig.json referencing tsconfig.shared.json (covers src/shared, no DOM, no Node, no Electron types, enforcing no I/O), tsconfig.main.json (covers src/main, src/workers, src/preload, Node + Electron types, no DOM lib), and tsconfig.renderer.json (covers src/renderer, DOM lib, React JSX, no Node types). All configs configured with target ES2022, module ESNext/bundler, strict, noUncheckedIndexedAccess, noImplicitAny, noEmit. Verified boundary isolation (Node/DOM imports in shared and DOM imports in main fail type checks). - Process boundary enforcement via TypeScript project references.
 
+[2026-10-26] - Decided and configured Own Vite configs: main.vite.config.ts (bundles main into one file and preload into one file), workers.vite.config.ts (bundles index and jobs workers as separate files for Electron utilityProcess), and renderer.vite.config.ts (multi-window HTML builds for renderer). Added V8 compile cache toggle support with --no-code-cache CLI flag in main and renderer. Zero extra wrapper packages added. - Architecture: multi-process bundling via dedicated Vite configs.
+
 

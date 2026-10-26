@@ -22,7 +22,7 @@ app.whenReady().then(async () => {
   }
 
   // Test 2: Node worker_threads
-  const workerScript = join(__dirname, 'worker-index.js')
+  const workerScript = join(__dirname, '../workers/index.js')
   try {
     const threadResult = await new Promise<{ ok: boolean; rows?: unknown[]; error?: string }>(
       (resolve, reject) => {

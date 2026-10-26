@@ -68,10 +68,10 @@ Nothing that depends on a row is built until it is decided. Rows 15 to 17 are ne
 
 | # | Open item | Decided by | Blocks | Needed by |
 |---|---|---|---|---|
-| 1 | Renderer state library (plain React state or Zustand) | Krishna (DEPENDENCIES.md) | Every renderer feature | Before M1 |
-| 2 | Test and lint tools: Vitest, Playwright, ESLint, dependency-cruiser, Stylelint, Prettier, @electron/fuses | Krishna (DEPENDENCIES.md) | Build checks and tests from the first commit | Before M1 |
-| 3 | This milestone list | Antigravity checks, Krishna approves | The start of M1 | Before M1 |
-| 4 | Versions doc Question 1: if Windows 10 cannot have 16 px corners and also resize and maximise properly, which wins | Krishna | Which fallback the window shell uses | Before the M1 window shell |
+| 1 | Renderer state library (plain React state or Zustand) | **Decided:** Plain React state and context (no Zustand). ADR-W13 | Unblocks renderer features | Decided (Setup) |
+| 2 | Test and lint tools: Vitest, Playwright, ESLint, dependency-cruiser, Stylelint, Prettier, @electron/fuses | **Decided:** Yes to all 7, added when first needed (Vitest, ESLint+typescript-eslint, dependency-cruiser, Prettier now; Stylelint with token checks in M1; Playwright with packaged test in M1; fuses at M5) | Unblocks build checks & tests | Decided (Setup) |
+| 3 | This milestone list | Antigravity audited against Features 1-9, UI hand-off & versions doc; report submitted to Krishna | The start of M1 | Pending Krishna's approval of audit report |
+| 4 | Versions doc Question 1: if Windows 10 cannot have 16 px corners and also resize and maximise properly, which wins | **Decided:** Yes to recommendation (resizing, maximising and snapping win; Windows' own square corners used on Win 10). Recorded in ADR-W06 | Unblocks M1 window shell fallback | Decided (Setup) |
 | 5 | Worker type for the index and job workers | Day-one check, then ADR-W11 | Both workers | M1 |
 | 6 | File watcher library | Day-one check, then ADR-W12 | The watcher adapter | M1 |
 | 7 | Which worker writes autosaves, so a save never waits behind a job | Antigravity proposes, Krishna approves | Autosave | M1, used in M2 |

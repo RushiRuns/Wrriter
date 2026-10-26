@@ -29,6 +29,8 @@
 | Inter (font files) | The one interface and note font, bundled | SIL OFL 1.1 | Decided (Features 1). Never loaded from the web |
 | PDF.js (Version 2) | PDF preview, bundled, in its own worker | Apache-2.0 | Decided (Features 5). Not added before Version 2 |
 
+**State management:** Plain React state and context encapsulated behind `use<Feature>` controller hooks (ADR-W13). No external state package.
+
 **Built into Node and Electron, no package needed:** `crypto` (scrypt and AES-256-GCM in Version 2), `fs`, `path`, worker threads, Electron's utility process (chosen in ADR-W11), tray, global shortcut, notifications, shell, protocol and spell checker.
 
 Code blocks use the fonts already on Windows (Cascadia Code, then Cascadia Mono, then Consolas). Nothing is bundled for them.
@@ -40,6 +42,10 @@ Code blocks use the fonts already on Windows (Cascadia Code, then Cascadia Mono,
 | TypeScript | Language | Apache-2.0 |
 | Vite | Bundler for renderer, preload, main and workers | MIT |
 | electron-builder | NSIS installer, current user only | MIT |
+| Vitest | Unit tests for `shared/`, services, stores and controllers | MIT (verified 2026-10-19 release, works offline) |
+| ESLint with typescript-eslint | Lint (no sync I/O in main, no floating promises) | MIT (verified Oct 2026 releases, works offline) |
+| dependency-cruiser | Enforce layer import rules from ARCHITECTURE.md | MIT (verified 2026-10-23 release, works offline) |
+| Prettier | Code formatting | MIT (verified 2026-10-10 release, works offline) |
 
 ---
 
@@ -55,7 +61,7 @@ Nothing that depends on one of these is built until it is decided.
 | Markdown block splitting with exact source positions | markdown-it (token line maps), micromark or mdast (positions), TipTap's own markdown support | M2 spike against the sample notes. The winner must give the exact source text of every block so unedited blocks are written back byte for byte |
 | Frontmatter that keeps key order and comments | yaml (its Document API) | M2 spike: change one owned key, everything else stays byte for byte |
 | IPC argument validation | Own validators in `shared/ipc`, zod | M1. Could own code do it in a few lines per request? |
-| Renderer state | Plain React state and context, Zustand | Krishna, before M1 |
+| Renderer state | Plain React state and context | Decided: Plain React state & context (ADR-W13). No Zustand. Keypress state local |
 | Virtualised lists | TanStack Virtual, own code | M1, a list of 50,000 rows scrolling smoothly |
 | Fuzzy matching for the palette and quick switcher | Own code, fuzzysort | M2. Could 20 lines do it? |
 | Accessible menus and popovers without styling | Radix primitives, own code | M2. Only if fully restyled from tokens with no visual change |
@@ -63,19 +69,16 @@ Nothing that depends on one of these is built until it is decided.
 | Line diff (Version 2 conflict screen) | diff | Version 2 |
 | Graph drawing (Version 3) | sigma.js with graphology, own WebGL | Version 3. Must draw 50,000 dots on the graphics card |
 
-## Pending: Testing and Quality (not shipped)
+## Approved: Testing and Quality Schedule (not shipped)
 
-Proposed. Each needs Krishna's yes before it goes in.
+All 7 tools approved by Krishna in Setup phase. Added when first needed, not all at once:
 
-| Tool | Purpose |
-|---|---|
-| Vitest | Unit tests for `shared/`, services, stores and controllers |
-| Playwright with its Electron support | End-to-end tests on the packaged app |
-| ESLint with typescript-eslint | Lint, including no synchronous file calls in the main process and no floating promises |
-| dependency-cruiser | The layer import rules from ARCHITECTURE.md |
-| Stylelint | Helps the token check: no raw colours, sizes or durations outside `tokens.css` |
-| Prettier | Formatting |
-| @electron/fuses | Turns off unused Electron fuses in release builds |
+- **Added now (Setup)**: Vitest, ESLint with typescript-eslint, dependency-cruiser, Prettier (verified and listed in Approved Build Tooling above).
+- **With token and contrast checks in M1**: Stylelint (helps token check: no raw colours, sizes or durations outside `tokens.css`).
+- **With the first packaged-app test in M1**: Playwright with its Electron support (end-to-end tests on the packaged app).
+- **At M5 release builds**: @electron/fuses (turns off unused Electron fuses in release builds).
+
+On the day each remaining tool is added, check the licence, the date of its last release, and that it works offline, then add its row to the Approved Build Tooling table above.
 
 The token check, the contrast check, the motion check and the long-dash check are small scripts in this repo, not packages.
 

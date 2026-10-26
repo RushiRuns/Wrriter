@@ -26,4 +26,6 @@
 
 [2026-10-26] - Standardized package.json scripts: commented dev placeholder pending wiring approval; typecheck running tsc -b across all 4 tsconfigs; build running typecheck then bundle; build:win bundling then running electron-builder; and placeholder scripts for checks:tokens, checks:contrast, checks:motion, and checks:dash. - none.
 
+[2026-10-26] - Setup open items 1, 2, and 4 resolved; comprehensive audit of milestone plan (Open Item 3) conducted against Features 1-9, UI hand-off, and versions doc. Row 1 decided: plain React state and context (no Zustand), controller use<Feature> hooks, and keypress state locality rule recorded in ADR-W13. Row 2 decided: approved all 7 test/lint tools on a staged schedule; verified Vitest, ESLint, typescript-eslint, dependency-cruiser, and Prettier licences and offline capability for immediate use; scheduled Stylelint (M1 token checks), Playwright (M1 packaged app), and @electron/fuses (M5 release). Row 4 decided: accepted Question 1 fallback in ADR-W06 (resizing, maximising and snapping win over 16 px corners on Windows 10). - Architecture: ADR-W13 (state management via React primitives and controller hooks) and ADR-W06 updated with Question 1 outcome.
+
 

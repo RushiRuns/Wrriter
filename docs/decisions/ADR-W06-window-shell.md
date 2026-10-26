@@ -14,10 +14,11 @@ On Windows:
 ## Decision
 1. **Prioritize Native Snapping and Resizing**: Use Electron `frame: false` with default `thickFrame: true` and non-transparent background (`backgroundColor: '#18181A'`).
 2. **Window Controls**: The 40 px toolbar is marked `-webkit-app-region: drag`, while the three drawn circular buttons are marked `-webkit-app-region: no-drag`.
-3. **Corner Fallback on Windows 10**: Accept Windows 10 native square window boundaries (per Versions doc Question 1 recommendation). On Windows 11, standard DWM system corner rounding applies.
+3. **Corner Fallback on Windows 10 (Question 1 Outcome)**: Approved per Versions doc Question 1 recommendation. If the M1 window check shows Windows 10 cannot have 16 px corners and also resize, maximise and snap properly, then resizing, maximising and snapping win and Wrriter uses Windows' own square corners. On Windows 11, standard DWM system corner rounding applies.
 4. **Snap Layouts Flyout**: Acknowledge that the Snap Layouts flyout does not appear when hovering over the custom drawn HTML maximize button; standard keyboard shortcuts (`Win + Left/Right/Up/Down`) and edge dragging retain full Aero snap functionality.
 
 ## Consequences
 - Windows 10 and Windows 11 both maintain full window ergonomics: edge/corner resizing, double-click toolbar maximize, and snap-to-edge.
+- Windows 10 uses its native square window boundaries to preserve native Aero snapping and edge resizing without transparency bugs.
 - No white flash on start (window shown only on `ready-to-show`).
 - Window shell renders the 16 px border-radius inside its client area seamlessly.

@@ -5,34 +5,31 @@
   "main": "./out/main/index.js",
   "author": "Rushi",
   "license": "MIT",
+  "// electron": "Pinned to 42.11.18: latest stable Electron version with matching better-sqlite3 prebuilt binary (ABI 146)",
   "scripts": {
-    "dev": "electron-vite dev",
-    "build": "electron-vite build",
+    "dev": "vite build --config vite.main.config.ts && vite build --config vite.preload.config.ts && electron .",
+    "build": "vite build --config vite.main.config.ts && vite build --config vite.preload.config.ts && vite build --config vite.renderer.config.ts",
     "postinstall": "electron-builder install-app-deps",
-    "package": "electron-vite build && electron-builder --win --dir",
+    "package": "npm run build && electron-builder --win --dir",
     "check:types": "tsc --noEmit && tsc -p src/shared/tsconfig.json --noEmit",
-    "test:day-one:sqlite": "electron out/main/test-day-one-sqlite.js",
-    "test:day-one:watcher": "node tests/vault-gen/test-watcher-50k.js"
+    "test:day-one:sqlite": "electron out/main/test-day-one-sqlite.js"
   },
   "dependencies": {
-    "better-sqlite3": "^12.11.1",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "@tiptap/core": "3.32.0",
+    "@tiptap/react": "3.32.0",
+    "@tiptap/pm": "3.32.0",
+    "better-sqlite3": "12.11.1"
   },
   "devDependencies": {
-    "@parcel/watcher": "^2.6.0",
-    "@swc/core": "^1.10.1",
-    "@types/better-sqlite3": "^7.6.12",
-    "@types/node": "^22.10.2",
-    "@types/react": "^19.0.2",
-    "@types/react-dom": "^19.0.2",
-    "@vitejs/plugin-react": "^4.3.4",
-    "chokidar": "^4.0.3",
-    "// electron": "Pinned to 42.11.18: latest stable Electron version with matching better-sqlite3 prebuilt binary (ABI 146)",
     "electron": "42.11.18",
-    "electron-builder": "^25.1.8",
-    "electron-vite": "^6.0.0",
-    "typescript": "^5.7.2",
-    "vite": "^6.0.3"
+    "typescript": "7.0.2",
+    "vite": "8.3.5",
+    "electron-builder": "26.18.0",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@types/better-sqlite3": "9.6.0",
+    "@types/node": "26.6.5"
   }
 }

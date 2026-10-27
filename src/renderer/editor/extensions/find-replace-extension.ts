@@ -177,7 +177,7 @@ export const FindReplaceExtension = Extension.create({
 
       replaceCurrent:
         (replacement: string) =>
-        ({ editor, dispatch }) => {
+        ({ editor, tr, dispatch }) => {
           const state = findReplacePluginKey.getState(editor.state);
           if (!state || state.matches.length === 0) return false;
 
@@ -185,10 +185,10 @@ export const FindReplaceExtension = Extension.create({
           if (!currentMatch || currentMatch.isProtected) return false;
 
           if (dispatch) {
-            const tr = editor.state.tr;
             const ok = replaceOneMatch(tr, editor.state.schema, currentMatch, replacement);
-            if (ok) {
-              editor.view.dispatch(tr);
+            if (!ok) {
+              tr.setMeta('preventDispatch', true);
+              return false;
             }
           }
           return true;
@@ -196,15 +196,15 @@ export const FindReplaceExtension = Extension.create({
 
       replaceAll:
         (replacement: string) =>
-        ({ editor, dispatch }) => {
+        ({ editor, tr, dispatch }) => {
           const state = findReplacePluginKey.getState(editor.state);
           if (!state || state.matches.length === 0) return false;
 
           if (dispatch) {
-            const tr = editor.state.tr;
             const res = replaceAllMatches(tr, editor.state.schema, state.matches, replacement);
-            if (res.changed) {
-              editor.view.dispatch(tr);
+            if (!res.changed) {
+              tr.setMeta('preventDispatch', true);
+              return false;
             }
           }
           return true;

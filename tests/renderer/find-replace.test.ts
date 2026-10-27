@@ -225,6 +225,130 @@ describe('Find and Replace in Note', () => {
     });
   });
 
+  describe('TipTap FindReplaceExtension Commands Execution (Regression for Mismatched Transaction)', () => {
+    it('executes replaceAll without throwing RangeError: Applying a mismatched transaction in TipTap CommandManager flow', async () => {
+      const { FindReplaceExtension, findReplacePluginKey } = await import('../../src/renderer/editor/extensions/find-replace-extension');
+
+      const { Plugin } = await import('@tiptap/pm/state');
+      const doc = createDoc([
+        { type: 'paragraph', text: 'alpha bravo alpha charlie' }
+      ]);
+      let state = EditorState.create({
+        schema: testSchema,
+        doc,
+        plugins: [
+          new Plugin({
+            key: findReplacePluginKey,
+            state: {
+              init: () => ({
+                searchTerm: 'alpha',
+                matches: findMatchesInDoc(doc, 'alpha', defaultOptions).matches,
+                activeIndex: 0,
+                skippedMatches: 0
+              }),
+              apply: (_tr, val) => val
+            }
+          })
+        ]
+      });
+
+      const mockEditor: any = {
+        state,
+        schema: testSchema,
+        view: {
+          dispatch: (t: any) => {
+            state = state.apply(t);
+            mockEditor.state = state;
+          }
+        }
+      };
+
+      const commands = (FindReplaceExtension.config.addCommands as any).call({
+        editor: mockEditor,
+        name: 'findReplace'
+      });
+      const replaceAllFn = commands.replaceAll('zulu');
+
+      // TipTap CommandManager simulation: initiates tr on current state
+      const tr = state.tr;
+      const callback = replaceAllFn({
+        tr,
+        editor: mockEditor,
+        dispatch: true,
+        state
+      });
+
+      // TipTap CommandManager dispatches tr if not prevented
+      if (!tr.getMeta('preventDispatch')) {
+        mockEditor.view.dispatch(tr);
+      }
+
+      expect(callback).toBe(true);
+      expect(state.doc.textContent).toBe('zulu bravo zulu charlie');
+    });
+
+    it('executes replaceCurrent without throwing RangeError: Applying a mismatched transaction in TipTap CommandManager flow', async () => {
+      const { FindReplaceExtension, findReplacePluginKey } = await import('../../src/renderer/editor/extensions/find-replace-extension');
+
+      const { Plugin } = await import('@tiptap/pm/state');
+      const doc = createDoc([
+        { type: 'paragraph', text: 'one two one three' }
+      ]);
+      let state = EditorState.create({
+        schema: testSchema,
+        doc,
+        plugins: [
+          new Plugin({
+            key: findReplacePluginKey,
+            state: {
+              init: () => ({
+                searchTerm: 'one',
+                matches: findMatchesInDoc(doc, 'one', defaultOptions).matches,
+                activeIndex: 0,
+                skippedMatches: 0
+              }),
+              apply: (_tr, val) => val
+            }
+          })
+        ]
+      });
+
+      const mockEditor: any = {
+        state,
+        schema: testSchema,
+        view: {
+          dispatch: (t: any) => {
+            state = state.apply(t);
+            mockEditor.state = state;
+          }
+        }
+      };
+
+      const commands = (FindReplaceExtension.config.addCommands as any).call({
+        editor: mockEditor,
+        name: 'findReplace'
+      });
+      const replaceCurrentFn = commands.replaceCurrent('ONE');
+
+      // TipTap CommandManager simulation: initiates tr on current state
+      const tr = state.tr;
+      const callback = replaceCurrentFn({
+        tr,
+        editor: mockEditor,
+        dispatch: true,
+        state
+      });
+
+      // TipTap CommandManager dispatches tr if not prevented
+      if (!tr.getMeta('preventDispatch')) {
+        mockEditor.view.dispatch(tr);
+      }
+
+      expect(callback).toBe(true);
+      expect(state.doc.textContent).toBe('ONE two one three');
+    });
+  });
+
   describe('Performance Gate: 5,000 matches in a 1 MB note in under 1 s', () => {
     it('replaces all 5,000 matches in a 1 MB note in under 1,000 ms (measured and verified)', () => {
       // Construct ~1 MB document with 5,000 matches

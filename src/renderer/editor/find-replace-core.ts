@@ -253,13 +253,14 @@ export function replaceAllMatches(
 
   for (const match of sorted) {
     if (replacementText) {
-      const marks = match.marks ?? tr.doc.resolve(match.from).marks();
-      const newNode = marks.length === 0 ? defaultNode! : schema.text(replacementText, marks as any);
+      const marks = match.marks ?? (match.from < tr.doc.content.size ? tr.doc.resolve(match.from).marks() : []);
+      const newNode = !marks || marks.length === 0 ? defaultNode! : schema.text(replacementText, marks as any);
       tr.replaceWith(match.from, match.to, newNode);
     } else {
       tr.delete(match.from, match.to);
     }
   }
+
 
   return {
     replacedCount: eligible.length,

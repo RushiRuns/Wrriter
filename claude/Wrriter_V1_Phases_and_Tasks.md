@@ -307,10 +307,11 @@ Nothing that depends on a row is built until it is decided. Rows 15 to 17 are ne
 
 ### Settings
 
-- [ ] `SettingsWindow` from the gear, Ctrl+comma and the palette, loaded on first use: Theme (Follow Windows by default, Light, Dark), Accent (five, yellow by default), Motion (Follow Windows, Reduced, Full), Note margin (a slider from 16 to 96 px in steps of 4, Reset, live preview in the open note). Keep running in the background and Start with Windows are shown here and take effect when the tray arrives in M4
-- [ ] A short Syncthing help text with a link to syncthing.net (Features 6)
-- [ ] A theme or accent change is one cross-fade of every open window at Slow. Check whether Electron's engine supports View Transitions, and fall back to a Fast fade if not. A theme change made by Windows fades the same way
-- [ ] Settings live in the app data folder, never in a vault
+- [x] `SettingsWindow` from the gear, Ctrl+comma and the palette, loaded on first use: Theme (Follow Windows by default, Light, Dark), Accent (five, yellow by default), Motion (Follow Windows, Reduced, Full), Note margin (a slider from 16 to 96 px in steps of 4, Reset, live preview in the open note). Keep running in the background and Start with Windows are shown here and take effect when the tray arrives in M4
+- [x] A short Syncthing help text with a link to syncthing.net (Features 6)
+- [x] A theme or accent change is one cross-fade of every open window at Slow. Check whether Electron's engine supports View Transitions, and fall back to a Fast fade if not. A theme change made by Windows fades the same way
+- [x] Settings live in the app data folder, never in a vault
+
 
 ### Motion built here
 

@@ -2205,3 +2205,342 @@
   pointer-events: none;
   animation: lin var(--t-fast) var(--ease-arrive) both;
 }
+
+/* ==========================================================================
+   5. View Transitions & Theme Cross-fade (M2 Settings)
+   ========================================================================== */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--t-slow);
+  animation-timing-function: var(--ease-move);
+}
+
+.wr-theme-fade-fallback,
+.wr-theme-fade-fallback * {
+  transition: background-color var(--t-fast) var(--ease-move),
+              color var(--t-fast) var(--ease-move),
+              border-color var(--t-fast) var(--ease-move),
+              box-shadow var(--t-fast) var(--ease-move) !important;
+}
+
+/* ==========================================================================
+   6. Settings Window Component (M2 Settings)
+   ========================================================================== */
+.wr-settings-dialog {
+  width: clamp(480px, 92vw, 600px);
+  max-height: calc(100vh - 80px);
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--r-l);
+  background: var(--pop);
+  box-shadow: 0 0 0 1px var(--line), var(--shadow);
+  overflow: hidden;
+  animation: lin var(--t-fast) var(--ease-arrive) both;
+}
+
+.wr-settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--s-4) var(--s-5) var(--s-2) var(--s-5);
+}
+
+.wr-settings-title {
+  margin: 0;
+  font-size: var(--fs-h2);
+  font-weight: var(--fw-bold);
+  color: var(--tx);
+  letter-spacing: var(--ls-head);
+}
+
+.wr-settings-tabs {
+  display: flex;
+  gap: var(--s-2);
+  padding: 0 var(--s-5) var(--s-3) var(--s-5);
+  border-bottom: 1px solid var(--line);
+}
+
+.wr-settings-tab {
+  height: var(--ctl);
+  padding: 0 var(--s-3);
+  border-radius: var(--r-s);
+  font-size: var(--fs-ui);
+  font-weight: var(--fw-semi);
+  color: var(--tx2);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background var(--t-fast) var(--ease-move), color var(--t-fast) var(--ease-move), box-shadow var(--t-fast) var(--ease-move);
+}
+
+.wr-settings-tab:hover {
+  color: var(--tx);
+  box-shadow: var(--hov-fill);
+}
+
+.wr-settings-tab.on {
+  color: var(--tx);
+  background: var(--field);
+}
+
+.wr-settings-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--s-4) var(--s-5) var(--s-5) var(--s-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-5);
+}
+
+.wr-settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.wr-settings-label {
+  font-size: var(--fs-ui);
+  font-weight: var(--fw-bold);
+  color: var(--tx);
+}
+
+.wr-settings-desc {
+  font-size: var(--fs-small);
+  color: var(--tx2);
+  line-height: var(--lh-small);
+}
+
+.wr-settings-pills {
+  display: flex;
+  gap: var(--s-2);
+}
+
+.wr-settings-pill {
+  flex: 1;
+  height: var(--ctl);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  border-radius: var(--r-s);
+  border: 1px solid var(--line);
+  background: var(--pop);
+  color: var(--tx2);
+  font-size: var(--fs-ui);
+  font-weight: var(--fw-semi);
+  cursor: pointer;
+  transition: box-shadow var(--t-fast) var(--ease-move), background var(--t-fast) var(--ease-move), color var(--t-fast) var(--ease-move), border-color var(--t-fast) var(--ease-move);
+}
+
+.wr-settings-pill:hover {
+  box-shadow: var(--hov-fill);
+  color: var(--tx);
+}
+
+.wr-settings-pill.on {
+  background: var(--selbg);
+  color: var(--tx);
+  border-color: var(--accent);
+}
+
+.wr-settings-accents {
+  display: flex;
+  gap: var(--s-3);
+  align-items: center;
+}
+
+.wr-settings-accent-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-full);
+  border: 2px solid transparent;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  background: none;
+  padding: 0;
+  transition: transform var(--t-fast) var(--ease-move), border-color var(--t-fast) var(--ease-move);
+}
+
+.wr-settings-accent-btn:hover {
+  transform: scale(1.08);
+}
+
+.wr-settings-accent-btn.on {
+  border-color: var(--tx);
+}
+
+.wr-settings-accent-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--r-full);
+}
+
+.wr-settings-accent-dot.sky {
+  background: var(--hs);
+}
+
+.wr-settings-accent-dot.yellow {
+  background: var(--ha);
+}
+
+.wr-settings-accent-dot.coral {
+  background: var(--hc);
+}
+
+.wr-settings-accent-dot.mint {
+  background: var(--hm);
+}
+
+.wr-settings-accent-dot.lilac {
+  background: var(--hl);
+}
+
+.wr-settings-margin-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.wr-settings-slider {
+  flex: 1;
+  accent-color: var(--accent);
+  cursor: pointer;
+  height: 6px;
+}
+
+.wr-settings-val {
+  min-width: 48px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-ui);
+  font-weight: var(--fw-semi);
+  color: var(--tx);
+}
+
+.wr-settings-btn {
+  height: var(--ctl);
+  padding: 0 var(--s-3);
+  border-radius: var(--r-s);
+  border: 1px solid var(--line);
+  background: var(--pop);
+  color: var(--tx);
+  font-size: var(--fs-ui);
+  font-weight: var(--fw-semi);
+  cursor: pointer;
+  transition: box-shadow var(--t-fast) var(--ease-move);
+}
+
+.wr-settings-btn:hover {
+  box-shadow: var(--hov-fill);
+}
+
+.wr-settings-toggle-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  cursor: pointer;
+}
+
+.wr-settings-toggle-row.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.wr-settings-checkbox {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.wr-settings-toggle-row.disabled .wr-settings-checkbox {
+  cursor: not-allowed;
+}
+
+.wr-settings-badge {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: var(--r-s);
+  background: var(--field);
+  color: var(--tx3);
+  font-weight: var(--fw-semi);
+  margin-left: var(--s-2);
+}
+
+.wr-settings-card {
+  padding: var(--s-4);
+  border-radius: var(--r-m);
+  background: var(--field);
+  border: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.wr-settings-shortcuts-search {
+  height: var(--ctl);
+  padding: 0 var(--s-3);
+  border-radius: var(--r-s);
+  border: 1px solid var(--line);
+  background: var(--field);
+  color: var(--tx);
+  font-size: var(--fs-ui);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.wr-settings-shortcuts-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.wr-settings-shortcut-row {
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--s-2);
+  border-radius: var(--r-s);
+  transition: background var(--t-fast) var(--ease-move);
+}
+
+.wr-settings-shortcut-row:hover {
+  background: var(--hov);
+}
+
+.wr-settings-shortcut-info {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wr-settings-shortcut-title {
+  font-size: var(--fs-ui);
+  color: var(--tx);
+  font-weight: var(--fw-semi);
+}
+
+.wr-settings-shortcut-desc {
+  font-size: var(--fs-small);
+  color: var(--tx3);
+}
+
+.wr-settings-shortcut-kbd {
+  padding: 2px 6px;
+  border-radius: var(--r-s);
+  background: var(--pop);
+  border: 1px solid var(--line);
+  font-size: var(--fs-small);
+  font-family: inherit;
+  font-weight: var(--fw-bold);
+  color: var(--tx);
+  flex: none;
+}
+

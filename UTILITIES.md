@@ -167,7 +167,8 @@ Record every query here as it is written.
 | `Dialog` | Confirmations such as deleting a folder (`src/renderer/components/Dialog.tsx`) | M1 to M2 | Built |
 | `Palette` | Command palette and quick switcher overlay (`src/renderer/components/CommandPalette.tsx`, `src/renderer/palette/command-registry.ts`) | M2 to M3 | Built |
 | `FindBar` | Find and replace floating bar over note column with toggles and counts (`src/renderer/components/FindBar.tsx`) | M2 | Built |
-| `SettingsWindow` | Settings, including Note margin and the shortcut list | M2 | Planned |
+| `SettingsWindow` | Settings, including Note margin and the shortcut list (`src/renderer/components/SettingsWindow.tsx`) | M2 | Built |
+
 | `FileChip` | The ticket-shaped file chip, and the missing file state | M4 | Planned |
 | `Icon` | The icon set copied from the UI reference (`src/renderer/components/icons.tsx`) | M1 | Built |
 | `ComponentGallery` | Development-only page showing every component in light and dark on all five accents (`src/renderer/components/gallery/Gallery.tsx`) | M1 | Built |

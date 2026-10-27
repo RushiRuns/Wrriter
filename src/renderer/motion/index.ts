@@ -138,3 +138,11 @@ export function flipGlide(
 
   return animation;
 }
+
+export {
+  crossFadeTransition,
+  broadcastThemeChange,
+  subscribeThemeSync,
+  type ThemeSyncMessage
+} from './theme-transition';
+

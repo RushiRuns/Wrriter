@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { WindowShell } from '../../components/WindowShell';
 import {
   NotesTileIcon,
@@ -11,7 +11,8 @@ import {
   MoreDotsIcon,
   SortIcon,
   PinIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  SettingsIcon
 } from '../../components/icons';
 import { FirstRunScreen } from '../../components/FirstRunScreen';
 import { VaultMenu } from '../../components/VaultMenu';
@@ -27,6 +28,7 @@ import { CommandPalette } from '../../components/CommandPalette';
 import { commandRegistry, type Command } from '../../palette/command-registry';
 import { matchesShortcut } from '../../../shared/shortcuts';
 import { formatDefaultTitle, deriveFileNameFromTitle } from '../../../shared';
+import { crossFadeTransition, subscribeThemeSync } from '../../motion';
 import type {
   FolderNode,
   NoteListItem,
@@ -34,6 +36,9 @@ import type {
   VaultInfo,
   AppSettingsContract
 } from '../../../shared/ipc';
+
+const SettingsWindow = React.lazy(() => import('../../components/SettingsWindow'));
+
 
 export const MainWindow: React.FC = () => {
   // Window & pane dimensions
@@ -76,6 +81,28 @@ export const MainWindow: React.FC = () => {
   });
 
   // Settings state (defaults per SCHEMA.md)
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [currentSettings, setCurrentSettings] = useState<AppSettingsContract>({
+    theme: 'follow-windows',
+    accent: 'yellow',
+    motion: 'follow-windows',
+    noteMargin: 24,
+    keepRunningInBackground: true,
+    startWithWindows: false,
+    captureHotkey: 'Ctrl+Alt+N',
+    captureVault: 'last-active',
+    noteList: {
+      sortBy: 'manual',
+      showSortIcon: false,
+      showPreviews: true,
+      showDates: true,
+      showImages: true
+    },
+    dragHintShown: false
+  });
+  const currentSettingsRef = useRef(currentSettings);
+  currentSettingsRef.current = currentSettings;
+
   const [sortBy, setSortBy] = useState<'manual' | 'modified' | 'title'>('manual');
   const [showSortIcon, setShowSortIcon] = useState(false);
   const [showPreviews, setShowPreviews] = useState(true);
@@ -99,6 +126,15 @@ export const MainWindow: React.FC = () => {
       await window.wrriter.app.saveSettings(patch);
     }
   }, []);
+
+  const handleSaveSettings = useCallback(async (patch: Partial<AppSettingsContract>) => {
+    setCurrentSettings((prev) => ({ ...prev, ...patch }));
+    if (patch.noteMargin !== undefined) {
+      setNoteMargin(patch.noteMargin);
+    }
+    await updateSettings(patch);
+  }, [updateSettings]);
+
 
   // Refresh folders from disk
   const refreshFolders = useCallback(async () => {
@@ -224,6 +260,7 @@ export const MainWindow: React.FC = () => {
         const sRes = await window.wrriter.app.getSettings();
         if (sRes.ok && isMounted) {
           const s = sRes.value;
+          setCurrentSettings(s);
           if (s.noteList) {
             const mappedSort = s.noteList.sortBy === 'created' ? 'modified' : s.noteList.sortBy;
             setSortBy(mappedSort);
@@ -233,8 +270,22 @@ export const MainWindow: React.FC = () => {
             setShowImages(s.noteList.showImages ?? true);
           }
           if (s.noteMargin) setNoteMargin(s.noteMargin);
+          if (s.motion === 'reduced') {
+            document.documentElement.setAttribute('data-motion', 'reduced');
+          }
+          if (s.theme) {
+            let effectiveTheme = s.theme;
+            if (s.theme === 'follow-windows' && typeof window !== 'undefined' && window.matchMedia) {
+              effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            document.documentElement.setAttribute('data-theme', effectiveTheme);
+          }
+          if (s.accent) {
+            document.documentElement.setAttribute('data-accent', s.accent);
+          }
         }
       }
+
 
       // 4. Load initial folders and notes
       await refreshFolders();
@@ -256,6 +307,62 @@ export const MainWindow: React.FC = () => {
       }
     };
   }, []);
+
+  // Listen for Windows system theme changes and cross-window theme broadcasts
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // 1. Windows system theme change
+    let mediaQuery: MediaQueryList | null = null;
+    let handleSystemThemeChange: ((e: MediaQueryListEvent) => void) | null = null;
+
+    if (window.matchMedia) {
+      mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      handleSystemThemeChange = (e: MediaQueryListEvent) => {
+        if (currentSettingsRef.current.theme === 'follow-windows') {
+          const newTheme = e.matches ? 'dark' : 'light';
+          void crossFadeTransition(() => {
+            document.documentElement.setAttribute('data-theme', newTheme);
+          });
+        }
+      };
+
+      if (mediaQuery.addEventListener) {
+        mediaQuery.addEventListener('change', handleSystemThemeChange);
+      } else {
+        mediaQuery.addListener(handleSystemThemeChange);
+      }
+    }
+
+    // 2. Cross-window theme broadcast
+    const unsubscribe = subscribeThemeSync((msg) => {
+      if (msg.type === 'theme') {
+        let effectiveTheme = msg.value;
+        if (msg.value === 'follow-windows' && window.matchMedia) {
+          effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        void crossFadeTransition(() => {
+          document.documentElement.setAttribute('data-theme', effectiveTheme);
+        });
+      } else if (msg.type === 'accent') {
+        void crossFadeTransition(() => {
+          document.documentElement.setAttribute('data-accent', msg.value);
+        });
+      }
+    });
+
+    return () => {
+      if (mediaQuery && handleSystemThemeChange) {
+        if (mediaQuery.removeEventListener) {
+          mediaQuery.removeEventListener('change', handleSystemThemeChange);
+        } else {
+          mediaQuery.removeListener(handleSystemThemeChange);
+        }
+      }
+      unsubscribe();
+    };
+  }, []);
+
 
   // Poll for external changes and refresh when window regains focus
   useEffect(() => {
@@ -556,7 +663,13 @@ export const MainWindow: React.FC = () => {
         setSidebarOpen((open) => !open);
         return;
       }
+      if (matchesShortcut(e, 'Ctrl+,')) {
+        e.preventDefault();
+        setSettingsOpen((open) => !open);
+        return;
+      }
     };
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [
@@ -775,9 +888,18 @@ export const MainWindow: React.FC = () => {
         category: 'Settings',
         shortcut: 'Ctrl+,',
         keywords: ['preferences', 'options'],
-        run: () => setNoticeMessage('Settings window arrives in next slice')
+        run: () => setSettingsOpen(true)
+      },
+      {
+        id: 'settings:open',
+        title: 'Open settings',
+        category: 'Settings',
+        shortcut: 'Ctrl+,',
+        keywords: ['preferences', 'options'],
+        run: () => setSettingsOpen(true)
       }
     ];
+
 
     commandRegistry.registerBatch(commands);
   }, [
@@ -925,7 +1047,7 @@ export const MainWindow: React.FC = () => {
             }}
           />
 
-          {/* Bottom Vault Button and Popup Menu */}
+          {/* Bottom Vault Button, Settings Gear and Popup Menu */}
           <div className="vaults" style={{ position: 'relative' }}>
             <button
               type="button"
@@ -933,7 +1055,7 @@ export const MainWindow: React.FC = () => {
               aria-expanded={vaultMenuOpen}
               onClick={() => setVaultMenuOpen((open) => !open)}
               title="Vault menu"
-              style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer' }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer' }}
             >
               <div
                 className="vc p"
@@ -947,6 +1069,17 @@ export const MainWindow: React.FC = () => {
               <span className="vn">{activeVault?.name || 'Personal Vault'}</span>
               <ChevronUpDownIcon style={{ marginLeft: 'auto', width: 16, height: 16, color: 'var(--tx3)' }} />
             </button>
+
+            <button
+              type="button"
+              className="ib"
+              onClick={() => setSettingsOpen(true)}
+              title="Settings (Ctrl+,)"
+              aria-label="Settings"
+            >
+              <SettingsIcon />
+            </button>
+
 
             {/* Floating Vault Menu */}
             <VaultMenu
@@ -1419,6 +1552,20 @@ export const MainWindow: React.FC = () => {
         isOpen={commandPaletteOpen}
         onClose={() => setCommandPaletteOpen(false)}
       />
+
+      {/* Settings Window Overlay (Loaded on first use) */}
+      {settingsOpen && (
+        <Suspense fallback={null}>
+          <SettingsWindow
+            isOpen={settingsOpen}
+            onClose={() => setSettingsOpen(false)}
+            currentSettings={currentSettings}
+            onSaveSettings={handleSaveSettings}
+            onMarginChangeLive={(val) => setNoteMargin(val)}
+          />
+        </Suspense>
+      )}
+
 
       {/* Temporary Notice Banner */}
       {noticeMessage && (

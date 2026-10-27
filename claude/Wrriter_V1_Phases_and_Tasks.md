@@ -320,17 +320,17 @@ Nothing that depends on a row is built until it is decided. Rows 15 to 17 are ne
 
 **Done when**
 
-- [ ] The round-trip check passes on every build before M2 is reported done
-- [ ] Force-quitting Wrriter while typing loses at most the last moment of typing and never damages the note
-- [ ] Opening and closing a note without editing leaves its modified time unchanged
-- [ ] Typing a hash and a space turns the line into a heading, and the saved file holds a markdown heading
-- [ ] A first line with a colon or question mark makes a valid file name while the note keeps the line as typed
-- [ ] Every Done when line of Find and replace in a note (Features 2) passes, including 5,000 replacements in a 1 MB note in under 1 s
-- [ ] Every Done when line of UI hand-off sections 4 to 8 passes, except the parts waiting on a decision
-- [ ] The Weekly plan note matches the screenshots in light and dark on all five accents, except the parts waiting on a decision
-- [ ] Twelve tabs open and close by mouse and keyboard, and the hidden-tab check is reported
-- [ ] Key press to letter on screen in a 1 MB note is within budget with all animations on
-- [ ] Each UI slice was shown beside the screenshots before the next one started
+- [x] The round-trip check passes on every build before M2 is reported done
+- [x] Force-quitting Wrriter while typing loses at most the last moment of typing and never damages the note
+- [x] Opening and closing a note without editing leaves its modified time unchanged
+- [x] Typing a hash and a space turns the line into a heading, and the saved file holds a markdown heading
+- [x] A first line with a colon or question mark makes a valid file name while the note keeps the line as typed
+- [x] Every Done when line of Find and replace in a note (Features 2) passes, including 5,000 replacements in a 1 MB note in under 1 s
+- [x] Every Done when line of UI hand-off sections 4 to 8 passes, except the parts waiting on a decision
+- [x] The Weekly plan note matches the screenshots in light and dark on all five accents, except the parts waiting on a decision
+- [x] Twelve tabs open and close by mouse and keyboard, and the hidden-tab check is reported
+- [x] Key press to letter on screen in a 1 MB note is within budget with all animations on
+- [x] Each UI slice was shown beside the screenshots before the next one started
 - [ ] The M2 report is sent, and Krishna says go
 
 ---

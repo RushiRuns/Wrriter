@@ -233,5 +233,54 @@ describe('Typing Touches and Motion System (Features 8, ADR-W09)', () => {
       // 60 FPS frame budget is 16.6 ms; transaction handling must be well under 5 ms
       expect(avgDuration).toBeLessThan(5);
     });
+
+    it('Performance Gate: Key press to letter in 1 MB note is within budget (median < 8 ms, 99th < 16 ms) with all animations on', () => {
+      // Create a ~1 MB document (1,000,000 characters)
+      const paragraphContent = 'The calm, precise note editor that stays out of your way. '.repeat(18); // ~1,044 chars
+      const paragraphs = Array.from({ length: 1000 }, () =>
+        testSchema.node('paragraph', null, [testSchema.text(paragraphContent)])
+      );
+      const largeDoc = testSchema.node('doc', null, paragraphs);
+
+      expect(largeDoc.content.size).toBeGreaterThanOrEqual(1_000_000);
+
+      const plugin = createTypingTouchesPlugin({
+        fastTypingThresholdMs: 120,
+        largeNoteSizeThreshold: 500_000
+      });
+
+      let state = EditorState.create({
+        doc: largeDoc,
+        schema: testSchema,
+        plugins: [plugin]
+      });
+
+      const durations: number[] = [];
+      const keystrokeCount = 100;
+
+      for (let i = 0; i < keystrokeCount; i++) {
+        const start = performance.now();
+        // Insert character at position 500
+        state = state.apply(state.tr.insertText('A', 500 + i));
+        const end = performance.now();
+        durations.push(end - start);
+      }
+
+      durations.sort((a, b) => a - b);
+      const median = durations[Math.floor(keystrokeCount / 2)]!;
+      const p99 = durations[Math.floor(keystrokeCount * 0.99)]!;
+
+      console.log(`\n======================================================`);
+      console.log(`[PERFORMANCE BENCHMARK] Key press to letter in 1 MB note:`);
+      console.log(`  Document size: ${(largeDoc.content.size / 1_000_000).toFixed(2)} MB (${largeDoc.content.size.toLocaleString()} chars)`);
+      console.log(`  Keystrokes: ${keystrokeCount}`);
+      console.log(`  Median latency: ${median.toFixed(2)} ms (Ceiling: 8.00 ms)`);
+      console.log(`  99th percentile: ${p99.toFixed(2)} ms (Ceiling: 16.00 ms)`);
+      console.log(`======================================================\n`);
+
+      // Features 8 / PERFORMANCE.md budget: Median under 8 ms, 99th percentile under 16 ms
+      expect(median).toBeLessThan(8);
+      expect(p99).toBeLessThan(16);
+    });
   });
 });

@@ -159,6 +159,22 @@ describe('UI Slice 4: Menus, Slash Menu, and Floating Toolbar', () => {
     });
   });
 
+  describe('Slash Menu: Block Insertion Execution on Enter (Regression)', () => {
+    it('ensures SlashMenuExtension handleKeyDown executes chosen.action with the TipTap editor instance', async () => {
+      const { readFileSync } = await import('fs');
+      const { join } = await import('path');
+      const slashMenuSource = readFileSync(
+        join(__dirname, '../../src/renderer/editor/extensions/slash-menu.ts'),
+        'utf-8'
+      );
+
+      // Must capture this.editor in addProseMirrorPlugins
+      expect(slashMenuSource).toMatch(/const\s+editor\s*=\s*this\.editor/);
+      // Must not rely solely on (view as any).editor which is undefined
+      expect(slashMenuSource).not.toMatch(/const\s+editor\s*=\s*\(view as any\)\.editor;\s*if\s*\(editor\)\s*\{\s*chosen\.action\(editor\);/);
+    });
+  });
+
   describe('Editor Three-Dot Menu Options', () => {
     it('contains all required items per spec (Pin/Unpin, Duplicate M3, Find, Pop out M4, Explorer, Delete)', () => {
       const items = [

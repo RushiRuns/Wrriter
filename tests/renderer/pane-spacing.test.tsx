@@ -146,4 +146,15 @@ describe('Pane Spacing Contract (M1/M2)', () => {
     expect(mainWindowSource).toContain('if (!selectedNotePath) return null;');
     expect(mainWindowSource).toContain('if (!selectedNote) return null;');
   });
+
+  it('ensures EditorHost stabilizes prop callback refs and prevents redundant switchNote resets on the active note (Regression)', () => {
+    const editorHostSource = readFileSync(
+      join(__dirname, '../../src/renderer/editor/EditorHost.tsx'),
+      'utf-8'
+    );
+    expect(editorHostSource).toContain('onTitleChangeRef = useRef');
+    expect(editorHostSource).toContain('onNoticeRef = useRef');
+    expect(editorHostSource).toContain('onTabsUpdateRef = useRef');
+    expect(editorHostSource).toContain('if (prevPath === activeNotePath && tabsRef.current.has(activeNotePath))');
+  });
 });

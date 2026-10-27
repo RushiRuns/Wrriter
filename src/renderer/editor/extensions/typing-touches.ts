@@ -210,6 +210,7 @@ export function createTypingTouchesPlugin(options: TypingTouchesOptions = {}): P
           if (!view.hasFocus() || cutStage >= 2 || reduced) {
             glider.style.opacity = '0';
             prevCoords = null;
+            view.dom?.classList?.remove('has-caret-glider');
             return;
           }
 
@@ -217,6 +218,7 @@ export function createTypingTouchesPlugin(options: TypingTouchesOptions = {}): P
           if (!selection.empty) {
             glider.style.opacity = '0';
             prevCoords = null;
+            view.dom?.classList?.remove('has-caret-glider');
             return;
           }
 
@@ -241,10 +243,12 @@ export function createTypingTouchesPlugin(options: TypingTouchesOptions = {}): P
             glider.style.opacity = '1';
           }
 
+          view.dom?.classList?.add('has-caret-glider');
           prevCoords = { left: x, top: y, height };
         },
 
         destroy() {
+          editorView.dom?.classList?.remove('has-caret-glider');
           if (glider && glider.parentElement) {
             glider.parentElement.removeChild(glider);
             glider = null;

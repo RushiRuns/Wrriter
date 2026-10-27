@@ -1414,9 +1414,17 @@
 /* --------------------------------------------------------------------------
    TipTap Live Editor ProseMirror Integration (UI Slice 3)
    -------------------------------------------------------------------------- */
+.editor-container {
+  position: relative;
+}
+
 .wrriter-prosemirror {
   outline: none;
   caret-color: var(--tx);
+}
+
+.wrriter-prosemirror.has-caret-glider {
+  caret-color: transparent;
 }
 
 .wrriter-prosemirror ::selection {
@@ -2657,6 +2665,8 @@
 /* Smooth Caret Glider indicator */
 .wr-caret-glider {
   position: absolute;
+  top: 0;
+  left: 0;
   pointer-events: none;
   width: 2px;
   border-radius: 1px;

@@ -38,6 +38,7 @@ export const SlashMenuExtension = Extension.create<SlashMenuOptions>({
   addProseMirrorPlugins() {
     let selectedIndex = 0;
     const options = this.options;
+    const editor = this.editor;
 
     return [
       new Plugin({
@@ -172,9 +173,9 @@ export const SlashMenuExtension = Extension.create<SlashMenuOptions>({
                 view.dispatch(tr);
 
                 // Execute block insertion
-                const editor = (view as any).editor;
-                if (editor) {
-                  chosen.action(editor);
+                const editorInstance = editor ?? (view as any).editor;
+                if (editorInstance) {
+                  chosen.action(editorInstance);
                 }
               }
               return true;

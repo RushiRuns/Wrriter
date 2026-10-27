@@ -41,6 +41,91 @@ describe('Typing Touches and Motion System (Features 8, ADR-W09)', () => {
     vi.restoreAllMocks();
   });
 
+  describe('Single Caret Contract and Caret Glider Positioning (Regression)', () => {
+    it('ensures CSS defines position: relative on .editor-container, top/left: 0 on .wr-caret-glider, and transparent caret when glider is active', async () => {
+      const { readFileSync } = await import('fs');
+      const { join } = await import('path');
+      const css = readFileSync(join(__dirname, '../../src/renderer/styles/components.css'), 'utf-8');
+
+      // 1. .editor-container must be positioned relative to anchor the glider
+      const containerMatch = css.match(/\.editor-container\s*\{([^}]+)\}/);
+      expect(containerMatch, '.editor-container must be declared in components.css').toBeTruthy();
+      expect(containerMatch![1]).toContain('position: relative');
+
+      // 2. .wr-caret-glider must have top: 0 and left: 0 so translate(x,y) starts at origin
+      const gliderMatch = css.match(/\.wr-caret-glider\s*\{([^}]+)\}/);
+      expect(gliderMatch, '.wr-caret-glider must be declared in components.css').toBeTruthy();
+      expect(gliderMatch![1]).toContain('top: 0');
+      expect(gliderMatch![1]).toContain('left: 0');
+
+      // 3. When glider is active, native caret must be hidden to avoid double carets
+      const hideCaretMatch = css.match(/\.wrriter-prosemirror\.has-caret-glider\s*\{([^}]+)\}/);
+      expect(hideCaretMatch, '.wrriter-prosemirror.has-caret-glider must hide native caret').toBeTruthy();
+      expect(hideCaretMatch![1]).toContain('caret-color: transparent');
+    });
+
+    it('toggles has-caret-glider class on view.dom when glider is active vs inactive', () => {
+      const plugin = createTypingTouchesPlugin();
+      const state = EditorState.create({
+        doc: createDoc('Testing single caret'),
+        schema: testSchema,
+        plugins: [plugin]
+      });
+
+      const classList = new Set<string>();
+      const domEl: any = {
+        classList: {
+          add: (cls: string) => classList.add(cls),
+          remove: (cls: string) => classList.delete(cls),
+          contains: (cls: string) => classList.has(cls)
+        },
+        parentElement: {
+          getBoundingClientRect: () => ({ left: 0, top: 0, right: 800, bottom: 600 }),
+          scrollLeft: 0,
+          scrollTop: 0,
+          appendChild: () => {},
+          removeChild: () => {}
+        }
+      };
+
+      const originalDocument = (global as any).document;
+      (global as any).document = {
+        createElement: () => ({
+          className: '',
+          setAttribute: () => {},
+          style: {},
+          parentElement: domEl.parentElement
+        })
+      };
+
+      try {
+        const mockView: any = {
+          state,
+          dom: domEl,
+          hasFocus: () => true,
+          coordsAtPos: () => ({ left: 50, top: 20, bottom: 44 }),
+          isDestroyed: false
+        };
+
+        const pluginView = plugin.spec.view!(mockView);
+        pluginView.update!(mockView, state);
+
+        // When active, class must be added to hide the native caret
+        expect(domEl.classList.contains('has-caret-glider')).toBe(true);
+
+        // When editor loses focus, glider hides and native caret is restored
+        mockView.hasFocus = () => false;
+        pluginView.update!(mockView, state);
+        expect(domEl.classList.contains('has-caret-glider')).toBe(false);
+
+        pluginView.destroy!();
+        expect(domEl.classList.contains('has-caret-glider')).toBe(false);
+      } finally {
+        (global as any).document = originalDocument;
+      }
+    });
+  });
+
   describe('Cut Order & Step-Aside Protocol (PERFORMANCE.md item 44)', () => {
     it('manages cut stages from 0 (all on) to 1 (new-letter cut) to 2 (glide cut)', () => {
       expect(getTypingTouchesCutStage()).toBe(0);

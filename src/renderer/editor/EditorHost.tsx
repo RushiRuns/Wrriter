@@ -127,6 +127,18 @@ export const EditorHost: React.FC<EditorHostProps> = ({
   const scrollRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<Editor | null>(null);
 
+  // Stable callback refs to isolate effect/useCallback dependencies from parent re-renders
+  const onTitleChangeRef = useRef(onTitleChange);
+  onTitleChangeRef.current = onTitleChange;
+  const onNoticeRef = useRef(onNotice);
+  onNoticeRef.current = onNotice;
+  const onPathChangeRef = useRef(onPathChange);
+  onPathChangeRef.current = onPathChange;
+  const onSelectTabRef = useRef(onSelectTab);
+  onSelectTabRef.current = onSelectTab;
+  const onTabsUpdateRef = useRef(onTabsUpdate);
+  onTabsUpdateRef.current = onTabsUpdate;
+
   // Tab sessions kept in memory (active & hidden tabs)
   const tabsRef = useRef<Map<string, TabSession>>(new Map());
   const activePathRef = useRef<string | null>(activeNotePath);
@@ -196,8 +208,8 @@ export const EditorHost: React.FC<EditorHostProps> = ({
   const notifyTabs = useCallback(() => {
     const list = Array.from(tabsRef.current.values());
     setTabsList(list);
-    onTabsUpdate?.(list, activePathRef.current);
-  }, [onTabsUpdate]);
+    onTabsUpdateRef.current?.(list, activePathRef.current);
+  }, []);
 
   // Saves a tab session using planSave and SafeWriter
   const saveTabSession = useCallback(
@@ -230,7 +242,7 @@ export const EditorHost: React.FC<EditorHostProps> = ({
           return true;
         } else {
           // Keep text in tab, show notice and retry if locked
-          onNotice?.('Save paused: another program is holding this file. Retrying...');
+          onNoticeRef.current?.('Save paused: another program is holding this file. Retrying...');
           if (retryCount < 3) {
             setTimeout(() => {
               void saveTabSession(tab, retryCount + 1);
@@ -242,7 +254,7 @@ export const EditorHost: React.FC<EditorHostProps> = ({
 
       return true;
     },
-    [onNotice]
+    []
   );
 
   // Checks and executes title-based file rename on leaving note
@@ -282,14 +294,14 @@ export const EditorHost: React.FC<EditorHostProps> = ({
               initialTitle: newTitle
             };
             tabsRef.current.set(newPath, updatedTab);
-            onPathChange?.(oldPath, newPath);
-            onTitleChange?.(newTitle);
+            onPathChangeRef.current?.(oldPath, newPath);
+            onTitleChangeRef.current?.(newTitle);
             notifyTabs();
           }
         }
       }
     },
-    [onPathChange, onTitleChange, notifyTabs]
+    [notifyTabs]
   );
 
   // Initialize the single live TipTap editor on mount
@@ -488,7 +500,7 @@ export const EditorHost: React.FC<EditorHostProps> = ({
           const currentTitle = extractTitleFromFirstLine(firstLine) || tab.title;
           if (currentTitle !== tab.title) {
             tab.title = currentTitle;
-            onTitleChange?.(currentTitle);
+            onTitleChangeRef.current?.(currentTitle);
             notifyTabs();
           }
 
@@ -530,7 +542,7 @@ export const EditorHost: React.FC<EditorHostProps> = ({
       editor.destroy();
       editorRef.current = null;
     };
-  }, [saveTabSession, onTitleChange, notifyTabs]);
+  }, [saveTabSession, notifyTabs]);
 
   // Handle activeNotePath changes (load, switch tabs, save previous)
   useEffect(() => {
@@ -539,6 +551,11 @@ export const EditorHost: React.FC<EditorHostProps> = ({
 
     const switchNote = async () => {
       const prevPath = activeTabPath;
+
+      // If the target tab is already loaded and active, avoid redundant re-renders or resets
+      if (prevPath === activeNotePath && tabsRef.current.has(activeNotePath)) {
+        return;
+      }
 
       // 1. Save and remember previous tab state
       if (prevPath && prevPath !== activeNotePath) {
@@ -608,13 +625,13 @@ export const EditorHost: React.FC<EditorHostProps> = ({
         // Set content in live editor
         editor.commands.setContent(docJson as any, { emitUpdate: false });
         targetTab.editorState = editor.state;
-        onTitleChange?.(title);
+        onTitleChangeRef.current?.(title);
         setActiveTags(tags);
         setActiveDateLine(dateLine);
       } else if (targetTab.editorState) {
         // Swap EditorState in O(1) time without re-mounting editor DOM
         editor.view.updateState(targetTab.editorState);
-        onTitleChange?.(targetTab.title);
+        onTitleChangeRef.current?.(targetTab.title);
         setActiveTags(targetTab.tags || []);
         setActiveDateLine(targetTab.dateLine || '');
       }
@@ -670,7 +687,7 @@ export const EditorHost: React.FC<EditorHostProps> = ({
     };
 
     void switchNote();
-  }, [activeNotePath, activeTabPath, saveTabSession, checkRenameOnLeave, onTitleChange, notifyTabs]);
+  }, [activeNotePath, activeTabPath, saveTabSession, checkRenameOnLeave, notifyTabs]);
 
   // Outside changes handler (quiet reload if clean; save (External).md if dirty; notify if deleted)
   const checkExternalChanges = useCallback(async () => {
@@ -680,7 +697,7 @@ export const EditorHost: React.FC<EditorHostProps> = ({
       if (!res.ok) {
         if (tab.originalBytes.length > 0 && !(tab as any)._deletedNotified) {
           (tab as any)._deletedNotified = true;
-          onNotice?.(`"${tab.title}" was moved or deleted outside Wrriter. Your text is kept in the tab.`);
+          onNoticeRef.current?.(`"${tab.title}" was moved or deleted outside Wrriter. Your text is kept in the tab.`);
         }
         continue;
       }
@@ -718,13 +735,13 @@ export const EditorHost: React.FC<EditorHostProps> = ({
               path: externalPath,
               text: res.value.text
             });
-            onNotice?.(`"${tab.title}" was edited outside Wrriter. External version saved as ${externalName}.`);
+            onNoticeRef.current?.(`"${tab.title}" was edited outside Wrriter. External version saved as ${externalName}.`);
           }
           tab.originalBytes = diskBytes;
         }
       }
     }
-  }, [onNotice]);
+  }, []);
 
   useEffect(() => {
     const handleFocus = () => {
@@ -745,7 +762,7 @@ export const EditorHost: React.FC<EditorHostProps> = ({
   const handleSelectTab = (path: string) => {
     setActiveTabPath(path);
     activePathRef.current = path;
-    onSelectTab?.(path);
+    onSelectTabRef.current?.(path);
   };
 
   // Close tab handler
@@ -764,7 +781,7 @@ export const EditorHost: React.FC<EditorHostProps> = ({
         const next = remaining[remaining.length - 1] ?? null;
         setActiveTabPath(next);
         activePathRef.current = next;
-        onSelectTab?.(next);
+        onSelectTabRef.current?.(next);
       }
       notifyTabs();
     }

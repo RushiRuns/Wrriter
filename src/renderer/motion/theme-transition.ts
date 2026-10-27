@@ -35,15 +35,22 @@ export async function crossFadeTransition(updateFn: () => void | Promise<void>):
 
   // 1. View Transitions API path (Chromium 111+ / Electron)
   if (typeof doc.startViewTransition === 'function') {
+    const transition = doc.startViewTransition(async () => {
+      await updateFn();
+    });
+
+    // Wait for the DOM update callback to finish (this throws if updateFn throws)
+    await transition.updateCallbackDone;
+
+    // Wait for the animation to finish; if skipped by the browser/engine, finished rejects with AbortError
     try {
-      const transition = doc.startViewTransition(async () => {
-        await updateFn();
-      });
       await transition.finished;
-      return;
-    } catch {
-      // If View Transition fails, proceed to fallback
+    } catch (err: unknown) {
+      if (!(err instanceof Error && err.name === 'AbortError')) {
+        throw err;
+      }
     }
+    return;
   }
 
   // 2. Fallback path: Fast (100 ms) transition

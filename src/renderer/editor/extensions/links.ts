@@ -104,5 +104,25 @@ export const WebLinkMark = Mark.create({
       ['span', { class: 'globe-icon', contenteditable: 'false' }],
       ['span', { class: 'u' }, 0]
     ];
+  },
+
+  addCommands(): any {
+    return {
+      setLink:
+        (attributes: { href: string; title?: string | null }) =>
+        ({ commands }: any) => {
+          return commands.setMark(this.name, attributes);
+        },
+      toggleLink:
+        (attributes: { href: string; title?: string | null }) =>
+        ({ commands }: any) => {
+          return commands.toggleMark(this.name, attributes);
+        },
+      unsetLink:
+        () =>
+        ({ commands }: any) => {
+          return commands.unsetMark(this.name);
+        }
+    };
   }
 });

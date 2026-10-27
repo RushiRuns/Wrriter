@@ -15,6 +15,15 @@ export const ParagraphNode = Node.create({
   },
   renderHTML({ HTMLAttributes }) {
     return ['p', mergeAttributes(HTMLAttributes, { class: 'edp' }), 0];
+  },
+  addCommands(): any {
+    return {
+      setParagraph:
+        () =>
+        ({ commands }: any) => {
+          return commands.setNode(this.name);
+        }
+    };
   }
 });
 
@@ -49,6 +58,20 @@ export const HeadingNode = Node.create({
   renderHTML({ node, HTMLAttributes }) {
     const level = (node.attrs['level'] as number) || 1;
     return [`h${level}`, mergeAttributes(HTMLAttributes, { class: `ed${level}` }), 0];
+  },
+  addCommands(): any {
+    return {
+      setHeading:
+        (attributes: { level: number }) =>
+        ({ commands }: any) => {
+          return commands.setNode(this.name, attributes);
+        },
+      toggleHeading:
+        (attributes: { level: number }) =>
+        ({ commands }: any) => {
+          return commands.toggleNode(this.name, 'paragraph', attributes);
+        }
+    };
   }
 });
 
@@ -110,6 +133,20 @@ export const CodeBlockNode = Node.create({
       ],
       ['pre', { class: 'cbody mono' }, ['code', { class: lang ? `language-${lang}` : undefined }, 0]]
     ];
+  },
+  addCommands(): any {
+    return {
+      setCodeBlock:
+        (attributes?: { language?: string | null }) =>
+        ({ commands }: any) => {
+          return commands.setNode(this.name, attributes);
+        },
+      toggleCodeBlock:
+        (attributes?: { language?: string | null }) =>
+        ({ commands }: any) => {
+          return commands.toggleNode(this.name, 'paragraph', attributes);
+        }
+    };
   }
 });
 
@@ -123,6 +160,25 @@ export const BlockquoteNode = Node.create({
   },
   renderHTML({ HTMLAttributes }) {
     return ['blockquote', mergeAttributes(HTMLAttributes, { class: 'bq' }), 0];
+  },
+  addCommands(): any {
+    return {
+      setBlockquote:
+        () =>
+        ({ commands }: any) => {
+          return commands.wrapIn(this.name);
+        },
+      toggleBlockquote:
+        () =>
+        ({ commands }: any) => {
+          return commands.toggleWrap(this.name);
+        },
+      unsetBlockquote:
+        () =>
+        ({ commands }: any) => {
+          return commands.lift(this.name);
+        }
+    };
   }
 });
 
@@ -135,6 +191,15 @@ export const BulletListNode = Node.create({
   },
   renderHTML({ HTMLAttributes }) {
     return ['ul', mergeAttributes(HTMLAttributes, { class: 'bullet-list' }), 0];
+  },
+  addCommands(): any {
+    return {
+      toggleBulletList:
+        () =>
+        ({ commands }: any) => {
+          return commands.toggleList(this.name, 'listItem');
+        }
+    };
   }
 });
 
@@ -154,6 +219,15 @@ export const OrderedListNode = Node.create({
   },
   renderHTML({ node, HTMLAttributes }) {
     return ['ol', mergeAttributes(HTMLAttributes, { start: node.attrs['start'], class: 'ordered-list' }), 0];
+  },
+  addCommands(): any {
+    return {
+      toggleOrderedList:
+        () =>
+        ({ commands }: any) => {
+          return commands.toggleList(this.name, 'listItem');
+        }
+    };
   }
 });
 
@@ -178,6 +252,15 @@ export const TaskListNode = Node.create({
   },
   renderHTML({ HTMLAttributes }) {
     return ['ul', mergeAttributes(HTMLAttributes, { 'data-type': 'taskList', class: 'tasks task-list' }), 0];
+  },
+  addCommands(): any {
+    return {
+      toggleTaskList:
+        () =>
+        ({ commands }: any) => {
+          return commands.toggleList(this.name, 'taskItem');
+        }
+    };
   }
 });
 
@@ -261,5 +344,14 @@ export const HorizontalRuleNode = Node.create({
   },
   renderHTML({ HTMLAttributes }) {
     return ['hr', mergeAttributes(HTMLAttributes, { class: 'hr thematic-break' })];
+  },
+  addCommands(): any {
+    return {
+      setHorizontalRule:
+        () =>
+        ({ chain }: any) => {
+          return chain().insertContent({ type: this.name }).run();
+        }
+    };
   }
 });

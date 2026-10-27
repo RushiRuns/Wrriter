@@ -175,6 +175,64 @@ describe('UI Slice 4: Menus, Slash Menu, and Floating Toolbar', () => {
     });
   });
 
+  describe('Node & Mark Commands Availability (Regression for setHeading, toggleBlockquote, toggleBold)', () => {
+    it('ensures HeadingNode and BlockquoteNode declare addCommands with setHeading and toggleBlockquote', async () => {
+      const { HeadingNode, BlockquoteNode, BulletListNode, OrderedListNode, TaskListNode, CodeBlockNode, ParagraphNode, HorizontalRuleNode } = await import('../../src/renderer/editor/extensions/nodes');
+
+      // Verify HeadingNode has addCommands with setHeading
+      expect(typeof HeadingNode.config.addCommands).toBe('function');
+      const headingCommands = (HeadingNode.config.addCommands as any).call({ name: 'heading' });
+      expect(typeof headingCommands.setHeading).toBe('function');
+      expect(typeof headingCommands.toggleHeading).toBe('function');
+
+      // Verify BlockquoteNode has addCommands with toggleBlockquote
+      expect(typeof BlockquoteNode.config.addCommands).toBe('function');
+      const bqCommands = (BlockquoteNode.config.addCommands as any).call({ name: 'blockquote' });
+      expect(typeof bqCommands.toggleBlockquote).toBe('function');
+
+      // Verify List nodes have toggle commands
+      expect(typeof (BulletListNode.config.addCommands as any)?.call({ name: 'bulletList' })?.toggleBulletList).toBe('function');
+      expect(typeof (OrderedListNode.config.addCommands as any)?.call({ name: 'orderedList' })?.toggleOrderedList).toBe('function');
+      expect(typeof (TaskListNode.config.addCommands as any)?.call({ name: 'taskList' })?.toggleTaskList).toBe('function');
+
+      // Verify CodeBlockNode, ParagraphNode, HorizontalRuleNode
+      expect(typeof (CodeBlockNode.config.addCommands as any)?.call({ name: 'codeBlock' })?.toggleCodeBlock).toBe('function');
+      expect(typeof (ParagraphNode.config.addCommands as any)?.call({ name: 'paragraph' })?.setParagraph).toBe('function');
+      expect(typeof (HorizontalRuleNode.config.addCommands as any)?.call({ name: 'horizontalRule' })?.setHorizontalRule).toBe('function');
+    });
+
+    it('ensures formatting marks declare addCommands with toggleBold, toggleItalic, toggleStrike, toggleCode, and setLink', async () => {
+      const { BoldMark, ItalicMark, StrikeMark, CodeMark } = await import('../../src/renderer/editor/extensions/marks');
+      const { WebLinkMark } = await import('../../src/renderer/editor/extensions/links');
+
+      // BoldMark
+      expect(typeof BoldMark.config.addCommands).toBe('function');
+      const boldCommands = (BoldMark.config.addCommands as any).call({ name: 'bold' });
+      expect(typeof boldCommands.toggleBold).toBe('function');
+
+      // ItalicMark
+      expect(typeof ItalicMark.config.addCommands).toBe('function');
+      const italicCommands = (ItalicMark.config.addCommands as any).call({ name: 'italic' });
+      expect(typeof italicCommands.toggleItalic).toBe('function');
+
+      // StrikeMark
+      expect(typeof StrikeMark.config.addCommands).toBe('function');
+      const strikeCommands = (StrikeMark.config.addCommands as any).call({ name: 'strike' });
+      expect(typeof strikeCommands.toggleStrike).toBe('function');
+
+      // CodeMark
+      expect(typeof CodeMark.config.addCommands).toBe('function');
+      const codeCommands = (CodeMark.config.addCommands as any).call({ name: 'code' });
+      expect(typeof codeCommands.toggleCode).toBe('function');
+
+      // WebLinkMark
+      expect(typeof WebLinkMark.config.addCommands).toBe('function');
+      const linkCommands = (WebLinkMark.config.addCommands as any).call({ name: 'webLink' });
+      expect(typeof linkCommands.setLink).toBe('function');
+      expect(typeof linkCommands.unsetLink).toBe('function');
+    });
+  });
+
   describe('Editor Three-Dot Menu Options', () => {
     it('contains all required items per spec (Pin/Unpin, Duplicate M3, Find, Pop out M4, Explorer, Delete)', () => {
       const items = [

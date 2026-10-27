@@ -1,4 +1,5 @@
-import type { Node as PMNode, Schema } from '@tiptap/pm/model';
+import { type Node as PMNode, type Schema, Slice, Fragment } from '@tiptap/pm/model';
+import { ReplaceStep } from '@tiptap/pm/transform';
 import { findPassThroughSpans } from '../../shared/markdown/pass-through';
 
 export interface FindOptions {
@@ -49,6 +50,11 @@ export interface ProtectedSpan {
  * Collects all protected spans (wikilinks and pass-through syntax) in a block text.
  */
 export function getProtectedSpansInText(text: string): ProtectedSpan[] {
+  // Fast path: if text contains none of the trigger characters for protected syntax, return early
+  if (!/[[%<=$\^]/.test(text)) {
+    return [];
+  }
+
   const spans: ProtectedSpan[] = [];
 
   // 1. Pass-through spans from SCHEMA.md
@@ -249,15 +255,28 @@ export function replaceAllMatches(
   // Process in descending order of 'from' so earlier positions are unaffected
   const sorted = [...eligible].sort((a, b) => b.from - a.from);
 
-  const defaultNode = replacementText ? schema.text(replacementText) : null;
+  const defaultSlice = replacementText
+    ? new Slice(Fragment.from(schema.text(replacementText)), 0, 0)
+    : Slice.empty;
+
+  const sliceCache = new Map<any, Slice>();
+  sliceCache.set(null, defaultSlice);
 
   for (const match of sorted) {
     if (replacementText) {
-      const marks = match.marks ?? (match.from < tr.doc.content.size ? tr.doc.resolve(match.from).marks() : []);
-      const newNode = !marks || marks.length === 0 ? defaultNode! : schema.text(replacementText, marks as any);
-      tr.replaceWith(match.from, match.to, newNode);
+      const marks = match.marks;
+      if (!marks || marks.length === 0) {
+        tr.step(new ReplaceStep(match.from, match.to, defaultSlice));
+      } else {
+        let cached = sliceCache.get(marks);
+        if (!cached) {
+          cached = new Slice(Fragment.from(schema.text(replacementText, marks as any)), 0, 0);
+          sliceCache.set(marks, cached);
+        }
+        tr.step(new ReplaceStep(match.from, match.to, cached));
+      }
     } else {
-      tr.delete(match.from, match.to);
+      tr.step(new ReplaceStep(match.from, match.to, Slice.empty));
     }
   }
 

@@ -264,7 +264,6 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding-top: var(--band);
   position: relative;
 }
 
@@ -278,7 +277,6 @@
   flex: none;
   display: flex;
   flex-direction: column;
-  padding-top: var(--band);
   background: var(--list);
   border-right: 1px solid var(--div);
 }

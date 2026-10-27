@@ -16,7 +16,7 @@
     "bundle": "npm run bundle:main && npm run bundle:workers && npm run bundle:renderer",
     "checks:layers": "node scripts/check-rules.mjs",
     "checks:round-trip": "vitest run tests/samples/round-trip.test.ts",
-    "test": "vitest run",
+    "test": "vitest run --maxWorkers 4",
     "check": "npm run typecheck && npm run checks:layers && npm run checks:tokens && npm run checks:contrast && npm run checks:motion && npm run checks:dash && npm run checks:round-trip && npm run test",
     "build": "npm run check && npm run bundle && npm run report:size",
     "build:win": "npm run bundle && electron-builder --win",

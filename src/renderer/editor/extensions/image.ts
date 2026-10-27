@@ -10,6 +10,7 @@ export interface ImageAttributes {
 export const ImageNode = Node.create({
   name: 'image',
   group: 'block',
+  atom: true,
   selectable: true,
   draggable: true,
   inline: false,
@@ -81,6 +82,7 @@ export const ImageNode = Node.create({
     const src = (node.attrs['src'] as string) || '';
 
     const alignClass = alignment === 'right' ? 'r' : alignment === 'left' ? 'l' : 'c';
+    const isPlaceholder = !src || src === 'attachments/image.png';
 
     return [
       'div',
@@ -92,16 +94,29 @@ export const ImageNode = Node.create({
       [
         'div',
         { class: 'ph' },
-        [
-          'img',
-          {
-            src,
-            alt,
-            loading: 'lazy',
-            decoding: 'async',
-            width: width ? String(width) : undefined
-          }
-        ]
+        isPlaceholder
+          ? [
+              'div',
+              { class: 'ph-placeholder', contenteditable: 'false' },
+              [
+                'svg',
+                { class: 'ic xl', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '2' },
+                ['rect', { x: '3', y: '3', width: '18', height: '18', rx: '2', ry: '2' }],
+                ['circle', { cx: '8.5', cy: '8.5', r: '1.5' }],
+                ['polyline', { points: '21 15 16 10 5 21' }]
+              ],
+              ['span', { class: 'ph-label' }, alt || 'Add an image']
+            ]
+          : [
+              'img',
+              {
+                src,
+                alt,
+                loading: 'lazy',
+                decoding: 'async',
+                width: width ? String(width) : undefined
+              }
+            ]
       ],
       // Corner resize handles
       ['span', { class: 'phh tl', contenteditable: 'false' }],

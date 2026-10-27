@@ -118,17 +118,17 @@ export const SLASH_MENU_ITEMS: readonly SlashMenuItem[] = [
         schema.nodes['tableHeader'].create(null, pNode.create(null, schema.text('Column 3')))
       ]);
       const dataRow1 = schema.nodes['tableRow'].create(null, [
-        schema.nodes['tableCell'].create(null, pNode.create()),
-        schema.nodes['tableCell'].create(null, pNode.create()),
-        schema.nodes['tableCell'].create(null, pNode.create())
+        schema.nodes['tableCell'].create(null, pNode.create(null, schema.text('Item 1'))),
+        schema.nodes['tableCell'].create(null, pNode.create(null, schema.text('Description'))),
+        schema.nodes['tableCell'].create(null, pNode.create(null, schema.text('Value')))
       ]);
       const dataRow2 = schema.nodes['tableRow'].create(null, [
-        schema.nodes['tableCell'].create(null, pNode.create()),
-        schema.nodes['tableCell'].create(null, pNode.create()),
-        schema.nodes['tableCell'].create(null, pNode.create())
+        schema.nodes['tableCell'].create(null, pNode.create(null, schema.text('Item 2'))),
+        schema.nodes['tableCell'].create(null, pNode.create(null, schema.text('Description'))),
+        schema.nodes['tableCell'].create(null, pNode.create(null, schema.text('Value')))
       ]);
       const tableNode = schema.nodes['table'].create(null, [headerRow, dataRow1, dataRow2]);
-      editor.chain().focus().insertContent(tableNode.toJSON()).run();
+      editor.chain().focus().insertContent([tableNode.toJSON(), { type: 'paragraph' }]).run();
     }
   },
   {
@@ -194,7 +194,7 @@ export const SLASH_MENU_ITEMS: readonly SlashMenuItem[] = [
     iconName: 'SlashDividerIcon',
     paletteCommand: 'wrriter:insert-divider',
     action: (editor) => {
-      (editor.chain().focus() as any).setHorizontalRule().insertContent({ type: 'paragraph' }).run();
+      (editor.chain().focus() as any).setHorizontalRule().run();
     }
   },
 
@@ -209,23 +209,35 @@ export const SLASH_MENU_ITEMS: readonly SlashMenuItem[] = [
     iconName: 'SlashImageIcon',
     paletteCommand: 'wrriter:insert-image',
     action: (editor) => {
-      // Check if wrriter IPC file dialog is available
-      const wrriterApi = (window as any).wrriter;
-      if (wrriterApi && typeof wrriterApi.pickImageFile === 'function') {
-        wrriterApi.pickImageFile().then((selectedPath: string | null) => {
-          if (selectedPath) {
-            editor.chain().focus().insertContent({
-              type: 'image',
-              attrs: { src: selectedPath }
-            }).insertContent({ type: 'paragraph' }).run();
+      if (typeof document !== 'undefined') {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.style.display = 'none';
+        input.onchange = () => {
+          const file = input.files?.[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              const dataUrl = e.target?.result as string;
+              if (dataUrl) {
+                editor.chain().focus().insertContent([
+                  { type: 'image', attrs: { src: dataUrl, alt: file.name } },
+                  { type: 'paragraph' }
+                ]).run();
+              }
+            };
+            reader.readAsDataURL(file);
           }
-        });
+          input.remove();
+        };
+        document.body.appendChild(input);
+        input.click();
       } else {
-        // Fallback default image block placeholder
-        editor.chain().focus().insertContent({
-          type: 'image',
-          attrs: { src: 'attachments/image.png' }
-        }).insertContent({ type: 'paragraph' }).run();
+        editor.chain().focus().insertContent([
+          { type: 'image', attrs: { src: 'attachments/image.png' } },
+          { type: 'paragraph' }
+        ]).run();
       }
     }
   }

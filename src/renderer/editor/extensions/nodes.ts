@@ -240,6 +240,13 @@ export const ListItemNode = Node.create({
   },
   renderHTML({ HTMLAttributes }) {
     return ['li', mergeAttributes(HTMLAttributes, { class: 'li' }), 0];
+  },
+  addKeyboardShortcuts() {
+    return {
+      Enter: () => this.editor.commands.splitListItem(this.name),
+      Tab: () => this.editor.commands.sinkListItem(this.name),
+      'Shift-Tab': () => this.editor.commands.liftListItem(this.name)
+    };
   }
 });
 
@@ -276,6 +283,13 @@ export const TaskItemNode = Node.create({
       stateChar: {
         default: ' '
       }
+    };
+  },
+  addKeyboardShortcuts() {
+    return {
+      Enter: () => this.editor.commands.splitListItem(this.name, { checked: false }),
+      Tab: () => this.editor.commands.sinkListItem(this.name),
+      'Shift-Tab': () => this.editor.commands.liftListItem(this.name)
     };
   },
   parseHTML() {
@@ -339,6 +353,8 @@ export const TaskItemNode = Node.create({
 export const HorizontalRuleNode = Node.create({
   name: 'horizontalRule',
   group: 'block',
+  atom: true,
+  selectable: true,
   parseHTML() {
     return [{ tag: 'hr' }];
   },
@@ -350,7 +366,7 @@ export const HorizontalRuleNode = Node.create({
       setHorizontalRule:
         () =>
         ({ chain }: any) => {
-          return chain().insertContent({ type: this.name }).run();
+          return chain().insertContent([{ type: this.name }, { type: 'paragraph' }]).run();
         }
     };
   }

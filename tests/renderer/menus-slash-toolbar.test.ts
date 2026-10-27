@@ -231,6 +231,35 @@ describe('UI Slice 4: Menus, Slash Menu, and Floating Toolbar', () => {
       expect(typeof linkCommands.setLink).toBe('function');
       expect(typeof linkCommands.unsetLink).toBe('function');
     });
+
+    it('ensures ListItemNode and TaskItemNode declare keyboard shortcuts for list splitting (Enter) and indentation (Tab/Shift-Tab)', async () => {
+      const { ListItemNode, TaskItemNode, HorizontalRuleNode } = await import('../../src/renderer/editor/extensions/nodes');
+      const { ImageNode } = await import('../../src/renderer/editor/extensions/image');
+
+      // ListItemNode shortcuts
+      expect(typeof ListItemNode.config.addKeyboardShortcuts).toBe('function');
+      const liShortcuts = (ListItemNode.config.addKeyboardShortcuts as any).call({
+        name: 'listItem',
+        editor: { commands: { splitListItem: vi.fn(), sinkListItem: vi.fn(), liftListItem: vi.fn() } }
+      });
+      expect(typeof liShortcuts.Enter).toBe('function');
+      expect(typeof liShortcuts.Tab).toBe('function');
+      expect(typeof liShortcuts['Shift-Tab']).toBe('function');
+
+      // TaskItemNode shortcuts
+      expect(typeof TaskItemNode.config.addKeyboardShortcuts).toBe('function');
+      const taskShortcuts = (TaskItemNode.config.addKeyboardShortcuts as any).call({
+        name: 'taskItem',
+        editor: { commands: { splitListItem: vi.fn(), sinkListItem: vi.fn(), liftListItem: vi.fn() } }
+      });
+      expect(typeof taskShortcuts.Enter).toBe('function');
+      expect(typeof taskShortcuts.Tab).toBe('function');
+      expect(typeof taskShortcuts['Shift-Tab']).toBe('function');
+
+      // HorizontalRuleNode and ImageNode must be atoms
+      expect(HorizontalRuleNode.config.atom).toBe(true);
+      expect(ImageNode.config.atom).toBe(true);
+    });
   });
 
   describe('Editor Three-Dot Menu Options', () => {

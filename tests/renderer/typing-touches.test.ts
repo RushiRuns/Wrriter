@@ -117,7 +117,7 @@ describe('Typing Touches and Motion System (Features 8, ADR-W09)', () => {
       // Verify decoration was created for newly inserted character
       const decs = pluginState?.decorations.find();
       expect(decs).toHaveLength(1);
-      expect(decs?.[0]?.type?.attrs?.class).toBe('wr-new-letter-fade');
+      expect((decs?.[0] as any)?.spec?.class).toBe('wr-new-letter-fade');
       expect(decs?.[0]?.from).toBe(6);
       expect(decs?.[0]?.to).toBe(7);
     });
@@ -191,14 +191,15 @@ describe('Typing Touches and Motion System (Features 8, ADR-W09)', () => {
         attrs: { checked: true }
       } as any;
 
-      const htmlSpec = TaskItemNode.config.renderHTML?.({
+      const renderFn = TaskItemNode.config.renderHTML as any;
+      const htmlSpec = renderFn?.call({} as any, {
         node: dummyNode,
         HTMLAttributes: {}
-      } as any);
+      }) as any[];
 
       // htmlSpec structure: ['li', attrs, ['button', btnAttrs, ['svg', svgAttrs, ['polyline', polyAttrs]]], ['div', ...]]
       expect(Array.isArray(htmlSpec)).toBe(true);
-      const buttonSpec = htmlSpec?.[2] as any[];
+      const buttonSpec = (htmlSpec as any[])?.[2] as any[];
       expect(buttonSpec?.[0]).toBe('button');
       expect(buttonSpec?.[1]?.class).toContain('chk on');
 

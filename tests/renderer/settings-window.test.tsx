@@ -262,8 +262,9 @@ describe('M2 Settings: SettingsWindow and Theme Transitions', () => {
       expect(channelMessage).toEqual({ type: 'theme', value: 'dark' });
 
       // Simulate incoming message from another window
-      if (registeredListener) {
-        registeredListener({ data: { type: 'accent', value: 'mint' } });
+      const listener = registeredListener as ((e: any) => void) | null;
+      if (listener) {
+        listener({ data: { type: 'accent', value: 'mint' } });
       }
       expect(received).toEqual([{ type: 'accent', value: 'mint' }]);
 

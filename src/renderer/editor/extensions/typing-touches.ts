@@ -45,7 +45,7 @@ export function getTypingTouchesCutStage(): TypingTouchCutStage {
   return globalCutStage;
 }
 
-export function setTypingTouchesCutStage(stage: TypingTouchCutStage, reason?: string): void {
+export function setTypingTouchesCutStage(stage: TypingTouchCutStage, reason?: string | null): void {
   globalCutStage = stage;
   globalStepAsideReason = reason ?? null;
   for (const listener of globalStepAsideListeners) {
@@ -141,6 +141,7 @@ export function createTypingTouchesPlugin(options: TypingTouchesOptions = {}): P
                   const dec = Decoration.inline(
                     newStart,
                     newEnd,
+                    { class: 'wr-new-letter-fade' },
                     { class: 'wr-new-letter-fade' }
                   );
                   nextDecorations = nextDecorations.add(tr.doc, [dec]);

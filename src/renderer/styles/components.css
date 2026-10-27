@@ -260,14 +260,16 @@
 }
 
 .sin {
-  width: 247px;
+  width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
   position: relative;
+  box-sizing: border-box;
 }
 
 .side.shut .sin {
+  width: var(--sidew, 248px);
   visibility: hidden;
   transition: visibility 0s linear var(--t-slow);
 }
@@ -1668,13 +1670,8 @@
    UI Slice 4: Menus, Slash Menu and Floating Toolbar
    ========================================================================== */
 
-/* Editor Three-Dot Menu */
-.lmenu.ed {
-  position: absolute;
-  top: calc(var(--band) + var(--s-4) + var(--ctl) - var(--s-1));
-  right: var(--s-4);
-  min-width: 272px;
-  z-index: 50;
+/* Base List Menu (Flyout / Dropdowns) */
+.lmenu {
   list-style: none;
   margin: 0;
   padding: var(--s-2);
@@ -1683,6 +1680,16 @@
   box-shadow: 0 0 0 1px var(--line), var(--shadow);
   transform-origin: top right;
   animation: lin var(--t-fast) var(--ease-arrive) both;
+  box-sizing: border-box;
+}
+
+/* Editor Three-Dot Menu */
+.lmenu.ed {
+  position: absolute;
+  top: calc(var(--band) + var(--s-4) + var(--ctl) - var(--s-1));
+  right: var(--s-4);
+  min-width: 272px;
+  z-index: 50;
 }
 
 /* Right-click Context Menu */

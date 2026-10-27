@@ -400,10 +400,12 @@ export const MainWindow: React.FC = () => {
     e.preventDefault();
     const startX = e.clientX;
     const startW = sidebarWidth;
+    let currentW = startW;
 
     const onMouseMove = (moveEvent: MouseEvent) => {
       const delta = moveEvent.clientX - startX;
       const clamped = Math.max(180, Math.min(400, startW + delta));
+      currentW = clamped;
       setSidebarWidth(clamped);
       document.documentElement.style.setProperty('--sidew', `${clamped}px`);
     };
@@ -411,7 +413,7 @@ export const MainWindow: React.FC = () => {
     const onMouseUp = () => {
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
-      savePaneWidths(sidebarWidth, listWidth);
+      savePaneWidths(currentW, listWidth);
     };
 
     window.addEventListener('mousemove', onMouseMove);
@@ -422,10 +424,12 @@ export const MainWindow: React.FC = () => {
     e.preventDefault();
     const startX = e.clientX;
     const startW = listWidth;
+    let currentW = startW;
 
     const onMouseMove = (moveEvent: MouseEvent) => {
       const delta = moveEvent.clientX - startX;
       const clamped = Math.max(240, Math.min(500, startW + delta));
+      currentW = clamped;
       setListWidth(clamped);
       document.documentElement.style.setProperty('--listw', `${clamped}px`);
     };
@@ -433,7 +437,7 @@ export const MainWindow: React.FC = () => {
     const onMouseUp = () => {
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
-      savePaneWidths(sidebarWidth, listWidth);
+      savePaneWidths(sidebarWidth, currentW);
     };
 
     window.addEventListener('mousemove', onMouseMove);

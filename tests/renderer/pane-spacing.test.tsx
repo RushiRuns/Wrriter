@@ -88,4 +88,27 @@ describe('Pane Spacing Contract (M1/M2)', () => {
     expect(vtrigMatch).toBeTruthy();
     expect(vtrigMatch![0]).toContain('flexShrink: 0');
   });
+
+  it('ensures base .lmenu has background var(--pop) and elevation shadow to prevent transparent flyouts', () => {
+    const cssContent = readFileSync(
+      join(__dirname, '../../src/renderer/styles/components.css'),
+      'utf-8'
+    );
+    const lmenuMatch = cssContent.match(/\.lmenu\s*\{([^}]+)\}/);
+    expect(lmenuMatch).toBeTruthy();
+    expect(lmenuMatch![1]).toContain('background: var(--pop)');
+    expect(lmenuMatch![1]).toContain('box-shadow: 0 0 0 1px var(--line), var(--shadow)');
+  });
+
+  it('ensures .sin has width: 100% and box-sizing: border-box without hardcoded 247px width', () => {
+    const cssContent = readFileSync(
+      join(__dirname, '../../src/renderer/styles/components.css'),
+      'utf-8'
+    );
+    const sinMatch = cssContent.match(/\.sin\s*\{([^}]+)\}/);
+    expect(sinMatch).toBeTruthy();
+    expect(sinMatch![1]).not.toContain('width: 247px');
+    expect(sinMatch![1]).toContain('width: 100%');
+    expect(sinMatch![1]).toContain('box-sizing: border-box');
+  });
 });

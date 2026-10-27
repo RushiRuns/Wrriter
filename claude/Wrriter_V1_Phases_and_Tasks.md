@@ -315,8 +315,8 @@ Nothing that depends on a row is built until it is decided. Rows 15 to 17 are ne
 
 ### Motion built here
 
-- [ ] The typing touches: caret glide, selection fade, and the new-letter fade skipped when typing is fast. If they add any delay or dropped frames in a 1 MB note, the new-letter fade goes first and Krishna is told
-- [ ] Menus, the palette, dialogs, tooltips, the find bar slide and the single match pulse, tabs opening and closing, block lift and settle, image glides, folds, the task tick
+- [x] The typing touches: caret glide, selection fade, and the new-letter fade skipped when typing is fast. If they add any delay or dropped frames in a 1 MB note, the new-letter fade goes first and Krishna is told
+- [x] Menus, the palette, dialogs, tooltips, the find bar slide and the single match pulse, tabs opening and closing, block lift and settle, image glides, folds, the task tick
 
 **Done when**
 

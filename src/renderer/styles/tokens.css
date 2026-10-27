@@ -440,8 +440,11 @@ main.ed .tail, .ed .tail {
     transition-duration: var(--t-instant) !important;
     animation-duration: var(--t-instant) !important;
   }
-  .vmenu, .lmenu, .sm {
+  .vmenu, .lmenu, .sm, .cmd-palette, .wr-dialog, .wr-tooltip, .wr-find-bar, .tstr-tab, .wr-find-match-active, .wr-new-letter-fade {
     animation: none !important;
+  }
+  .wr-caret-glider {
+    display: none !important;
   }
 }
 
@@ -451,8 +454,18 @@ main.ed .tail, .ed .tail {
 }
 .wr[data-reduced-motion="true"] .vmenu,
 .wr[data-reduced-motion="true"] .lmenu,
-.wr[data-reduced-motion="true"] .sm {
+.wr[data-reduced-motion="true"] .sm,
+.wr[data-reduced-motion="true"] .cmd-palette,
+.wr[data-reduced-motion="true"] .wr-dialog,
+.wr[data-reduced-motion="true"] .wr-tooltip,
+.wr[data-reduced-motion="true"] .wr-find-bar,
+.wr[data-reduced-motion="true"] .tstr-tab,
+.wr[data-reduced-motion="true"] .wr-find-match-active,
+.wr[data-reduced-motion="true"] .wr-new-letter-fade {
   animation: none !important;
+}
+.wr[data-reduced-motion="true"] .wr-caret-glider {
+  display: none !important;
 }
 
 /* Hidden slow-motion switch (every duration 5x longer, development only) */

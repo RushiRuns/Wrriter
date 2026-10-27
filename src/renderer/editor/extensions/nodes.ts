@@ -238,7 +238,15 @@ export const TaskItemNode = Node.create({
           contenteditable: 'false',
           'data-task-toggle': 'true'
         },
-        ['span', { class: 'chk-tick' }]
+        [
+          'svg',
+          {
+            class: 'chk-tick-svg',
+            viewBox: '0 0 24 24',
+            'aria-hidden': 'true'
+          },
+          ['polyline', { points: '20 6 9 17 4 12' }]
+        ]
       ],
       ['div', { class: 'task-content' }, 0]
     ];

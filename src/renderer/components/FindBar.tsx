@@ -71,6 +71,7 @@ export const FindBar: React.FC<FindBarProps> = ({
     <div
       role="search"
       aria-label="Find and replace in note"
+      className="wr-find-bar"
       style={{
         position: 'absolute',
         top: 12,
@@ -85,8 +86,7 @@ export const FindBar: React.FC<FindBarProps> = ({
         flexDirection: 'column',
         gap: 6,
         minWidth: 350,
-        maxWidth: 480,
-        animation: 'lin var(--t-fast) var(--ease-arrive) both'
+        maxWidth: 480
       }}
       onKeyDown={(e) => {
         if (e.key === 'Escape') {

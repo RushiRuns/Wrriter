@@ -33,6 +33,7 @@ import { BlockDragExtension } from './extensions/block-drag';
 import { SlashMenuExtension, type SlashMenuState } from './extensions/slash-menu';
 import { SLASH_MENU_ITEMS } from './extensions/slash-menu-items';
 import { FloatingToolbarExtension, type FloatingToolbarState } from './extensions/floating-toolbar';
+import { TypingTouchesExtension } from './extensions/typing-touches';
 import { FindBar } from '../components/FindBar';
 import { SlashMenu } from '../components/SlashMenu';
 import { FloatingToolbar } from '../components/FloatingToolbar';
@@ -341,7 +342,8 @@ export const EditorHost: React.FC<EditorHostProps> = ({
         }),
         FloatingToolbarExtension.configure({
           onStateChange: (state) => setFloatingToolbarState(state)
-        })
+        }),
+        TypingTouchesExtension
       ],
       editorProps: {
         attributes: {

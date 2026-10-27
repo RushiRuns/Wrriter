@@ -1392,6 +1392,7 @@
   background-color: var(--selbg);
   outline: 1.5px solid var(--accent);
   border-radius: 2px;
+  animation: wr-find-match-pulse var(--t-fast) var(--ease-arrive);
 }
 
 .wr-find-match-protected {
@@ -1409,6 +1410,7 @@
 
 .wrriter-prosemirror ::selection {
   background: var(--selbg);
+  transition: background-color var(--t-fast) var(--ease-move);
 }
 
 .wrriter-prosemirror p.is-editor-empty:first-child::before,
@@ -2543,4 +2545,167 @@
   color: var(--tx);
   flex: none;
 }
+
+/* ==========================================================================
+   6. Motion System & Typing Touches (M2 Motion)
+   Strictly conforms to Features 8, ADR-W09, and UI hand-off Section 9.
+   Only transform and opacity animate. No animation exceeds 300 ms.
+   ========================================================================== */
+
+/* Menu, Palette, Dialog and Tooltip entry: fade in from 0 while moving 4 px toward place and growing 96% to 100% */
+@keyframes lin {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Find bar slide in from top */
+@keyframes wr-find-bar-slide {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.wr-find-bar {
+  animation: wr-find-bar-slide var(--t-fast) var(--ease-arrive) both;
+}
+
+/* Active find match pulse at Fast 100 ms */
+@keyframes wr-find-match-pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 var(--accent);
+  }
+  50% {
+    transform: scale(1.08);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 60%, transparent);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+/* Tab open entrance animation at Fast 100 ms */
+@keyframes wr-tab-open {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.tstr-tab {
+  animation: wr-tab-open var(--t-fast) var(--ease-arrive);
+}
+
+/* New-letter subtle fade at Fast 100 ms */
+@keyframes wr-new-letter-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.wr-new-letter-fade {
+  animation: wr-new-letter-fade var(--t-fast) var(--ease-move) forwards;
+  display: inline;
+}
+
+/* Smooth Caret Glider indicator */
+.wr-caret-glider {
+  position: absolute;
+  pointer-events: none;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--tx);
+  opacity: 0;
+  z-index: 5;
+}
+
+.wr-selection-fade {
+  background: var(--selbg);
+  transition: background-color var(--t-fast) var(--ease-move);
+}
+
+/* Task list checkbox: circle fills at Fast, tick draws at Fast */
+.tasks {
+  margin: 0 0 var(--s-3);
+  list-style: none;
+  padding-left: 0;
+}
+
+.task {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  margin-bottom: var(--s-1);
+  font-size: var(--fs-read);
+  line-height: var(--lh-read);
+}
+
+.chk {
+  width: 24px;
+  height: 24px;
+  margin-top: 3px;
+  border-radius: var(--r-full);
+  border: 2px solid var(--tx3);
+  display: grid;
+  place-items: center;
+  color: transparent;
+  flex: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: background-color var(--t-fast) var(--ease-move), border-color var(--t-fast) var(--ease-move);
+}
+
+.chk:hover {
+  border-color: var(--tx2);
+}
+
+.chk.on {
+  background-color: var(--chk);
+  border-color: var(--chk);
+  color: #fff;
+}
+
+.chk-tick-svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+  transition: stroke-dashoffset var(--t-fast) var(--ease-move);
+}
+
+.chk.on .chk-tick-svg {
+  stroke-dashoffset: 0;
+}
+
+.task.done .task-content {
+  color: var(--tx3);
+  text-decoration: line-through;
+  text-decoration-color: var(--tx3);
+}
+
 

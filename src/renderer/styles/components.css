@@ -1683,11 +1683,22 @@
   box-sizing: border-box;
 }
 
+/* Editor Three-Dot Menu Container (Pinned in top right corner of third pane) */
+.nmore {
+  position: absolute;
+  top: 10px;
+  right: 20px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* Editor Three-Dot Menu */
 .lmenu.ed {
   position: absolute;
-  top: calc(var(--band) + var(--s-4) + var(--ctl) - var(--s-1));
-  right: var(--s-4);
+  top: calc(100% + 4px);
+  right: 0;
   min-width: 272px;
   z-index: 50;
 }

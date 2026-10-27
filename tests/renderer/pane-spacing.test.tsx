@@ -111,4 +111,39 @@ describe('Pane Spacing Contract (M1/M2)', () => {
     expect(sinMatch![1]).toContain('width: 100%');
     expect(sinMatch![1]).toContain('box-sizing: border-box');
   });
+
+  it('ensures editor 3-dot container .nmore is pinned to top-right with 20px margin and z-index', () => {
+    const cssContent = readFileSync(
+      join(__dirname, '../../src/renderer/styles/components.css'),
+      'utf-8'
+    );
+    const nmoreMatch = cssContent.match(/\.nmore\s*\{([^}]+)\}/);
+    expect(nmoreMatch, '.nmore must be declared in components.css').toBeTruthy();
+    expect(nmoreMatch![1]).toContain('position: absolute');
+    expect(nmoreMatch![1]).toContain('top: 10px');
+    expect(nmoreMatch![1]).toContain('right: 20px');
+    expect(nmoreMatch![1]).toContain('z-index: 10');
+  });
+
+  it('ensures .lmenu.ed anchors directly under .nmore with top: calc(100% + 4px) and right: 0', () => {
+    const cssContent = readFileSync(
+      join(__dirname, '../../src/renderer/styles/components.css'),
+      'utf-8'
+    );
+    const lmenuEdMatch = cssContent.match(/\.lmenu\.ed\s*\{([^}]+)\}/);
+    expect(lmenuEdMatch, '.lmenu.ed must be declared in components.css').toBeTruthy();
+    expect(lmenuEdMatch![1]).toContain('position: absolute');
+    expect(lmenuEdMatch![1]).toContain('top: calc(100% + 4px)');
+    expect(lmenuEdMatch![1]).toContain('right: 0');
+    expect(lmenuEdMatch![1]).not.toContain('var(--band)');
+  });
+
+  it('ensures MainWindow hides editor 3-dot menu container when no note is open', () => {
+    const mainWindowSource = readFileSync(
+      join(__dirname, '../../src/renderer/windows/main/MainWindow.tsx'),
+      'utf-8'
+    );
+    expect(mainWindowSource).toContain('if (!selectedNotePath) return null;');
+    expect(mainWindowSource).toContain('if (!selectedNote) return null;');
+  });
 });

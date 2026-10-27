@@ -1358,32 +1358,35 @@ export const MainWindow: React.FC = () => {
           position: 'relative'
         }}
       >
-        {/* Editor 3-dot button in top right corner */}
+        {/* Editor 3-dot button in top right corner (pinned, hidden when no note is open) */}
         {(() => {
+          if (!selectedNotePath) return null;
           const selectedNote = notes.find((n) => n.path === selectedNotePath);
+          if (!selectedNote) return null;
           return (
             <div className="nmore">
               <button
                 type="button"
                 className="ib"
                 title="Note options"
+                aria-label="Note options"
                 onClick={() => setEditorMenuOpen((prev) => !prev)}
-                style={{ width: 32, height: 32, cursor: 'pointer', background: 'none', border: 'none' }}
+                style={{ width: 28, height: 28, cursor: 'pointer', background: 'none', border: 'none' }}
               >
                 <MoreDotsIcon />
               </button>
               <EditorMenu
                 isOpen={editorMenuOpen}
                 onClose={() => setEditorMenuOpen(false)}
-                isPinned={selectedNote?.pinned ?? false}
-                onTogglePin={() => selectedNote && void handleTogglePinNote(selectedNote)}
+                isPinned={selectedNote.pinned ?? false}
+                onTogglePin={() => void handleTogglePinNote(selectedNote)}
                 onFindInNote={() => window.dispatchEvent(new CustomEvent('wrriter:find-in-note'))}
                 onShowInExplorer={() => {
                   if (selectedNotePath && window.wrriter?.showItemInFolder) {
                     void window.wrriter.showItemInFolder(selectedNotePath);
                   }
                 }}
-                onDeleteNote={() => selectedNote && void handleDeleteNote(selectedNote)}
+                onDeleteNote={() => void handleDeleteNote(selectedNote)}
               />
             </div>
           );

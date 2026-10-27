@@ -7,7 +7,8 @@
   "license": "MIT",
   "// electron": "Pinned to 42.11.18: latest stable Electron version with matching better-sqlite3 prebuilt binary (ABI 146)",
   "scripts": {
-    "// dev": "starts in development mode (depends on the wiring decision; leave as a comment until step 4 is approved)",
+    "dev": "npm run bundle && electron .",
+    "start": "electron .",
     "typecheck": "tsc -b",
     "bundle:main": "vite build --config main.vite.config.ts",
     "bundle:workers": "vite build --config workers.vite.config.ts",

@@ -16,7 +16,8 @@ import {
   MoveToFolderIcon,
   FolderClosedIcon,
   LinkIcon,
-  ShowInExplorerIcon
+  ShowInExplorerIcon,
+  NewNoteIcon
 } from '../../components/icons';
 import { FirstRunScreen } from '../../components/FirstRunScreen';
 import { VaultMenu } from '../../components/VaultMenu';
@@ -611,6 +612,12 @@ export const MainWindow: React.FC = () => {
     setSelectedNotePath(newPath);
     setNoteTitle(defaultTitle);
     tabHistoriesRef.current.set(newPath, { stack: [newPath], index: 0 });
+
+    setTimeout(() => {
+      if (typeof document !== 'undefined') {
+        document.querySelector<HTMLElement>('.wrriter-prosemirror')?.focus();
+      }
+    }, 0);
   }, [selectedFolder, notes]);
 
   // Per-tab navigation: canGoBack and canGoForward
@@ -1261,6 +1268,18 @@ export const MainWindow: React.FC = () => {
               <SortIcon />
             </button>
           )}
+
+          {/* New Note Button (resides on the left of 3-dot icon) */}
+          <button
+            type="button"
+            className="ib"
+            onClick={handleCreateNewNote}
+            title="New note"
+            aria-label="New note"
+            style={{ width: 28, height: 28, cursor: 'pointer', background: 'none', border: 'none' }}
+          >
+            <NewNoteIcon />
+          </button>
 
           {/* 3-Dot Menu Button */}
           <div style={{ position: 'relative' }}>

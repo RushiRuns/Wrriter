@@ -203,8 +203,6 @@ export const VaultMenu: React.FC<VaultMenuProps> = ({
         ref={menuRef}
         className="vmenu"
         style={{
-          width: 260,
-          minWidth: 240,
           maxHeight: 380,
           overflowY: 'auto'
         }}

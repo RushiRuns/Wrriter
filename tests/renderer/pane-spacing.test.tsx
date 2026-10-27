@@ -57,4 +57,15 @@ describe('Pane Spacing Contract (M1/M2)', () => {
     expect(vtrigMatch![0]).toContain('<ChevronUpDownIcon');
     expect(vtrigMatch![0]).toContain('className="vn"');
   });
+
+  it('ensures VaultMenu has no fixed pixel width override and stays contained within sidebar boundaries', () => {
+    const vaultMenuSource = readFileSync(
+      join(__dirname, '../../src/renderer/components/VaultMenu.tsx'),
+      'utf-8'
+    );
+
+    // Verify fixed pixel width overrides (width: 260, minWidth: 240) are absent
+    expect(vaultMenuSource).not.toContain('width: 260');
+    expect(vaultMenuSource).not.toContain('minWidth: 240');
+  });
 });

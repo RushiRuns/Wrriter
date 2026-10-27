@@ -12,7 +12,11 @@ import {
   SortIcon,
   PinIcon,
   ChevronRightIcon,
-  SettingsIcon
+  SettingsIcon,
+  MoveToFolderIcon,
+  FolderClosedIcon,
+  LinkIcon,
+  ShowInExplorerIcon
 } from '../../components/icons';
 import { FirstRunScreen } from '../../components/FirstRunScreen';
 import { VaultMenu } from '../../components/VaultMenu';
@@ -23,7 +27,7 @@ import { NotesPaneMenu } from '../../components/NotesPaneMenu';
 import { Notice } from '../../components/Notice';
 import { EditorHost } from '../../editor/EditorHost';
 import { EditorMenu } from '../../components/menu/EditorMenu';
-import { ContextMenu } from '../../components/menu/ContextMenu';
+import { ContextMenu, type ContextMenuItem } from '../../components/menu/ContextMenu';
 import { CommandPalette } from '../../components/CommandPalette';
 import { commandRegistry, type Command } from '../../palette/command-registry';
 import { matchesShortcut } from '../../../shared/shortcuts';
@@ -38,6 +42,26 @@ import type {
 } from '../../../shared/ipc';
 
 const SettingsWindow = React.lazy(() => import('../../components/SettingsWindow'));
+
+function getNoteFolderRelPath(filePath: string): string {
+  const norm = filePath.replace(/\\/g, '/');
+  const lastSlash = norm.lastIndexOf('/');
+  return lastSlash >= 0 ? norm.slice(0, lastSlash) : '';
+}
+
+function flattenFolderNodes(nodes: readonly FolderNode[]): { name: string; relPath: string }[] {
+  const result: { name: string; relPath: string }[] = [];
+  const walk = (list: readonly FolderNode[]) => {
+    for (const node of list) {
+      result.push({ name: node.name, relPath: node.relPath });
+      if (node.children?.length) {
+        walk(node.children);
+      }
+    }
+  };
+  walk(nodes);
+  return result;
+}
 
 
 export const MainWindow: React.FC = () => {
@@ -204,16 +228,18 @@ export const MainWindow: React.FC = () => {
     const handleCloseAllMenus = (e: Event) => {
       const customEvent = e as CustomEvent<{ except?: string }>;
       if (customEvent.detail?.except !== 'editor-menu') setEditorMenuOpen(false);
-      if (customEvent.detail?.except !== 'note-context-menu') setNoteContextMenu(null);
+      if (customEvent.detail?.except !== 'note-context-menu' && customEvent.detail?.except !== 'context-menu') setNoteContextMenu(null);
       if (customEvent.detail?.except !== 'notes-pane-menu') setNotesMenuOpen(false);
       if (customEvent.detail?.except !== 'vault-menu') setVaultMenuOpen(false);
     };
 
     window.addEventListener('click', handleOutside);
+    window.addEventListener('contextmenu', handleOutside);
     window.addEventListener('keydown', handleKey);
     window.addEventListener('wrriter:close-all-menus', handleCloseAllMenus);
     return () => {
       window.removeEventListener('click', handleOutside);
+      window.removeEventListener('contextmenu', handleOutside);
       window.removeEventListener('keydown', handleKey);
       window.removeEventListener('wrriter:close-all-menus', handleCloseAllMenus);
     };
@@ -478,6 +504,64 @@ export const MainWindow: React.FC = () => {
             setNoteContent('');
           }
         }
+      }
+    }
+  };
+
+  // Copy wikilink action
+  const handleCopyWikilink = (note: NoteListItem) => {
+    setNoteContextMenu(null);
+    const wikilink = `[[${note.title}]]`;
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      void navigator.clipboard.writeText(wikilink)
+        .then(() => setNoticeMessage('Wikilink copied'))
+        .catch(() => setNoticeMessage('Wikilink copied'));
+    } else {
+      setNoticeMessage('Wikilink copied');
+    }
+  };
+
+  // Show in Explorer action
+  const handleShowInExplorer = (notePath: string) => {
+    setNoteContextMenu(null);
+    if (window.wrriter?.vault?.showInExplorer) {
+      void window.wrriter.vault.showInExplorer({ path: notePath });
+    } else if (window.wrriter?.showItemInFolder) {
+      void window.wrriter.showItemInFolder(notePath);
+    }
+  };
+
+  // Move note to folder action
+  const handleMoveNoteToFolder = async (note: NoteListItem, targetFolderRelPath: string) => {
+    setNoteContextMenu(null);
+    const normalizedPath = note.path.replace(/\\/g, '/');
+    const fileName = normalizedPath.includes('/') ? normalizedPath.slice(normalizedPath.lastIndexOf('/') + 1) : normalizedPath;
+    const newPath = targetFolderRelPath ? `${targetFolderRelPath}/${fileName}` : fileName;
+
+    if (newPath === note.path) return;
+
+    if (window.wrriter?.folder?.rename) {
+      const res = await window.wrriter.folder.rename({
+        oldPath: note.path,
+        newPath
+      });
+      if (res.ok) {
+        if (selectedNotePath === note.path) {
+          setSelectedNotePath(newPath);
+        }
+        if (tabHistoriesRef.current.has(note.path)) {
+          const hist = tabHistoriesRef.current.get(note.path)!;
+          tabHistoriesRef.current.delete(note.path);
+          tabHistoriesRef.current.set(newPath, {
+            stack: hist.stack.map((p) => (p === note.path ? newPath : p)),
+            index: hist.index
+          });
+        }
+        await refreshNotes();
+        await refreshFolders();
+        setNoticeMessage(`Moved to ${targetFolderRelPath || 'Notes'}`);
+      } else {
+        setNoticeMessage((res.error as any)?.rule || 'Failed to move note');
       }
     }
   };
@@ -1258,6 +1342,9 @@ export const MainWindow: React.FC = () => {
                         onContextMenu={(e, item) => {
                           e.preventDefault();
                           e.stopPropagation();
+                          if (selectedNotePath !== item.path) {
+                            handleSelectNote(undefined, item.path);
+                          }
                           setNoteContextMenu({ x: e.clientX, y: e.clientY, note: item });
                         }}
                       />
@@ -1284,6 +1371,9 @@ export const MainWindow: React.FC = () => {
                     onContextMenu={(e, item) => {
                       e.preventDefault();
                       e.stopPropagation();
+                      if (selectedNotePath !== item.path) {
+                        handleSelectNote(undefined, item.path);
+                      }
                       setNoteContextMenu({ x: e.clientX, y: e.clientY, note: item });
                     }}
                   />
@@ -1294,44 +1384,83 @@ export const MainWindow: React.FC = () => {
         </div>
 
         {/* Note Context Menu (Right Click on Note Row) */}
-        {noteContextMenu && (
-          <ContextMenu
-            isOpen={true}
-            x={noteContextMenu.x}
-            y={noteContextMenu.y}
-            onClose={() => setNoteContextMenu(null)}
-            items={[
-              {
-                id: 'pin',
-                label: noteContextMenu.note.pinned ? 'Unpin note' : 'Pin note',
-                icon: <PinIcon style={{ width: 14, height: 14 }} />,
-                onClick: () => void handleTogglePinNote(noteContextMenu.note)
-              },
-              {
-                id: 'dup',
-                label: 'Duplicate',
-                shortcut: 'M3',
-                isDisabled: true
-              },
-              {
-                id: 'explorer',
-                label: 'Show in File Explorer',
-                onClick: () => {
-                  if (window.wrriter?.showItemInFolder) {
-                    void window.wrriter.showItemInFolder(noteContextMenu.note.path);
-                  }
+        {noteContextMenu && (() => {
+          const currentFolder = getNoteFolderRelPath(noteContextMenu.note.path);
+          const allFolders = flattenFolderNodes(folders);
+          const moveSubmenuItems: ContextMenuItem[] = [];
+
+          if (currentFolder !== '') {
+            moveSubmenuItems.push({
+              id: 'move-root',
+              label: 'Notes (Root)',
+              icon: <FolderClosedIcon style={{ width: 14, height: 14 }} />,
+              onClick: () => void handleMoveNoteToFolder(noteContextMenu.note, '')
+            });
+          }
+
+          for (const f of allFolders) {
+            if (f.relPath !== currentFolder) {
+              moveSubmenuItems.push({
+                id: `move-folder-${f.relPath}`,
+                label: f.relPath.includes('/') ? f.relPath : f.name,
+                icon: <FolderClosedIcon style={{ width: 14, height: 14 }} />,
+                onClick: () => void handleMoveNoteToFolder(noteContextMenu.note, f.relPath)
+              });
+            }
+          }
+
+          if (moveSubmenuItems.length === 0) {
+            moveSubmenuItems.push({
+              id: 'no-folders',
+              label: 'No folders available',
+              isDisabled: true
+            });
+          }
+
+          return (
+            <ContextMenu
+              isOpen={true}
+              menuId="note-context-menu"
+              x={noteContextMenu.x}
+              y={noteContextMenu.y}
+              onClose={() => setNoteContextMenu(null)}
+              items={[
+                {
+                  id: 'pin',
+                  label: noteContextMenu.note.pinned ? 'Unpin note' : 'Pin note',
+                  icon: <PinIcon style={{ width: 14, height: 14 }} />,
+                  onClick: () => void handleTogglePinNote(noteContextMenu.note)
+                },
+                {
+                  id: 'move-to-folder',
+                  label: 'Move to folder',
+                  icon: <MoveToFolderIcon style={{ width: 14, height: 14 }} />,
+                  children: moveSubmenuItems
+                },
+                {
+                  id: 'copy-wikilink',
+                  label: 'Copy wikilink',
+                  icon: <LinkIcon style={{ width: 14, height: 14 }} />,
+                  onClick: () => handleCopyWikilink(noteContextMenu.note)
+                },
+                {
+                  id: 'explorer',
+                  label: 'Show in File Explorer',
+                  icon: <ShowInExplorerIcon style={{ width: 14, height: 14 }} />,
+                  onClick: () => handleShowInExplorer(noteContextMenu.note.path)
+                },
+                { id: 'div-danger', label: '', isDivider: true },
+                {
+                  id: 'del',
+                  label: 'Delete note',
+                  icon: <TrashTileIcon style={{ width: 14, height: 14 }} />,
+                  isDanger: true,
+                  onClick: () => void handleDeleteNote(noteContextMenu.note)
                 }
-              },
-              { id: 'div-1', label: '', isDivider: true },
-              {
-                id: 'del',
-                label: 'Delete note',
-                isDanger: true,
-                onClick: () => void handleDeleteNote(noteContextMenu.note)
-              }
-            ]}
-          />
-        )}
+              ]}
+            />
+          );
+        })()}
 
         {/* Resizer Handle for Notes List */}
         <div

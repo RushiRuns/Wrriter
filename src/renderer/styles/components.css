@@ -568,6 +568,8 @@
   box-shadow: 0 0 0 1px var(--line), var(--shadow);
   transform-origin: bottom left;
   animation: vin var(--t-fast) var(--ease-arrive) both;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 @keyframes vin {
@@ -591,14 +593,16 @@
 .vi {
   display: flex;
   align-items: center;
-  gap: var(--s-3);
+  gap: var(--s-2);
   width: 100%;
+  box-sizing: border-box;
   height: var(--ctl);
   padding: 0 var(--s-2);
   border-radius: var(--r-s);
   font-size: var(--fs-ui);
   line-height: var(--lh-ui);
   transition: box-shadow var(--t-fast) var(--ease-move);
+  overflow: hidden;
 }
 
 .vi:hover {
@@ -607,17 +611,24 @@
 
 .vi .vn {
   font-weight: var(--fw-regular);
+  flex: 1;
+  min-width: 0;
 }
 .vi[aria-checked="true"] .vn {
   font-weight: var(--fw-semi);
 }
 .vi .ic {
   color: var(--tx2);
+  flex: none;
 }
 .vi .ck {
   color: var(--tx);
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
   opacity: 0;
 }
 .vi .ck.on {

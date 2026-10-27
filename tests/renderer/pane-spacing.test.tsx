@@ -68,4 +68,24 @@ describe('Pane Spacing Contract (M1/M2)', () => {
     expect(vaultMenuSource).not.toContain('width: 260');
     expect(vaultMenuSource).not.toContain('minWidth: 240');
   });
+
+  it('ensures vmenu has overflow-x hidden to prevent horizontal scrollbars', () => {
+    const cssContent = readFileSync(
+      join(__dirname, '../../src/renderer/styles/components.css'),
+      'utf-8'
+    );
+    const vmenuMatch = cssContent.match(/\.vmenu\s*\{([^}]+)\}/);
+    expect(vmenuMatch).toBeTruthy();
+    expect(vmenuMatch![1]).toContain('overflow-x: hidden');
+  });
+
+  it('ensures vtrig icon has explicit flexShrink isolation to prevent overlapping the vault name', () => {
+    const mainWindowSource = readFileSync(
+      join(__dirname, '../../src/renderer/windows/main/MainWindow.tsx'),
+      'utf-8'
+    );
+    const vtrigMatch = mainWindowSource.match(/className="vtrig"[\s\S]*?<\/button>/);
+    expect(vtrigMatch).toBeTruthy();
+    expect(vtrigMatch![0]).toContain('flexShrink: 0');
+  });
 });

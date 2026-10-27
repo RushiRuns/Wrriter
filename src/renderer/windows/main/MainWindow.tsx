@@ -1057,7 +1057,9 @@ export const MainWindow: React.FC = () => {
               title="Vault menu"
               style={{ background: 'none', border: 'none', cursor: 'pointer' }}
             >
-              <ChevronUpDownIcon style={{ width: 14, height: 14, color: 'var(--tx3)', flex: 'none', marginRight: 'var(--s-1)' }} />
+              <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 16, height: 16, flexShrink: 0, marginRight: 'var(--s-2)' }}>
+                <ChevronUpDownIcon style={{ width: 14, height: 14, color: 'var(--tx3)' }} />
+              </span>
               <span className="vn">{activeVault?.name || 'Personal Vault'}</span>
             </button>
 

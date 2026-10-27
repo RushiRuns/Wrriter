@@ -41,4 +41,20 @@ describe('Pane Spacing Contract (M1/M2)', () => {
     expect(listMatch).toBeTruthy();
     expect(listMatch![1]).not.toContain('padding-top: var(--band)');
   });
+
+  it('ensures the sidebar bottom vault trigger (.vtrig) has no profile circle (.vc)', () => {
+    const mainWindowSource = readFileSync(
+      join(__dirname, '../../src/renderer/windows/main/MainWindow.tsx'),
+      'utf-8'
+    );
+
+    // Find the vtrig button block
+    const vtrigMatch = mainWindowSource.match(/className="vtrig"[\s\S]*?<\/button>/);
+    expect(vtrigMatch).toBeTruthy();
+    // Must NOT contain the .vc avatar circle
+    expect(vtrigMatch![0]).not.toContain('className="vc');
+    // Must contain ChevronUpDownIcon and the vault name
+    expect(vtrigMatch![0]).toContain('<ChevronUpDownIcon');
+    expect(vtrigMatch![0]).toContain('className="vn"');
+  });
 });

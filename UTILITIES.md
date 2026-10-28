@@ -238,6 +238,8 @@ Record every query here as it is written.
 | `SingleInstance` | One running copy, hand over arguments (`src/main/platform/single-instance.ts`) | M4 | Built |
 | `LoginItem` | Start with Windows, hidden (`src/main/platform/login-item.ts`) | M4 | Built |
 | `AppLifecycle` | Background persistence, tray, hotkey, and single instance coordination (`src/main/app/app-lifecycle.ts`) | M4 | Built |
+| `CaptureService` | Single quick capture and pop-out window manager, on-demand/ready modes, Inbox/ routing (`src/main/services/capture-service.ts`) | M4 | Built |
+| `CaptureWindow` | Unified small window for quick capture and pop-out notes with 120 ms entrance, 100 ms Escape fade-out, pin toggle (`src/renderer/windows/capture/CaptureWindow.tsx`) | M4 | Built |
 | `RecycleBin` | Delete to the Windows Recycle Bin (`src/main/platform/recycle-bin.ts`) | M1 | Built |
 | `ShellOpen` | Open in the default app, show in File Explorer, web links after checking | M4 | Planned |
 | `VaultProtocol` | The one app protocol serving files inside open vaults (`src/main/platform/vault-protocol.ts`) | M2 | Built |

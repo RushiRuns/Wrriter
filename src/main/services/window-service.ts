@@ -137,6 +137,9 @@ export class WindowService {
    * 3. Show window only when ready-to-show (first frame ready) with zero white flash.
    */
   async createMainWindow(): Promise<BrowserWindow> {
+    if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+      return this.mainWindow;
+    }
     this.isIdleWorkStarted = false;
     // 1. Initialize vault service and read settings, window state, and vaults
     await this.vaultService.initialize();

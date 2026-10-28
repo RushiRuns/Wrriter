@@ -43,6 +43,7 @@ import { WikilinkSuggest } from '../components/WikilinkSuggest';
 import { FloatingToolbar } from '../components/FloatingToolbar';
 import { ContextMenu } from '../components/menu/ContextMenu';
 import { TabStrip } from '../components/TabStrip';
+import { PopOutIcon } from '../components/icons';
 import { markdownToTipTapDoc, tipTapDocToMarkdown } from './markdown-converter';
 import { planSave, encodeUtf8 } from '../../shared/markdown/save';
 import { parseFrontmatter, updateFrontmatter, formatCreatedDate } from '../../shared/domain/frontmatter';
@@ -132,6 +133,8 @@ export interface EditorHostProps {
   onTabsUpdate?: (tabs: readonly TabSession[], activePath: string | null) => void;
   onNoteSummaryChange?: (summary: { path: string; title: string; preview: string; hasImage: boolean; imageSrc?: string | undefined }) => void;
   onFollowLink?: (target: string, isNewTab: boolean) => void;
+  hideTabStrip?: boolean;
+  isQuickCapture?: boolean;
 }
 
 export const EditorHost: React.FC<EditorHostProps> = ({
@@ -144,7 +147,9 @@ export const EditorHost: React.FC<EditorHostProps> = ({
   onSelectTab,
   onTabsUpdate,
   onNoteSummaryChange,
-  onFollowLink
+  onFollowLink,
+  hideTabStrip = false,
+  isQuickCapture = false
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -276,6 +281,52 @@ export const EditorHost: React.FC<EditorHostProps> = ({
     async (tab: TabSession, retryCount = 0): Promise<boolean> => {
       if (!tab.editorState) return true;
 
+      // Quick capture mode: write to Inbox/ on first content; skip write if empty
+      if (isQuickCapture) {
+        const docJson = tab.editorState.doc.toJSON();
+        const currentMarkdown = tipTapDocToMarkdown(docJson as any);
+        if (!currentMarkdown.trim() && !tab.path) {
+          tab.isDirty = false;
+          setIsSaving(false);
+          return true;
+        }
+
+        if (window.wrriter?.capture?.saveQuickNote) {
+          setIsSaving(true);
+          const res = await window.wrriter.capture.saveQuickNote({
+            text: currentMarkdown,
+            path: tab.path || undefined
+          });
+          if (res.ok && res.value.written) {
+            const oldPath = tab.path;
+            const newPath = res.value.path;
+            const updatedTab: TabSession = {
+              ...tab,
+              path: newPath,
+              title: res.value.title,
+              originalBytes: encodeUtf8(currentMarkdown),
+              lastSavedText: currentMarkdown,
+              isDirty: false
+            };
+            setIsSaving(false);
+
+            if (oldPath !== newPath) {
+              tabsRef.current.delete(oldPath);
+              tabsRef.current.set(newPath, updatedTab);
+              activePathRef.current = newPath;
+              setActiveTabPath(newPath);
+              onPathChangeRef.current?.(oldPath, newPath);
+              onTitleChangeRef.current?.(res.value.title);
+            } else {
+              tabsRef.current.set(newPath, updatedTab);
+            }
+            return true;
+          }
+        }
+        setIsSaving(false);
+        return false;
+      }
+
       // Broken frontmatter: SCHEMA.md mandates file is left untouched
       if (tab.isBrokenFrontmatter) {
         return true;
@@ -355,7 +406,7 @@ export const EditorHost: React.FC<EditorHostProps> = ({
 
       return true;
     },
-    []
+    [isQuickCapture]
   );
 
   // Checks and executes title-based file rename on leaving note
@@ -768,16 +819,17 @@ export const EditorHost: React.FC<EditorHostProps> = ({
       },
       onUpdate({ editor: currentEditor }) {
         const currentPath = activePathRef.current;
-        if (!currentPath) return;
+        if (currentPath === null && !isQuickCapture) return;
 
-        const tab = tabsRef.current.get(currentPath);
+        const lookupKey = currentPath ?? '';
+        const tab = tabsRef.current.get(lookupKey);
         if (tab) {
           tab.editorState = currentEditor.state;
           tab.isDirty = true;
 
           // Live title update
           const firstLine = currentEditor.state.doc.firstChild?.textContent ?? '';
-          const currentTitle = extractTitleFromFirstLine(firstLine) || tab.title;
+          const currentTitle = extractTitleFromFirstLine(firstLine) || (isQuickCapture ? 'Quick note' : tab.title);
           if (currentTitle !== tab.title) {
             tab.title = currentTitle;
             flushSync(() => {
@@ -806,6 +858,24 @@ export const EditorHost: React.FC<EditorHostProps> = ({
 
     editorRef.current = editor;
 
+    if (isQuickCapture) {
+      const initialTab: TabSession = {
+        path: '',
+        title: 'Quick note',
+        editorState: editor.state,
+        scrollTop: 0,
+        isDirty: false,
+        originalBytes: new Uint8Array(0),
+        initialFileName: '',
+        initialTitle: 'Quick note'
+      };
+      tabsRef.current.set('', initialTab);
+      setActiveTabPath('');
+      activePathRef.current = '';
+      editor.commands.setContent('');
+      editor.commands.focus('start');
+    }
+
     // Flush saves on window unload / quit
     const handleBeforeUnload = () => {
       for (const tab of tabsRef.current.values()) {
@@ -824,12 +894,12 @@ export const EditorHost: React.FC<EditorHostProps> = ({
       editor.destroy();
       editorRef.current = null;
     };
-  }, [saveTabSession, notifyTabs]);
+  }, [saveTabSession, notifyTabs, isQuickCapture]);
 
   // Handle activeNotePath changes (load, switch tabs, save previous)
   useEffect(() => {
     const editor = editorRef.current;
-    if (!editor || !activeNotePath) return;
+    if (!editor || !activeNotePath || isQuickCapture) return;
 
     const switchNote = async () => {
       const prevPath = activeTabPath;
@@ -1789,24 +1859,34 @@ export const EditorHost: React.FC<EditorHostProps> = ({
                   void window.wrriter.showItemInFolder(tabContextMenu.tabPath);
                 }
               }
+            },
+            {
+              id: 'pop-out',
+              label: 'Pop out',
+              icon: <PopOutIcon style={{ width: 14, height: 14 }} />,
+              onClick: () => {
+                void window.wrriter?.capture?.openPopOut({ path: tabContextMenu.tabPath });
+              }
             }
           ]}
         />
       )}
 
       {/* 32px TabStrip along the bottom of the editor pane */}
-      <TabStrip
-        tabs={tabsList.map((t) => ({ path: t.path, title: t.title }))}
-        activeTabPath={activeTabPath}
-        onSelectTab={handleSelectTab}
-        onCloseTab={(path) => void handleCloseTab(null, path)}
-        onNewTab={() => window.dispatchEvent(new CustomEvent('wrriter:new-note'))}
-        onReorderTabs={handleReorderTabs}
-        onContextMenu={(e, tabPath) => setTabContextMenu({ x: e.clientX, y: e.clientY, tabPath })}
-        savedState={isSaving ? 'saving' : 'saved'}
-        wordCount={wordCount}
-        charCount={charCount}
-      />
+      {!hideTabStrip && (
+        <TabStrip
+          tabs={tabsList.map((t) => ({ path: t.path, title: t.title }))}
+          activeTabPath={activeTabPath}
+          onSelectTab={handleSelectTab}
+          onCloseTab={(path) => void handleCloseTab(null, path)}
+          onNewTab={() => window.dispatchEvent(new CustomEvent('wrriter:new-note'))}
+          onReorderTabs={handleReorderTabs}
+          onContextMenu={(e, tabPath) => setTabContextMenu({ x: e.clientX, y: e.clientY, tabPath })}
+          savedState={isSaving ? 'saving' : 'saved'}
+          wordCount={wordCount}
+          charCount={charCount}
+        />
+      )}
       {/* Add Tag Dialog */}
       <Dialog
         isOpen={isAddTagOpen}

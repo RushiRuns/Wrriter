@@ -123,3 +123,30 @@ export function isAttachmentsFolder(relativePath: string): boolean {
   const normalized = relativePath.replace(/\\/g, '/').toLowerCase();
   return normalized === 'attachments' || normalized.startsWith('attachments/');
 }
+
+/**
+ * Generates canonical quick note title: "Quick note YYYY-MM-DD HH.mm"
+ * Features 3: uses dot instead of colon to ensure valid Windows file names.
+ */
+export function formatQuickNoteTitle(d: Date = new Date()): string {
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const min = String(d.getMinutes()).padStart(2, '0');
+  return `Quick note ${yyyy}-${mm}-${dd} ${hh}.${min}`;
+}
+
+/**
+ * Generates canonical pasted image file name: "Pasted image YYYYMMDD-HHmmss.png"
+ * Features 5: standard naming for pasted screenshots and images.
+ */
+export function formatPastedImageName(d: Date = new Date()): string {
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const min = String(d.getMinutes()).padStart(2, '0');
+  const ss = String(d.getSeconds()).padStart(2, '0');
+  return `Pasted image ${yyyy}${mm}${dd}-${hh}${min}${ss}.png`;
+}

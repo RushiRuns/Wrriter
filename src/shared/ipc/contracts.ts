@@ -253,6 +253,42 @@ export interface HotkeyStatusResult {
   readonly error?: string | undefined;
 }
 
+// 5b. capture.*
+export type OpenQuickCaptureArgs = Record<string, never>;
+
+export interface OpenPopOutArgs {
+  readonly path: string;
+}
+
+export interface OpenInMainWindowArgs {
+  readonly path: string;
+}
+
+export interface SetAlwaysOnTopArgs {
+  readonly alwaysOnTop: boolean;
+}
+
+export type GetCaptureStateArgs = Record<string, never>;
+
+export interface CaptureStateResult {
+  readonly mode: 'quick-capture' | 'pop-out';
+  readonly path?: string | undefined;
+  readonly isAlwaysOnTop: boolean;
+  readonly title?: string | undefined;
+  readonly activeVaultName?: string | undefined;
+}
+
+export interface SaveQuickNoteArgs {
+  readonly text: string;
+  readonly path?: string | undefined;
+}
+
+export interface SaveQuickNoteResult {
+  readonly path: string;
+  readonly title: string;
+  readonly written: boolean;
+}
+
 // 6. index.*
 export interface IndexGetNotesArgs {
   readonly folder?: string | undefined;
@@ -371,6 +407,12 @@ export interface IpcChannelTable {
   'app.saveSettings': { args: SaveSettingsArgs; result: AppSettingsContract };
   'app.getHotkeyStatus': { args: GetHotkeyStatusArgs; result: HotkeyStatusResult };
   'app.openLogFolder': { args: OpenLogFolderArgs; result: void };
+  'capture.openQuickCapture': { args: OpenQuickCaptureArgs; result: void };
+  'capture.openPopOut': { args: OpenPopOutArgs; result: void };
+  'capture.openInMainWindow': { args: OpenInMainWindowArgs; result: void };
+  'capture.setAlwaysOnTop': { args: SetAlwaysOnTopArgs; result: void };
+  'capture.getCaptureState': { args: GetCaptureStateArgs; result: CaptureStateResult };
+  'capture.saveQuickNote': { args: SaveQuickNoteArgs; result: SaveQuickNoteResult };
   'index.getNotes': { args: IndexGetNotesArgs; result: readonly NoteListItem[] };
   'index.getFolderCounts': { args: IndexGetFolderCountsArgs; result: readonly IndexFolderCount[] };
   'index.getTitleList': { args: IndexGetTitleListArgs; result: readonly IndexTitleItem[] };
@@ -629,6 +671,39 @@ export const IPC_VALIDATORS: { readonly [K in IpcChannel]: Validator<IpcChannelT
   },
 
   'app.openLogFolder': validateEmptyArgs,
+
+  'capture.openQuickCapture': validateEmptyArgs,
+
+  'capture.openPopOut': (input: unknown): Result<OpenPopOutArgs> => {
+    if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });
+    const path = validateNonEmptyString('path', input['path']);
+    if (!path.ok) return path;
+    return ok({ path: path.value });
+  },
+
+  'capture.openInMainWindow': (input: unknown): Result<OpenInMainWindowArgs> => {
+    if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });
+    const path = validateNonEmptyString('path', input['path']);
+    if (!path.ok) return path;
+    return ok({ path: path.value });
+  },
+
+  'capture.setAlwaysOnTop': (input: unknown): Result<SetAlwaysOnTopArgs> => {
+    if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });
+    const alwaysOnTop = validateBoolean('alwaysOnTop', input['alwaysOnTop']);
+    if (!alwaysOnTop.ok) return alwaysOnTop;
+    return ok({ alwaysOnTop: alwaysOnTop.value });
+  },
+
+  'capture.getCaptureState': validateEmptyArgs,
+
+  'capture.saveQuickNote': (input: unknown): Result<SaveQuickNoteArgs> => {
+    if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });
+    const text = validateString('text', input['text']);
+    if (!text.ok) return text;
+    const path = typeof input['path'] === 'string' && input['path'].trim() ? input['path'].trim() : undefined;
+    return ok({ text: text.value, path });
+  },
 
   'index.getNotes': (input: unknown): Result<IndexGetNotesArgs> => {
     if (!isObject(input)) return ok({});

@@ -15,6 +15,7 @@ import { IndexClient } from './services/index-client';
 import { registerVaultProtocolPrivileges, setupVaultProtocolHandler } from './platform/vault-protocol';
 import { SingleInstanceAdapter } from './platform/single-instance';
 import { AppLifecycle } from './app/app-lifecycle';
+import { CaptureService } from './services/capture-service';
 
 // 1. Single-instance lock taken first at startup (ARCHITECTURE.md rule 19)
 const singleInstance = new SingleInstanceAdapter();
@@ -76,10 +77,21 @@ const windowService = new WindowService({
   htmlPath: join(__dirname, '../renderer/windows/main/index.html')
 });
 
+const captureService = new CaptureService({
+  appDataStore,
+  safeWriter,
+  vaultService,
+  windowService,
+  ipcRouter
+});
+
 const appLifecycle = new AppLifecycle({
   appDataStore,
   windowService,
-  singleInstanceAdapter: singleInstance
+  singleInstanceAdapter: singleInstance,
+  onTriggerQuickNote: () => {
+    void captureService.openQuickCapture();
+  }
 });
 
 windowService.setOnSaveSettings((patch) => appLifecycle.handleSaveSettings(patch));
@@ -94,11 +106,13 @@ app.whenReady().then(async () => {
   ipcRouter.initialize();
   setupVaultProtocolHandler(vaultService);
 
-  const isHiddenStartup = process.argv.includes('--hidden');
+  const isQuickNoteStartup = process.argv.includes('--quick-note');
+  const isHiddenStartup = process.argv.includes('--hidden') || isQuickNoteStartup;
+
   await appLifecycle.initialize({ isHiddenStartup });
 
-  if (process.argv.includes('--quick-note')) {
-    appLifecycle.triggerQuickNote();
+  if (isQuickNoteStartup) {
+    await captureService.openQuickCapture();
   }
 
   app.on('activate', async () => {
@@ -107,6 +121,9 @@ app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => {
+  if (captureService.getQuickCaptureWindow() || captureService.getPopOutWindows().length > 0) {
+    return;
+  }
   if (!appLifecycle.shouldKeepRunningInBackground()) {
     app.quit();
   }

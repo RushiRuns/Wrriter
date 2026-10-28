@@ -111,6 +111,14 @@ export interface WrriterApi {
   readonly tag: {
     rename(args: import('./contracts').TagRenameArgs): Promise<Result<import('./contracts').TagRenameResult>>;
   };
+  readonly capture: {
+    openQuickCapture(): Promise<Result<void>>;
+    openPopOut(args: import('./contracts').OpenPopOutArgs): Promise<Result<void>>;
+    openInMainWindow(args: import('./contracts').OpenInMainWindowArgs): Promise<Result<void>>;
+    setAlwaysOnTop(args: import('./contracts').SetAlwaysOnTopArgs): Promise<Result<void>>;
+    getCaptureState(): Promise<Result<import('./contracts').CaptureStateResult>>;
+    saveQuickNote(args: import('./contracts').SaveQuickNoteArgs): Promise<Result<import('./contracts').SaveQuickNoteResult>>;
+  };
   readonly showItemInFolder?: (path: string) => Promise<Result<void>>;
   readonly invoke: <K extends IpcChannel>(
     channel: K,

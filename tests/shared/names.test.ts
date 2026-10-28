@@ -7,6 +7,8 @@ import {
   areNamesEqualCaseInsensitive,
   isIgnoredDotPath,
   isAttachmentsFolder,
+  formatQuickNoteTitle,
+  formatPastedImageName,
   MAX_FILE_NAME_LENGTH
 } from '../../src/shared/domain/names';
 
@@ -73,5 +75,19 @@ describe('Domain: Windows File and Folder Names', () => {
     expect(isAttachmentsFolder('attachments')).toBe(true);
     expect(isAttachmentsFolder('attachments/image.png')).toBe(true);
     expect(isAttachmentsFolder('Personal/Notes')).toBe(false);
+  });
+
+  it('generates Windows-safe quick note title with dot instead of colon', () => {
+    const fixedDate = new Date(2026, 9, 28, 14, 30); // 2026-10-28 14:30
+    const title = formatQuickNoteTitle(fixedDate);
+    expect(title).toBe('Quick note 2026-10-28 14.30');
+    expect(isValidFileName(`${title}.md`)).toBe(true);
+  });
+
+  it('generates timestamped pasted image name', () => {
+    const fixedDate = new Date(2026, 9, 28, 14, 30, 45);
+    const img = formatPastedImageName(fixedDate);
+    expect(img).toBe('Pasted image 20261028-143045.png');
+    expect(isValidFileName(img)).toBe(true);
   });
 });

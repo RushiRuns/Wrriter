@@ -1,4 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
+
+declare const window: any;
+
 import type {
   CreateFolderArgs,
   CreateVaultArgs,
@@ -98,9 +101,29 @@ const api: WrriterApi = {
   tag: {
     rename: (args) => invoke('tag.rename', args)
   },
+  capture: {
+    openQuickCapture: () => invoke('capture.openQuickCapture', {}),
+    openPopOut: (args) => invoke('capture.openPopOut', args),
+    openInMainWindow: (args) => invoke('capture.openInMainWindow', args),
+    setAlwaysOnTop: (args) => invoke('capture.setAlwaysOnTop', args),
+    getCaptureState: () => invoke('capture.getCaptureState', {}),
+    saveQuickNote: (args) => invoke('capture.saveQuickNote', args)
+  },
   showItemInFolder: (path: string) => invoke('vault.showInExplorer', { path }),
   invoke
 };
+
+ipcRenderer.on('capture:re-enter', () => {
+  window.dispatchEvent(new CustomEvent('wrriter:capture-reenter'));
+});
+
+ipcRenderer.on('note:opened-in-main', (_event, data) => {
+  window.dispatchEvent(new CustomEvent('wrriter:note-opened-in-main', { detail: data }));
+});
+
+ipcRenderer.on('note:saved', (_event, data) => {
+  window.dispatchEvent(new CustomEvent('wrriter:note-saved', { detail: data }));
+});
 
 contextBridge.exposeInMainWorld('wrriter', api);
 

@@ -38,8 +38,34 @@ export function getFolderFromPath(filePath: string): string {
  * Returns score > 0 for a match, 0 for no match.
  * Zero-allocation design for ultra-high-throughput scanning across 50,000 notes.
  */
-export function scoreTitleMatch(cleanQuery: string, title: string): number {
+export function scoreTitleMatch(
+  cleanQuery: string,
+  title: string,
+  skipSubsequence = false,
+  requiredChars?: readonly string[],
+  requiredUpper?: readonly string[]
+): number {
   if (!cleanQuery) return 1;
+
+  const queryLen = cleanQuery.length;
+  const titleLen = title.length;
+
+  // Fast rejection: Every non-space character of cleanQuery MUST be present in title
+  if (requiredChars && requiredUpper) {
+    for (let i = 0; i < requiredChars.length; i++) {
+      if (title.indexOf(requiredChars[i]!) === -1 && title.indexOf(requiredUpper[i]!) === -1) {
+        return 0;
+      }
+    }
+  } else {
+    for (let i = 0; i < queryLen; i++) {
+      const ch = cleanQuery[i]!;
+      if (ch === ' ') continue;
+      if (title.indexOf(ch) === -1 && title.indexOf(ch.toUpperCase()) === -1) {
+        return 0;
+      }
+    }
+  }
 
   const titleLower = title.toLowerCase();
 
@@ -50,8 +76,6 @@ export function scoreTitleMatch(cleanQuery: string, title: string): number {
 
   // Fast path: V8 SIMD-accelerated substring search
   const subIdx = titleLower.indexOf(cleanQuery);
-  const queryLen = cleanQuery.length;
-  const titleLen = titleLower.length;
 
   if (subIdx === 0) {
     // 2. Starts with query (prefix)
@@ -87,7 +111,7 @@ export function scoreTitleMatch(cleanQuery: string, title: string): number {
 
       if (isAlpha) {
         if (!inWord) {
-          if (titleLower[i] === cleanQuery[qIdx]) {
+          if (code === cleanQuery.charCodeAt(qIdx)) {
             qIdx++;
           }
           inWord = true;
@@ -103,9 +127,13 @@ export function scoreTitleMatch(cleanQuery: string, title: string): number {
   }
 
   // 6. Subsequence fuzzy match (all query characters appear in title in order)
+  if (skipSubsequence) {
+    return 0;
+  }
+
   let qIdx = 0;
   for (let i = 0; i < titleLen && qIdx < queryLen; i++) {
-    if (titleLower[i] === cleanQuery[qIdx]) {
+    if (titleLower.charCodeAt(i) === cleanQuery.charCodeAt(qIdx)) {
       qIdx++;
     }
   }
@@ -148,24 +176,65 @@ export function matchQuickSwitcher(
     }));
   }
 
-  // 2. Query non-empty: scan in memory and score without string manipulation
-  const matches: InternalMatch[] = [];
-
-  for (let i = 0; i < items.length; i++) {
-    const note = items[i]!;
-    const score = scoreTitleMatch(cleanQuery, note.title);
-    if (score > 0) {
-      matches.push({ note, score });
+  // 2. Query non-empty: scan in memory and score into tiered buckets for sub-30ms performance on 50,000 notes
+  const requiredChars: string[] = [];
+  const requiredUpper: string[] = [];
+  for (let c = 0; c < cleanQuery.length; c++) {
+    const ch = cleanQuery[c]!;
+    if (ch !== ' ') {
+      requiredChars.push(ch);
+      requiredUpper.push(ch.toUpperCase());
     }
   }
 
-  // 3. Sort matches: score descending, then modified time descending
-  matches.sort((a, b) => {
-    if (b.score !== a.score) {
-      return b.score - a.score;
+  const tier1: InternalMatch[] = []; // >= 5000 (exact, prefix)
+  const tier2: InternalMatch[] = []; // >= 3000 (word boundary)
+  const tier3: InternalMatch[] = []; // >= 2000 (substring)
+  const tier4: InternalMatch[] = []; // < 2000 (fuzzy, acronym)
+
+  let skipSubsequence = false;
+  for (let i = 0; i < items.length; i++) {
+    const note = items[i]!;
+    const score = scoreTitleMatch(cleanQuery, note.title, skipSubsequence, requiredChars, requiredUpper);
+    if (score >= 5000) {
+      tier1.push({ note, score });
+      if (tier1.length >= limit) {
+        skipSubsequence = true;
+      }
+    } else if (score >= 3000) {
+      tier2.push({ note, score });
+    } else if (score >= 2000) {
+      tier3.push({ note, score });
+    } else if (score > 0) {
+      tier4.push({ note, score });
     }
-    return b.note.mtime_ms - a.note.mtime_ms;
-  });
+  }
+
+  const sortTier = (arr: InternalMatch[]) => {
+    arr.sort((a, b) => {
+      if (b.score !== a.score) {
+        return b.score - a.score;
+      }
+      return b.note.mtime_ms - a.note.mtime_ms;
+    });
+  };
+
+  const matches: InternalMatch[] = [];
+  sortTier(tier1);
+  matches.push(...tier1);
+
+  if (matches.length < limit && tier2.length > 0) {
+    sortTier(tier2);
+    matches.push(...tier2);
+  }
+  if (matches.length < limit && tier3.length > 0) {
+    sortTier(tier3);
+    matches.push(...tier3);
+  }
+  if (matches.length < limit && tier4.length > 0) {
+    sortTier(tier4);
+    matches.push(...tier4);
+  }
 
   const sliced = matches.slice(0, limit);
 

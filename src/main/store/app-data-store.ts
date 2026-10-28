@@ -67,6 +67,20 @@ export const DEFAULT_WINDOW_STATE: WindowState = {
   listWidth: 320
 };
 
+export interface CaptureWindowState {
+  x?: number;
+  y?: number;
+  width: number;
+  height: number;
+  isAlwaysOnTop: boolean;
+}
+
+export const DEFAULT_CAPTURE_WINDOW_STATE: CaptureWindowState = {
+  width: 520,
+  height: 400,
+  isAlwaysOnTop: true
+};
+
 export interface FirstPaintState {
   openTabs: string[];
   activeTabPath: string | null;
@@ -157,6 +171,32 @@ export class AppDataStore {
     await fs.promises.mkdir(this.appDataDir, { recursive: true });
     const payload = JSON.stringify({ version: 1, windowState: state }, null, 2);
     const res = await this.safeWriter.write(this.appDataDir, 'window-state.json', payload);
+    if (!res.ok) return res;
+    return ok(undefined);
+  }
+
+  // --- Capture Window State ---
+  async getCaptureWindowState(): Promise<CaptureWindowState> {
+    const file = path.join(this.appDataDir, 'capture-window-state.json');
+    try {
+      if (!fs.existsSync(file)) {
+        return { ...DEFAULT_CAPTURE_WINDOW_STATE };
+      }
+      const data = await fs.promises.readFile(file, 'utf8');
+      const parsed = JSON.parse(data);
+      return {
+        ...DEFAULT_CAPTURE_WINDOW_STATE,
+        ...(parsed.captureWindowState ?? parsed ?? {})
+      };
+    } catch {
+      return { ...DEFAULT_CAPTURE_WINDOW_STATE };
+    }
+  }
+
+  async saveCaptureWindowState(state: CaptureWindowState): Promise<Result<void>> {
+    await fs.promises.mkdir(this.appDataDir, { recursive: true });
+    const payload = JSON.stringify({ version: 1, captureWindowState: state }, null, 2);
+    const res = await this.safeWriter.write(this.appDataDir, 'capture-window-state.json', payload);
     if (!res.ok) return res;
     return ok(undefined);
   }

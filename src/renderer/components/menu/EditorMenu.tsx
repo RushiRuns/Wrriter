@@ -17,6 +17,7 @@ export interface EditorMenuProps {
   onShowInExplorer: () => void;
   onDeleteNote: () => void;
   onDuplicateNote?: () => void;
+  onPopOut?: () => void;
 }
 
 export const EditorMenu: React.FC<EditorMenuProps> = ({
@@ -27,7 +28,8 @@ export const EditorMenu: React.FC<EditorMenuProps> = ({
   onFindInNote,
   onShowInExplorer,
   onDeleteNote,
-  onDuplicateNote
+  onDuplicateNote,
+  onPopOut
 }) => {
   const menuRef = useRef<HTMLUListElement | null>(null);
 
@@ -114,16 +116,21 @@ export const EditorMenu: React.FC<EditorMenuProps> = ({
         <span style={{ marginLeft: 'auto', fontSize: 'var(--fs-small)', color: 'var(--tx3)' }}>Ctrl+F</span>
       </li>
 
-      {/* 4. Pop out (works from M4) */}
+      {/* 4. Pop out */}
       <li
-        className="vi disabled"
+        className={`vi ${!onPopOut ? 'disabled' : ''}`}
         role="menuitem"
-        aria-disabled="true"
-        style={{ cursor: 'default', opacity: 0.5 }}
+        aria-disabled={!onPopOut}
+        onClick={() => {
+          if (onPopOut) {
+            onClose();
+            onPopOut();
+          }
+        }}
+        style={{ cursor: onPopOut ? 'pointer' : 'default', opacity: onPopOut ? 1 : 0.5 }}
       >
         <PopOutIcon />
         <span className="vn">Pop out</span>
-        <span style={{ marginLeft: 'auto', fontSize: 'var(--fs-small)', color: 'var(--tx3)' }}>M4</span>
       </li>
 
       {/* 5. Show in File Explorer */}

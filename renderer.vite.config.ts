@@ -9,7 +9,8 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       input: {
-        main: resolve(__dirname, 'src/renderer/windows/main/index.html')
+        main: resolve(__dirname, 'src/renderer/windows/main/index.html'),
+        capture: resolve(__dirname, 'src/renderer/windows/capture/index.html')
       }
     }
   },

@@ -18,7 +18,8 @@ import {
   LinkIcon,
   ShowInExplorerIcon,
   NewNoteIcon,
-  DuplicateIcon
+  DuplicateIcon,
+  PopOutIcon
 } from '../../components/icons';
 import { FirstRunScreen } from '../../components/FirstRunScreen';
 import { VaultMenu } from '../../components/VaultMenu';
@@ -721,6 +722,14 @@ export const MainWindow: React.FC = () => {
     }
   }, [selectedNotePath, refreshNotes]);
 
+  // Pop-out note action (M4 Quick capture & pop-out)
+  const handlePopOutNote = useCallback((noteRelPath: string) => {
+    setNoteContextMenu(null);
+    if (window.wrriter?.capture?.openPopOut) {
+      void window.wrriter.capture.openPopOut({ path: noteRelPath });
+    }
+  }, []);
+
   // Create new note action (Ctrl+N, Compose button, tab plus)
   const handleCreateNewNote = useCallback(() => {
     const folder = selectedFolder;
@@ -835,6 +844,26 @@ export const MainWindow: React.FC = () => {
     },
     [selectedNotePath, notes]
   );
+
+  // Handle external open in main window & note saved cross-window sync
+  useEffect(() => {
+    const handleOpenedInMain = (e: Event) => {
+      const detail = (e as CustomEvent<{ path: string }>).detail;
+      if (detail?.path) {
+        handleSelectNote(undefined, detail.path);
+      }
+    };
+    const handleNoteSaved = () => {
+      void refreshNotes();
+    };
+
+    window.addEventListener('wrriter:note-opened-in-main', handleOpenedInMain);
+    window.addEventListener('wrriter:note-saved', handleNoteSaved);
+    return () => {
+      window.removeEventListener('wrriter:note-opened-in-main', handleOpenedInMain);
+      window.removeEventListener('wrriter:note-saved', handleNoteSaved);
+    };
+  }, [handleSelectNote, refreshNotes]);
 
   // Duplicate note action
   const handleDuplicateNote = useCallback(
@@ -1062,6 +1091,17 @@ export const MainWindow: React.FC = () => {
         run: () => {
           if (selectedNotePath) {
             void handleDuplicateNote(selectedNotePath);
+          }
+        }
+      },
+      {
+        id: 'wrriter:pop-out-note',
+        title: 'Pop out note',
+        category: 'File',
+        keywords: ['popout', 'detach', 'window', 'separate', 'float'],
+        run: () => {
+          if (selectedNotePathRef.current) {
+            handlePopOutNote(selectedNotePathRef.current);
           }
         }
       },
@@ -1296,6 +1336,9 @@ export const MainWindow: React.FC = () => {
     if (activeTile === 'search') {
       return 'Search';
     }
+    if (activeTile === 'inbox' || selectedFolder === 'Inbox') {
+      return 'Inbox';
+    }
     if (!selectedFolder) return 'Notes';
     const parts = selectedFolder.split('/');
     return parts[parts.length - 1] || 'Notes';
@@ -1361,7 +1404,12 @@ export const MainWindow: React.FC = () => {
             <button
               type="button"
               className={`tile ${activeTile === 'inbox' ? 'on' : ''}`}
-              onClick={() => setActiveTile('inbox')}
+              onClick={() => {
+                setActiveTile('inbox');
+                setSelectedFolder('Inbox');
+                setSelectedTag(null);
+                void refreshNotes('Inbox', sortBy, null);
+              }}
               title="Inbox"
             >
               <InboxTileIcon />
@@ -1797,6 +1845,12 @@ export const MainWindow: React.FC = () => {
                   icon: <ShowInExplorerIcon style={{ width: 14, height: 14 }} />,
                   onClick: () => handleShowInExplorer(noteContextMenu.note.path)
                 },
+                {
+                  id: 'pop-out',
+                  label: 'Pop out',
+                  icon: <PopOutIcon style={{ width: 14, height: 14 }} />,
+                  onClick: () => handlePopOutNote(noteContextMenu.note.path)
+                },
                 { id: 'div-danger', label: '', isDivider: true },
                 {
                   id: 'del',
@@ -1858,6 +1912,7 @@ export const MainWindow: React.FC = () => {
                 isPinned={selectedNote.pinned ?? false}
                 onTogglePin={() => void handleTogglePinNote(selectedNote)}
                 onFindInNote={() => window.dispatchEvent(new CustomEvent('wrriter:find-in-note'))}
+                onPopOut={() => handlePopOutNote(selectedNote.path)}
                 onShowInExplorer={() => {
                   if (selectedNotePath && window.wrriter?.showItemInFolder) {
                     void window.wrriter.showItemInFolder(selectedNotePath);

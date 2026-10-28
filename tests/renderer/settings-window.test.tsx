@@ -108,7 +108,7 @@ describe('M2 Settings: SettingsWindow and Theme Transitions', () => {
 
       expect(html).toContain('Keep running in the background');
       expect(html).toContain('Start with Windows');
-      expect(html).toContain('Takes effect in M4');
+      expect(html).toContain('Quick capture global shortcut');
       expect(html).toContain('Windows notification area');
     });
 

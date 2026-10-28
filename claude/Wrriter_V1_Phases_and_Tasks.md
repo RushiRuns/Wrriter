@@ -430,15 +430,15 @@ Nothing that depends on a row is built until it is decided. Rows 15 to 17 are ne
 
 ### Quick capture and pop-out (not drawn in the mockup, shown to Krishna)
 
-- [ ] One small window for both jobs, with the same editor: small by default, resizable, its size and place remembered, following the theme and accent, on top by default with a pin toggle
-- [ ] The top strip holds the pin toggle, open in main window and close. Whether it hides until the cursor reaches it waits on open item 16
-- [ ] Quick capture: a blank note with a live cursor, no file until something is typed, saved into `Inbox/` (made at the first capture, an existing one used as it is, made again if deleted), named `Quick note YYYY-MM-DD HH.mm` when the first line is empty. Escape closes. Every capture is a fresh note. One capture window at a time, and the hotkey brings it forward. Open in main window moves the note to a tab
-- [ ] A capture goes to the last active vault, or to a fixed vault chosen in settings
-- [ ] Two approaches built and measured, a hidden window kept ready and a window made on demand: hotkey to cursor with and without the 120 ms entrance, and idle memory with and without the index worker kept alive. Krishna picks
-- [ ] Entrance: a fade and a 6 px rise over 120 ms, the cursor live from the first frame, skipped if the first frame is late. Escape fades out at Fast, and the hotkey during that fade brings it back
-- [ ] Pop-out from the note right-click menu, the tab right-click menu and the palette. Any number, one note each. The same note stays in step across windows through small changes. A pop-out survives closing the main window, does not reopen after a restart, and shows the same notice when its note is deleted or renamed outside Wrriter
-- [ ] The Inbox tile shows the Inbox folder
-- [ ] The Quick Note start flag: Wrriter starts showing only the small window. The installer makes the Start menu shortcut in M5. Its start time to a typing cursor is measured and reported, with no number promised
+- [x] One small window for both jobs, with the same editor: small by default, resizable, its size and place remembered, following the theme and accent, on top by default with a pin toggle
+- [x] The top strip holds the pin toggle, open in main window and close. Whether it hides until the cursor reaches it waits on open item 16
+- [x] Quick capture: a blank note with a live cursor, no file until something is typed, saved into `Inbox/` (made at the first capture, an existing one used as it is, made again if deleted), named `Quick note YYYY-MM-DD HH.mm` when the first line is empty. Escape closes. Every capture is a fresh note. One capture window at a time, and the hotkey brings it forward. Open in main window moves the note to a tab
+- [x] A capture goes to the last active vault, or to a fixed vault chosen in settings
+- [x] Two approaches built and measured, a hidden window kept ready and a window made on demand: hotkey to cursor with and without the 120 ms entrance, and idle memory with and without the index worker kept alive. Krishna picks
+- [x] Entrance: a fade and a 6 px rise over 120 ms, the cursor live from the first frame, skipped if the first frame is late. Escape fades out at Fast, and the hotkey during that fade brings it back
+- [x] Pop-out from the note right-click menu, the tab right-click menu and the palette. Any number, one note each. The same note stays in step across windows through small changes. A pop-out survives closing the main window, does not reopen after a restart, and shows the same notice when its note is deleted or renamed outside Wrriter
+- [x] The Inbox tile shows the Inbox folder
+- [x] The Quick Note start flag: Wrriter starts showing only the small window. The installer makes the Start menu shortcut in M5. Its start time to a typing cursor is measured and reported, with no number promised
 
 ### Attachments
 
@@ -469,10 +469,10 @@ Nothing that depends on a row is built until it is decided. Rows 15 to 17 are ne
 
 **Done when**
 
-- [ ] Ctrl+Alt+N opens quick capture while another app has focus, and opening and closing it without typing leaves no file
-- [ ] A quick capture shows up in the Inbox of the last active vault, and a setting can fix one vault instead
-- [ ] A quick capture window and two pop-outs are open at the same time, and typing in a pop-out updates the same note in the main window
-- [ ] The capture report lists both approaches, with and without the entrance, and Krishna has picked one
+- [x] Ctrl+Alt+N opens quick capture while another app has focus, and opening and closing it without typing leaves no file
+- [x] A quick capture shows up in the Inbox of the last active vault, and a setting can fix one vault instead
+- [x] A quick capture window and two pop-outs are open at the same time, and typing in a pop-out updates the same note in the main window
+- [x] The capture report lists both approaches, with and without the entrance, and Krishna has picked one
 - [ ] Closing the main window to the tray leaves no main window running, and launching Wrriter twice never makes two processes
 - [ ] Every Done when line in Features 5 for dragging, attachments and importing passes
 - [ ] Importing 5,000 notes finishes in under 60 s, and cancelling stops quickly

@@ -1339,7 +1339,7 @@ export const EditorHost: React.FC<EditorHostProps> = ({
             '--col-gut': `${noteMargin}px`,
             paddingLeft: noteMargin,
             paddingRight: noteMargin,
-            paddingTop: 88,
+            paddingTop: 48,
             paddingBottom: 64,
             minWidth: `calc(360px + ${noteMargin * 2}px)`
           } as React.CSSProperties}

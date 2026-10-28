@@ -10,14 +10,16 @@ import { planSave } from '../../src/shared/markdown/save';
 
 describe('UI Slice 3: The note column and its elements', () => {
   describe('Geometry and Note Column Specifications', () => {
-    it('calculates the exact 88 px top padding and 64 px bottom padding', () => {
+    it('calculates the exact 48 px top padding below toolbar and 64 px bottom padding', () => {
       const tbHeight = 40; // --tb-h / --band
       const s7 = 48; // --s-7
       const s8 = 64; // --s-8
-      const topPadding = tbHeight + s7;
+      const topPaddingBelowToolbar = s7;
+      const totalOffsetFromWindowTop = tbHeight + topPaddingBelowToolbar;
       const bottomPadding = s8;
 
-      expect(topPadding).toBe(88);
+      expect(topPaddingBelowToolbar).toBe(48);
+      expect(totalOffsetFromWindowTop).toBe(88);
       expect(bottomPadding).toBe(64);
     });
 

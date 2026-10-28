@@ -40,6 +40,12 @@ describe('Pane Spacing Contract (M1/M2)', () => {
     const listMatch = cssContent.match(/\.list\s*\{([^}]+)\}/);
     expect(listMatch).toBeTruthy();
     expect(listMatch![1]).not.toContain('padding-top: var(--band)');
+
+    // Extract .col block
+    const colMatch = cssContent.match(/\.col\s*\{([^}]+)\}/);
+    expect(colMatch).toBeTruthy();
+    expect(colMatch![1]).not.toContain('var(--band)');
+    expect(colMatch![1]).toContain('var(--s-7)');
   });
 
   it('ensures the sidebar bottom vault trigger (.vtrig) has no profile circle (.vc)', () => {

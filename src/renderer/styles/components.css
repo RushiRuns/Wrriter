@@ -821,7 +821,7 @@
   position: relative;
   width: min(calc(var(--col) + var(--col-gut) * 2), max(calc(var(--col-min) + var(--col-gut) * 2), 100%));
   margin: 0 auto;
-  padding: calc(var(--band) + var(--s-7)) var(--col-gut) var(--s-8);
+  padding: var(--s-7) var(--col-gut) var(--s-8);
 }
 
 .meta {

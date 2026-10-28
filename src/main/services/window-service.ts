@@ -1,4 +1,4 @@
-import { BrowserWindow, nativeTheme, Menu, MenuItem, shell } from 'electron';
+import { BrowserWindow, nativeTheme, Menu, MenuItem, shell, nativeImage } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import { AppDataStore, type AppSettings, type WindowState, type KnownVault, type FirstPaintState } from '../store/app-data-store';
@@ -16,6 +16,7 @@ import { LinkService } from './link-service';
 import { SearchService } from './search-service';
 import { IndexClient } from './index-client';
 import { AttachmentService } from './attachment-service';
+import { ImageDownloader } from './image-downloader';
 import { SafeWriter } from './safe-writer';
 import { Result, ok, err } from '../../shared/result';
 import type { StartupState, AccentName, SetPaneWidthsArgs, SetOpenTabsArgs, AppSettingsContract } from '../../shared/ipc';
@@ -50,6 +51,7 @@ export class WindowService {
   private readonly linkService: LinkService;
   private readonly searchService: SearchService;
   private readonly attachmentService: AttachmentService;
+  private readonly imageDownloader: ImageDownloader;
   private readonly indexClient?: IndexClient | undefined;
   private readonly vaultReader: VaultReader;
   private readonly watcherAdapter?: { start(): Promise<void>; stop(): Promise<void> };
@@ -111,6 +113,9 @@ export class WindowService {
       new AttachmentService({
         safeWriter: new SafeWriter()
       });
+    this.imageDownloader = new ImageDownloader({
+      attachmentService: this.attachmentService
+    });
     if (options.watcherAdapter) {
       this.watcherAdapter = options.watcherAdapter;
     }
@@ -435,6 +440,30 @@ export class WindowService {
         ? this.noteService.duplicateNote(this.activeVault.path, args.path)
         : err({ kind: 'vaultUnavailable' })
     );
+    this.ipcRouter.register('note.startDrag', async (args) => {
+      if (!this.activeVault) return err({ kind: 'vaultUnavailable' });
+      const fullPath = path.resolve(this.activeVault.path, args.path);
+      if (!fs.existsSync(fullPath)) {
+        return err({ kind: 'notFound' });
+      }
+
+      const transparentPng =
+        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+      const icon = nativeImage.createFromDataURL(transparentPng);
+
+      const targetWin = BrowserWindow.getFocusedWindow() || this.mainWindow;
+      if (targetWin && !targetWin.isDestroyed()) {
+        try {
+          targetWin.webContents.startDrag({
+            file: fullPath,
+            icon
+          });
+        } catch {
+          // Ignore startDrag errors
+        }
+      }
+      return ok(undefined);
+    });
 
     // 6. Folder channels
     this.ipcRouter.register('folder.create', (args) =>
@@ -573,6 +602,28 @@ export class WindowService {
             args.notePath,
             args.path
           )
+        : err({ kind: 'vaultUnavailable' })
+    );
+
+    this.ipcRouter.register('attachment.inspectPath', async (args) =>
+      this.attachmentService.inspectPath(args.path)
+    );
+
+    this.ipcRouter.register('attachment.saveDroppedFile', async (args) =>
+      this.activeVault
+        ? this.attachmentService.saveDroppedFile(this.activeVault.path, args.notePath, args.sourcePath)
+        : err({ kind: 'vaultUnavailable' })
+    );
+
+    this.ipcRouter.register('attachment.importDroppedPath', async (args) =>
+      this.activeVault
+        ? this.attachmentService.importDroppedPath(this.activeVault.path, args.targetFolder, args.sourcePath)
+        : err({ kind: 'vaultUnavailable' })
+    );
+
+    this.ipcRouter.register('attachment.downloadImage', async (args) =>
+      this.activeVault
+        ? this.imageDownloader.downloadAndSave(this.activeVault.path, args.notePath, args.url, args.altText)
         : err({ kind: 'vaultUnavailable' })
     );
   }

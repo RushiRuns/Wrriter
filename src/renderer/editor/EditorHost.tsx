@@ -28,6 +28,7 @@ import { FileChipNode } from './extensions/file-chip';
 import { WikilinkMark, WebLinkMark } from './extensions/links';
 import { MarkdownShortcutsExtension } from './extensions/markdown-shortcuts';
 import { PasteHandlerExtension } from './extensions/paste-handler';
+import { DropHandlerExtension } from './extensions/drop-handler';
 import { FindReplaceExtension, findReplacePluginKey } from './extensions/find-replace-extension';
 import { HeadingFoldingExtension, headingFoldingPluginKey } from './extensions/heading-folding';
 import { KeyboardMoveExtension } from './extensions/keyboard-move';
@@ -237,6 +238,19 @@ export const EditorHost: React.FC<EditorHostProps> = ({
   // "Drag to move" tooltip setting
   const [dragHintShown, setDragHintShown] = useState(false);
   const dragHintShownRef = useRef(false);
+
+  // Drag and drop states (500 MB confirmation and background copy progress)
+  const [confirmLargeFile, setConfirmLargeFile] = useState<{
+    fileName: string;
+    sizeMb: number;
+    onConfirm: () => void;
+    onCancel: () => void;
+  } | null>(null);
+  const [copyProgress, setCopyProgress] = useState<{
+    fileName: string;
+    percent: number;
+    onCancel: () => void;
+  } | null>(null);
 
   useEffect(() => {
     if (window.wrriter?.app?.getSettings) {
@@ -682,6 +696,27 @@ export const EditorHost: React.FC<EditorHostProps> = ({
         MarkdownShortcutsExtension,
         PasteHandlerExtension.configure({
           getActiveNotePath: () => activePathRef.current
+        }),
+        DropHandlerExtension.configure({
+          getActiveNotePath: () => activePathRef.current,
+          onNotice: (msg) => onNoticeRef.current?.(msg),
+          onRequestLargeFileConfirm: (fileName, sizeMb, onConfirm, onCancel) => {
+            setConfirmLargeFile({
+              fileName,
+              sizeMb,
+              onConfirm: () => {
+                setConfirmLargeFile(null);
+                onConfirm();
+              },
+              onCancel: () => {
+                setConfirmLargeFile(null);
+                onCancel();
+              }
+            });
+          },
+          onProgressChange: (progress) => {
+            setCopyProgress(progress);
+          }
         }),
         FindReplaceExtension,
         HeadingFoldingExtension,
@@ -2209,6 +2244,85 @@ export const EditorHost: React.FC<EditorHostProps> = ({
           </div>
         </form>
       </Dialog>
+
+      {/* 500 MB confirmation dialog */}
+      {confirmLargeFile && (
+        <Dialog
+          isOpen={true}
+          onClose={confirmLargeFile.onCancel}
+          title="Large file confirmation"
+          width={440}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}>
+            <p style={{ color: 'var(--tx)', fontSize: 'var(--fs-body)', lineHeight: 1.5, margin: 0 }}>
+              &ldquo;{confirmLargeFile.fileName}&rdquo; is {confirmLargeFile.sizeMb} MB (over 500 MB). Are you sure you want to copy it into attachments?
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--s-2)', marginTop: 'var(--s-2)' }}>
+              <button
+                type="button"
+                className="fb"
+                onClick={confirmLargeFile.onCancel}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="fb"
+                style={{ background: 'var(--accent)', color: 'var(--accent-fg)', fontWeight: 500 }}
+                onClick={confirmLargeFile.onConfirm}
+              >
+                Copy to attachments
+              </button>
+            </div>
+          </div>
+        </Dialog>
+      )}
+
+      {/* Large file copy progress */}
+      {copyProgress && (
+        <div
+          className="wr-drag-progress"
+          style={{
+            position: 'absolute',
+            bottom: 24,
+            right: 24,
+            background: 'var(--bg-pop)',
+            border: '1px solid var(--line)',
+            borderRadius: 'var(--r-m)',
+            padding: 'var(--s-3)',
+            boxShadow: 'var(--sh-2)',
+            zIndex: 100,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--s-2)',
+            minWidth: 260
+          }}
+        >
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 'var(--fs-caption)', color: 'var(--tx)', marginBottom: 4 }}>
+              Copying {copyProgress.fileName}...
+            </div>
+            <div style={{ height: 4, background: 'var(--line)', borderRadius: 2, overflow: 'hidden' }}>
+              <div
+                style={{
+                  height: '100%',
+                  width: `${copyProgress.percent}%`,
+                  background: 'var(--acc)',
+                  transition: 'width var(--t-fast) var(--ease-move)'
+                }}
+              />
+            </div>
+          </div>
+          <button
+            type="button"
+            className="fb"
+            onClick={copyProgress.onCancel}
+            style={{ fontSize: 'var(--fs-caption)', padding: '2px 8px' }}
+          >
+            Cancel
+          </button>
+        </div>
+      )}
     </div>
   );
 };

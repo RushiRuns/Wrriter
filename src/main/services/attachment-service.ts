@@ -16,7 +16,9 @@ import {
   resolveAttachmentVaultPath,
   sanitizeAttachmentName
 } from '../../shared/domain/attachments';
-import { formatPastedImageName } from '../../shared/domain/names';
+import { formatPastedImageName, formatClashName } from '../../shared/domain/names';
+import { deriveNoteTitleFromFileName } from '../../shared/domain/drag-drop';
+import type { AttachmentImportDroppedPathResult } from '../../shared/ipc/contracts';
 
 let electronShell: typeof import('electron').shell | null = null;
 try {
@@ -266,6 +268,211 @@ export class AttachmentService {
       return ok(undefined);
     } catch (error: any) {
       return err({ kind: 'unexpected', message: error?.message || 'Failed to reveal in explorer' });
+    }
+  }
+
+  /**
+   * Inspects a local filesystem path dropped from File Explorer.
+   * Reports whether it is a directory, its file size, and its name.
+   */
+  async inspectPath(
+    sourcePath: string
+  ): Promise<Result<{ isDirectory: boolean; size: number; name: string }>> {
+    try {
+      const stat = await fs.promises.stat(sourcePath);
+      return ok({
+        isDirectory: stat.isDirectory(),
+        size: stat.size,
+        name: path.basename(sourcePath)
+      });
+    } catch (error: any) {
+      return err({ kind: 'unexpected', message: error?.message || 'File not found on disk' });
+    }
+  }
+
+  /**
+   * Saves a local file dropped onto a note into the vault attachments folder.
+   */
+  async saveDroppedFile(
+    vaultRoot: string,
+    noteRelPath: string,
+    sourcePath: string
+  ): Promise<Result<SavedAttachment>> {
+    try {
+      const stat = await fs.promises.stat(sourcePath);
+      if (stat.isDirectory()) {
+        return err({
+          kind: 'validation',
+          field: 'sourcePath',
+          reason: 'Directories cannot be added as attachments to a note'
+        });
+      }
+
+      const buffer = await fs.promises.readFile(sourcePath);
+      const fileName = path.basename(sourcePath);
+      return this.saveAttachment(vaultRoot, noteRelPath, fileName, buffer);
+    } catch (error: any) {
+      return err({ kind: 'unexpected', message: error?.message || 'Failed to read dropped file' });
+    }
+  }
+
+  /**
+   * Imports a dropped file into a vault folder:
+   * - If .md note: imports text as a new note in targetFolder (with clash numbering).
+   * - If other file: saves into attachments/ and creates a new note titled with the file name holding it.
+   */
+  async importFileAsNote(
+    vaultRoot: string,
+    targetFolderRelPath: string,
+    sourcePath: string
+  ): Promise<Result<{ notePath: string; title: string }>> {
+    try {
+      const stat = await fs.promises.stat(sourcePath);
+      if (stat.isDirectory()) {
+        return err({ kind: 'validation', field: 'sourcePath', reason: 'Directories handled via importFolder' });
+      }
+
+      const baseName = path.basename(sourcePath);
+      const isMd = /\.md$/i.test(baseName);
+      const folderDir = targetFolderRelPath.trim().replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+
+      if (isMd) {
+        const text = await fs.promises.readFile(sourcePath, 'utf8');
+        const title = deriveNoteTitleFromFileName(baseName);
+
+        let finalName = `${title}.md`;
+        let clash = 2;
+        while (fs.existsSync(path.join(vaultRoot, folderDir ? `${folderDir}/${finalName}` : finalName))) {
+          finalName = formatClashName(title, clash);
+          clash++;
+        }
+
+        const noteRelPath = folderDir ? `${folderDir}/${finalName}` : finalName;
+        const writeRes = await this.safeWriter.write(vaultRoot, noteRelPath, text);
+        if (!writeRes.ok) return writeRes;
+
+        return ok({ notePath: noteRelPath, title });
+      }
+
+      // Any other file becomes a new note that holds it, titled with the file name
+      const buffer = await fs.promises.readFile(sourcePath);
+      const title = deriveNoteTitleFromFileName(baseName);
+
+      let finalNoteName = `${title}.md`;
+      let clash = 2;
+      while (fs.existsSync(path.join(vaultRoot, folderDir ? `${folderDir}/${finalNoteName}` : finalNoteName))) {
+        finalNoteName = formatClashName(title, clash);
+        clash++;
+      }
+
+      const noteRelPath = folderDir ? `${folderDir}/${finalNoteName}` : finalNoteName;
+
+      // Save file into attachments/ relative to the new note
+      const saveRes = await this.saveAttachment(vaultRoot, noteRelPath, baseName, buffer);
+      if (!saveRes.ok) return saveRes;
+
+      const noteBody = `${saveRes.value.markdown}\n`;
+      const writeRes = await this.safeWriter.write(vaultRoot, noteRelPath, noteBody);
+      if (!writeRes.ok) return writeRes;
+
+      return ok({ notePath: noteRelPath, title });
+    } catch (error: any) {
+      return err({ kind: 'unexpected', message: error?.message || 'Failed to import dropped file' });
+    }
+  }
+
+  /**
+   * Imports a dropped filesystem path (file or directory) into a vault folder.
+   * If a file: imports .md as note, or wraps other file in a note.
+   * If a folder: recursively imports into targetFolder keeping structure.
+   */
+  async importDroppedPath(
+    vaultRoot: string,
+    targetFolderRelPath: string,
+    sourcePath: string
+  ): Promise<Result<AttachmentImportDroppedPathResult>> {
+    try {
+      const stat = await fs.promises.stat(sourcePath);
+      const rootBaseName = path.basename(sourcePath);
+
+      if (!stat.isDirectory()) {
+        const fileRes = await this.importFileAsNote(vaultRoot, targetFolderRelPath, sourcePath);
+        if (!fileRes.ok) return fileRes;
+        return ok({
+          importedCount: 1,
+          rootName: rootBaseName,
+          notePath: fileRes.value.notePath,
+          title: fileRes.value.title
+        });
+      }
+
+      // Directory import
+      const folderDir = targetFolderRelPath.trim().replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+      let destFolder = folderDir ? `${folderDir}/${rootBaseName}` : rootBaseName;
+      let clash = 2;
+      while (fs.existsSync(path.join(vaultRoot, destFolder))) {
+        destFolder = folderDir ? `${folderDir}/${rootBaseName} ${clash}` : `${rootBaseName} ${clash}`;
+        clash++;
+      }
+
+      let importedCount = 0;
+
+      const importRecursive = async (srcDir: string, relDestDir: string) => {
+        const fullDestDir = path.join(vaultRoot, relDestDir);
+        await fs.promises.mkdir(fullDestDir, { recursive: true });
+
+        const entries = await fs.promises.readdir(srcDir, { withFileTypes: true });
+        for (const entry of entries) {
+          const entrySrcPath = path.join(srcDir, entry.name);
+          if (entry.isDirectory()) {
+            await importRecursive(entrySrcPath, `${relDestDir}/${entry.name}`);
+          } else if (entry.isFile()) {
+            const isMd = /\.md$/i.test(entry.name);
+            const title = deriveNoteTitleFromFileName(entry.name);
+
+            if (isMd) {
+              const text = await fs.promises.readFile(entrySrcPath, 'utf8');
+              let noteName = `${title}.md`;
+              let fileClash = 2;
+              while (fs.existsSync(path.join(vaultRoot, `${relDestDir}/${noteName}`))) {
+                noteName = formatClashName(title, fileClash);
+                fileClash++;
+              }
+              const writeRes = await this.safeWriter.write(vaultRoot, `${relDestDir}/${noteName}`, text);
+              if (writeRes.ok) {
+                importedCount++;
+              }
+            } else {
+              // Other file becomes a note holding the attachment
+              const buffer = await fs.promises.readFile(entrySrcPath);
+              let noteName = `${title}.md`;
+              let fileClash = 2;
+              while (fs.existsSync(path.join(vaultRoot, `${relDestDir}/${noteName}`))) {
+                noteName = formatClashName(title, fileClash);
+                fileClash++;
+              }
+              const noteRelPath = `${relDestDir}/${noteName}`;
+              const saveRes = await this.saveAttachment(vaultRoot, noteRelPath, entry.name, buffer);
+              if (saveRes.ok) {
+                const noteBody = `${saveRes.value.markdown}\n`;
+                const writeRes = await this.safeWriter.write(vaultRoot, noteRelPath, noteBody);
+                if (writeRes.ok) {
+                  importedCount++;
+                }
+              }
+            }
+          }
+        }
+      };
+
+      await importRecursive(sourcePath, destFolder);
+
+      return ok({
+        importedCount,
+        rootName: rootBaseName
+      });
+    } catch (error: any) {
+      return err({ kind: 'unexpected', message: error?.message || 'Failed to import dropped directory' });
     }
   }
 }

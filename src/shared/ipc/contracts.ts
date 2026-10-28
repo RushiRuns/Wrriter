@@ -411,6 +411,53 @@ export interface AttachmentShowInExplorerArgs {
   readonly path: string;
 }
 
+export interface NoteStartDragArgs {
+  readonly path: string;
+}
+
+export interface AttachmentInspectPathArgs {
+  readonly path: string;
+}
+
+export interface AttachmentInspectPathResult {
+  readonly isDirectory: boolean;
+  readonly size: number;
+  readonly name: string;
+}
+
+export interface AttachmentSaveDroppedFileArgs {
+  readonly notePath: string;
+  readonly sourcePath: string;
+}
+
+export interface AttachmentImportDroppedPathArgs {
+  readonly targetFolder: string;
+  readonly sourcePath: string;
+}
+
+export interface AttachmentImportDroppedPathResult {
+  readonly importedCount: number;
+  readonly rootName: string;
+  readonly notePath?: string | undefined;
+  readonly title?: string | undefined;
+}
+
+export interface AttachmentDownloadImageArgs {
+  readonly notePath: string;
+  readonly url: string;
+  readonly altText?: string | undefined;
+}
+
+export interface AttachmentDownloadImageResult {
+  readonly downloaded: boolean;
+  readonly fileName?: string | undefined;
+  readonly relativePath?: string | undefined;
+  readonly encodedPath?: string | undefined;
+  readonly isImage?: boolean | undefined;
+  readonly markdown: string;
+  readonly error?: string | undefined;
+}
+
 // Fixed Channel Registry
 export interface IpcChannelTable {
   'window.minimize': { args: WindowMinimizeArgs; result: void };
@@ -439,6 +486,7 @@ export interface IpcChannelTable {
   'note.rename': { args: RenameNoteArgs; result: NoteJobResult };
   'note.move': { args: MoveNoteArgs; result: NoteJobResult };
   'note.duplicate': { args: DuplicateNoteArgs; result: DuplicateNoteResult };
+  'note.startDrag': { args: NoteStartDragArgs; result: void };
   'folder.create': { args: CreateFolderArgs; result: void };
   'folder.rename': { args: RenameFolderArgs; result: void };
   'folder.delete': { args: DeleteFolderArgs; result: void };
@@ -473,6 +521,10 @@ export interface IpcChannelTable {
   'attachment.getInfo': { args: AttachmentGetInfoArgs; result: AttachmentGetInfoResult };
   'attachment.open': { args: AttachmentOpenArgs; result: void };
   'attachment.showInExplorer': { args: AttachmentShowInExplorerArgs; result: void };
+  'attachment.inspectPath': { args: AttachmentInspectPathArgs; result: AttachmentInspectPathResult };
+  'attachment.saveDroppedFile': { args: AttachmentSaveDroppedFileArgs; result: AttachmentSaveResult };
+  'attachment.importDroppedPath': { args: AttachmentImportDroppedPathArgs; result: AttachmentImportDroppedPathResult };
+  'attachment.downloadImage': { args: AttachmentDownloadImageArgs; result: AttachmentDownloadImageResult };
 }
 
 export type IpcChannel = keyof IpcChannelTable;
@@ -652,6 +704,13 @@ export const IPC_VALIDATORS: { readonly [K in IpcChannel]: Validator<IpcChannelT
   },
 
   'note.duplicate': (input: unknown): Result<DuplicateNoteArgs> => {
+    if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });
+    const path = validateNonEmptyString('path', input['path']);
+    if (!path.ok) return path;
+    return ok({ path: path.value });
+  },
+
+  'note.startDrag': (input: unknown): Result<NoteStartDragArgs> => {
     if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });
     const path = validateNonEmptyString('path', input['path']);
     if (!path.ok) return path;
@@ -864,6 +923,41 @@ export const IPC_VALIDATORS: { readonly [K in IpcChannel]: Validator<IpcChannelT
     const pathVal = validateNonEmptyString('path', input['path']);
     if (!pathVal.ok) return pathVal;
     return ok({ notePath: notePath.value, path: pathVal.value });
+  },
+
+  'attachment.inspectPath': (input: unknown): Result<AttachmentInspectPathArgs> => {
+    if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });
+    const p = validateNonEmptyString('path', input['path']);
+    if (!p.ok) return p;
+    return ok({ path: p.value });
+  },
+
+  'attachment.saveDroppedFile': (input: unknown): Result<AttachmentSaveDroppedFileArgs> => {
+    if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });
+    const notePath = validateString('notePath', input['notePath'] ?? '');
+    if (!notePath.ok) return notePath;
+    const sourcePath = validateNonEmptyString('sourcePath', input['sourcePath']);
+    if (!sourcePath.ok) return sourcePath;
+    return ok({ notePath: notePath.value, sourcePath: sourcePath.value });
+  },
+
+  'attachment.importDroppedPath': (input: unknown): Result<AttachmentImportDroppedPathArgs> => {
+    if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });
+    const targetFolder = validateString('targetFolder', input['targetFolder'] ?? '');
+    if (!targetFolder.ok) return targetFolder;
+    const sourcePath = validateNonEmptyString('sourcePath', input['sourcePath']);
+    if (!sourcePath.ok) return sourcePath;
+    return ok({ targetFolder: targetFolder.value, sourcePath: sourcePath.value });
+  },
+
+  'attachment.downloadImage': (input: unknown): Result<AttachmentDownloadImageArgs> => {
+    if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });
+    const notePath = validateString('notePath', input['notePath'] ?? '');
+    if (!notePath.ok) return notePath;
+    const url = validateNonEmptyString('url', input['url']);
+    if (!url.ok) return url;
+    const altText = typeof input['altText'] === 'string' ? input['altText'] : undefined;
+    return ok({ notePath: notePath.value, url: url.value, altText });
   }
 };
 

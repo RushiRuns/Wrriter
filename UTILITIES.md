@@ -70,6 +70,7 @@ Each of these exists exactly once. A second copy is a bug.
 | `conflictNames` | `shared/domain/conflicts.ts` | Detect `sync-conflict` copies next to a note | M1 (shown), V2 (handled) | Planned |
 | `captureNames` | `shared/domain/names.ts` | `Quick note YYYY-MM-DD HH.mm`, `Pasted image YYYYMMDD-HHmmss.png` | M4 | Built |
 | `attachments` | `shared/domain/attachments.ts` | Inline vs chip, Windows name sanitization, clash naming, note-relative paths, percent-encoding, file sizes | M4 | Built |
+| `dragDrop` | `shared/domain/drag-drop.ts` | Browser link and image parser, Explorer order formatting, note title derivation | M4 | Built |
 | `imagePaths` | `shared/domain/image-paths.ts` | Relative image and attachment paths, percent-encoding, rewrite on move | M3 | Built |
 | `blockSplitter` | `shared/markdown/blocks.ts` | Split a note into blocks with their exact source text | M2 | Built |
 | `planSave` | `shared/markdown/save.ts` | Re-serialize only edited blocks, keep line endings, byte order mark and style | M2 | Built |
@@ -160,11 +161,16 @@ Record every request here as it is written, so a second one is not added for the
 | `capture.setAlwaysOnTop` | `{ alwaysOnTop: boolean }` | `void` | M4 | Built |
 | `capture.getCaptureState` | `{}` | `CaptureStateResult` | M4 | Built |
 | `capture.saveQuickNote` | `{ text: string }` | `SaveQuickNoteResult` | M4 | Built |
+| `note.startDrag` | `{ path: string }` | `void` | M4 | Built |
 | `attachment.save` | `{ notePath: string, fileName: string, bytes: Uint8Array }` | `AttachmentSaveResult` | M4 | Built |
 | `attachment.savePastedImage` | `{ notePath: string, bytes: Uint8Array }` | `AttachmentSaveResult` | M4 | Built |
 | `attachment.getInfo` | `{ notePath: string, path: string }` | `AttachmentGetInfoResult` | M4 | Built |
 | `attachment.open` | `{ notePath: string, path: string }` | `void` | M4 | Built |
 | `attachment.showInExplorer` | `{ notePath: string, path: string }` | `void` | M4 | Built |
+| `attachment.inspectPath` | `{ path: string }` | `AttachmentInspectPathResult` | M4 | Built |
+| `attachment.saveDroppedFile` | `{ notePath: string, sourcePath: string }` | `AttachmentSaveResult` | M4 | Built |
+| `attachment.importDroppedPath` | `{ targetFolder: string, sourcePath: string }` | `AttachmentImportDroppedPathResult` | M4 | Built |
+| `attachment.downloadImage` | `{ notePath: string, url: string, altText?: string }` | `AttachmentDownloadImageResult` | M4 | Built |
 
 ## Index Queries
 
@@ -255,8 +261,8 @@ Record every query here as it is written.
 | `RecycleBin` | Delete to the Windows Recycle Bin (`src/main/platform/recycle-bin.ts`) | M1 | Built |
 | `ShellOpen` | Open in the default app, show in File Explorer, web links after checking | M4 | Planned |
 | `VaultProtocol` | The one app protocol serving files inside open vaults (`src/main/platform/vault-protocol.ts`) | M2 | Built |
-| `DragOut` | Drag a note out as a .md file | M4 | Planned |
-| `ImageDownloader` | The one network call: an image dropped from a website | M4 | Planned |
+| `DragOut` | Drag a note out to File Explorer/desktop as a .md file (`src/renderer/components/NoteRow.tsx`, `note.startDrag`) | M4 | Built |
+| `ImageDownloader` | The one network call: an image dropped from a website (`src/main/services/image-downloader.ts`) | M4 | Built |
 | `SpellCheck` | English spell check with suggestions on right-click (`src/main/services/window-service.ts`) | M2 | Built |
 
 ## Build Checks and Test Tools

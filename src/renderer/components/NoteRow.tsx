@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { NoteListItem } from '../../shared/ipc/contracts';
 import { PinIcon } from './icons';
 
@@ -10,6 +10,7 @@ export interface NoteRowProps {
   showImages: boolean;
   onSelect: (e?: React.MouseEvent) => void;
   onContextMenu: (e: React.MouseEvent, note: NoteListItem) => void;
+  onReorder?: ((draggedPath: string, targetPath: string, position: 'before' | 'after') => void) | undefined;
 }
 
 function resolveThumbnailSrc(src: string): string {
@@ -33,8 +34,11 @@ export const NoteRow: React.FC<NoteRowProps> = ({
   showPreviews,
   showImages,
   onSelect,
-  onContextMenu
+  onContextMenu,
+  onReorder
 }) => {
+  const [dropIndicator, setDropIndicator] = useState<'top' | 'bottom' | null>(null);
+
   const dateStr = note.modified
     ? new Date(note.modified).toLocaleDateString(undefined, {
         month: 'short',
@@ -47,6 +51,44 @@ export const NoteRow: React.FC<NoteRowProps> = ({
   return (
     <div
       className={`row ${isSelected ? 'sel' : ''}`}
+      draggable={true}
+      onDragStart={(e) => {
+        e.dataTransfer.setData(
+          'application/x-wrriter-note',
+          JSON.stringify({ path: note.path, title: note.title })
+        );
+        e.dataTransfer.setData('text/plain', note.title);
+        if ((window as any).wrriter?.note?.startDrag) {
+          void (window as any).wrriter.note.startDrag({ path: note.path });
+        }
+      }}
+      onDragOver={(e) => {
+        if (e.dataTransfer.types.includes('application/x-wrriter-note')) {
+          e.preventDefault();
+          const rect = e.currentTarget.getBoundingClientRect();
+          const isTop = e.clientY - rect.top < rect.height / 2;
+          setDropIndicator(isTop ? 'top' : 'bottom');
+        }
+      }}
+      onDragLeave={() => {
+        setDropIndicator(null);
+      }}
+      onDrop={(e) => {
+        if (e.dataTransfer.types.includes('application/x-wrriter-note')) {
+          e.preventDefault();
+          e.stopPropagation();
+          const pos = dropIndicator ?? 'before';
+          setDropIndicator(null);
+          try {
+            const data = JSON.parse(e.dataTransfer.getData('application/x-wrriter-note'));
+            if (data.path && data.path !== note.path && onReorder) {
+              onReorder(data.path, note.path, pos === 'top' ? 'before' : 'after');
+            }
+          } catch {
+            // Ignore invalid drag payload
+          }
+        }
+      }}
       onClick={(e) => onSelect(e)}
       onAuxClick={(e) => {
         if (e.button === 1) {
@@ -59,7 +101,9 @@ export const NoteRow: React.FC<NoteRowProps> = ({
         height: 80,
         boxSizing: 'border-box',
         cursor: 'pointer',
-        userSelect: 'none'
+        userSelect: 'none',
+        borderTop: dropIndicator === 'top' ? '2px solid var(--acc)' : undefined,
+        borderBottom: dropIndicator === 'bottom' ? '2px solid var(--acc)' : undefined
       }}
       tabIndex={0}
       role="button"

@@ -450,16 +450,16 @@ Nothing that depends on a row is built until it is decided. Rows 15 to 17 are ne
 
 ### All drag and drop (the table in Features 5)
 
-- [ ] From File Explorer onto a note: a drop line, images shown, other files as chips, several files one per line in Explorer's order, copying in the background with a placeholder, progress and cancel for a large file, a confirmation over 500 MB, a folder dropped on a note shows a short message, and Ctrl+Z removes the line and keeps the file
-- [ ] From File Explorer onto the note list or a folder: .md files and folders are imported, and any other file becomes a new note that holds it, titled with the file name
-- [ ] Selected text from a browser or another app becomes markdown at the drop point. Tested in Chrome, Edge and Firefox. No source address in Version 1
-- [ ] A link from a browser becomes a markdown link, using the page title when the browser gives one
-- [ ] An image from a website is downloaded at the moment of the drop by `ImageDownloader`, the only network code in Wrriter. If it cannot be downloaded, a link is inserted instead (third on the cut line)
-- [ ] A note dropped on a folder moves there (the M3 job). A note dropped at a new position in the list changes the manual order and switches the sort back to manual. A note dropped into an open note inserts a wikilink
-- [ ] A folder dropped on another folder moves there (the M3 job)
-- [ ] A note dragged out to File Explorer or the desktop copies its .md file there (`DragOut`, second on the cut line)
+- [x] From File Explorer onto a note: a drop line, images shown, other files as chips, several files one per line in Explorer's order, copying in the background with a placeholder, progress and cancel for a large file, a confirmation over 500 MB, a folder dropped on a note shows a short message, and Ctrl+Z removes the line and keeps the file
+- [x] From File Explorer onto the note list or a folder: .md files and folders are imported, and any other file becomes a new note that holds it, titled with the file name
+- [x] Selected text from a browser or another app becomes markdown at the drop point. Tested in Chrome, Edge and Firefox. No source address in Version 1
+- [x] A link from a browser becomes a markdown link, using the page title when the browser gives one
+- [x] An image from a website is downloaded at the moment of the drop by `ImageDownloader`, the only network code in Wrriter. If it cannot be downloaded, a link is inserted instead (third on the cut line)
+- [x] A note dropped on a folder moves there (the M3 job). A note dropped at a new position in the list changes the manual order and switches the sort back to manual. A note dropped into an open note inserts a wikilink
+- [x] A folder dropped on another folder moves there (the M3 job)
+- [x] A note dragged out to File Explorer or the desktop copies its .md file there (`DragOut`, second on the cut line)
 - [ ] A way to reorder notes and move folders without dragging: waits on open item 17
-- [ ] Every drop that makes sense in a note also works in the quick capture and pop-out windows
+- [x] Every drop that makes sense in a note also works in the quick capture and pop-out windows
 
 ### Import
 

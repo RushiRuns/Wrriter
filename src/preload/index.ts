@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, webUtils } from 'electron';
 
 declare const window: any;
 
@@ -68,7 +68,8 @@ const api: WrriterApi = {
     setPinned: (args: SetPinnedArgs) => invoke('note.setPinned', args),
     delete: (args: DeleteNoteArgs) => invoke('note.delete', args),
     list: (args: ListNotesArgs = {}) => invoke('note.list', args),
-    setOrder: (args: SetNoteOrderArgs) => invoke('note.setOrder', args)
+    setOrder: (args: SetNoteOrderArgs) => invoke('note.setOrder', args),
+    startDrag: (args) => invoke('note.startDrag', args)
   },
   folder: {
     create: (args: CreateFolderArgs) => invoke('folder.create', args),
@@ -114,7 +115,21 @@ const api: WrriterApi = {
     savePastedImage: (args) => invoke('attachment.savePastedImage', args),
     getInfo: (args) => invoke('attachment.getInfo', args),
     open: (args) => invoke('attachment.open', args),
-    showInExplorer: (args) => invoke('attachment.showInExplorer', args)
+    showInExplorer: (args) => invoke('attachment.showInExplorer', args),
+    inspectPath: (args) => invoke('attachment.inspectPath', args),
+    saveDroppedFile: (args) => invoke('attachment.saveDroppedFile', args),
+    importDroppedPath: (args) => invoke('attachment.importDroppedPath', args),
+    downloadImage: (args) => invoke('attachment.downloadImage', args)
+  },
+  getPathForFile: (file: any): string => {
+    try {
+      if (webUtils && typeof webUtils.getPathForFile === 'function') {
+        return webUtils.getPathForFile(file);
+      }
+    } catch {
+      // Fallback
+    }
+    return (file as any).path || '';
   },
   showItemInFolder: (path: string) => invoke('vault.showInExplorer', { path }),
   invoke

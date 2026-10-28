@@ -79,6 +79,7 @@ export interface WrriterApi {
     delete(args: DeleteNoteArgs): Promise<Result<void>>;
     list(args?: ListNotesArgs): Promise<Result<readonly NoteListItem[]>>;
     setOrder(args: SetNoteOrderArgs): Promise<Result<void>>;
+    startDrag(args: import('./contracts').NoteStartDragArgs): Promise<Result<void>>;
   };
   readonly folder: {
     create(args: CreateFolderArgs): Promise<Result<void>>;
@@ -125,7 +126,12 @@ export interface WrriterApi {
     getInfo(args: import('./contracts').AttachmentGetInfoArgs): Promise<Result<import('./contracts').AttachmentGetInfoResult>>;
     open(args: import('./contracts').AttachmentOpenArgs): Promise<Result<void>>;
     showInExplorer(args: import('./contracts').AttachmentShowInExplorerArgs): Promise<Result<void>>;
+    inspectPath(args: import('./contracts').AttachmentInspectPathArgs): Promise<Result<import('./contracts').AttachmentInspectPathResult>>;
+    saveDroppedFile(args: import('./contracts').AttachmentSaveDroppedFileArgs): Promise<Result<import('./contracts').AttachmentSaveResult>>;
+    importDroppedPath(args: import('./contracts').AttachmentImportDroppedPathArgs): Promise<Result<import('./contracts').AttachmentImportDroppedPathResult>>;
+    downloadImage(args: import('./contracts').AttachmentDownloadImageArgs): Promise<Result<import('./contracts').AttachmentDownloadImageResult>>;
   };
+  readonly getPathForFile?: (file: unknown) => string;
   readonly showItemInFolder?: (path: string) => Promise<Result<void>>;
   readonly invoke: <K extends IpcChannel>(
     channel: K,

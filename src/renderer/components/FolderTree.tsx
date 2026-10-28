@@ -47,6 +47,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
   const [creatingFolder, setCreatingFolder] = useState<CreatingFolderState | null>(null);
   const [createFolderName, setCreateFolderName] = useState('');
   const [createFolderError, setCreateFolderError] = useState<string | null>(null);
+  const [dropTargetFolder, setDropTargetFolder] = useState<string | null>(null);
 
   const renameInputRef = useRef<HTMLInputElement | null>(null);
   const createInputRef = useRef<HTMLInputElement | null>(null);
@@ -298,6 +299,70 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
     );
   };
 
+  const handleDropOnFolder = async (e: React.DragEvent, targetFolderRel: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDropTargetFolder(null);
+
+    // 1. Internal folder drop -> folder.rename (move folder into target folder)
+    const draggedFolderRel = e.dataTransfer.getData('application/x-wrriter-folder');
+    if (draggedFolderRel) {
+      if (draggedFolderRel === targetFolderRel) return;
+      if (targetFolderRel && targetFolderRel.startsWith(draggedFolderRel + '/')) return;
+
+      const folderBaseName = draggedFolderRel.includes('/')
+        ? draggedFolderRel.slice(draggedFolderRel.lastIndexOf('/') + 1)
+        : draggedFolderRel;
+      const newRelPath = targetFolderRel ? `${targetFolderRel}/${folderBaseName}` : folderBaseName;
+
+      if (newRelPath !== draggedFolderRel && (window as any).wrriter?.folder?.rename) {
+        await (window as any).wrriter.folder.rename({ oldPath: draggedFolderRel, newPath: newRelPath });
+        await onRefresh();
+      }
+      return;
+    }
+
+    // 2. Internal note drop -> note.move (move note into target folder)
+    const noteDataStr = e.dataTransfer.getData('application/x-wrriter-note');
+    if (noteDataStr) {
+      try {
+        const noteData = JSON.parse(noteDataStr);
+        const noteOldPath = noteData.path as string;
+        if (noteOldPath) {
+          const noteFileName = noteOldPath.includes('/')
+            ? noteOldPath.slice(noteOldPath.lastIndexOf('/') + 1)
+            : noteOldPath;
+          const noteNewPath = targetFolderRel ? `${targetFolderRel}/${noteFileName}` : noteFileName;
+
+          if (noteNewPath !== noteOldPath && (window as any).wrriter?.note?.move) {
+            await (window as any).wrriter.note.move({ oldPath: noteOldPath, newPath: noteNewPath });
+            await onRefresh();
+          }
+        }
+      } catch {
+        // Ignore invalid note data
+      }
+      return;
+    }
+
+    // 3. External files/folders from File Explorer
+    const files = Array.from(e.dataTransfer.files || []);
+    if (files.length > 0 && (window as any).wrriter?.attachment?.importDroppedPath) {
+      for (const file of files) {
+        const sourcePath = (window as any).wrriter?.getPathForFile
+          ? (window as any).wrriter.getPathForFile(file)
+          : (file as any).path || '';
+        if (sourcePath) {
+          await (window as any).wrriter.attachment.importDroppedPath({
+            targetFolder: targetFolderRel,
+            sourcePath
+          });
+        }
+      }
+      await onRefresh();
+    }
+  };
+
   const renderFolderItem = (folder: FolderNode, depth: number = 0) => {
     const isSelected = selectedFolder === folder.relPath;
     const hasChildren = Boolean(folder.children && folder.children.length > 0);
@@ -305,14 +370,39 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
     const isExpanded = (hasChildren || isCreatingHere) && expandedPaths.has(folder.relPath);
     const isRenaming = renamingPath === folder.relPath;
 
+    const isDropTarget = dropTargetFolder === folder.relPath;
+
     return (
       <React.Fragment key={folder.relPath}>
         <div
           className={`fr ${isSelected ? 'sel' : ''} ${isExpanded ? 'open' : ''}`}
+          draggable={!isRenaming}
+          onDragStart={(e) => {
+            e.dataTransfer.setData('application/x-wrriter-folder', folder.relPath);
+            e.dataTransfer.setData('text/plain', folder.name);
+          }}
+          onDragOver={(e) => {
+            if (
+              e.dataTransfer.types.includes('application/x-wrriter-folder') ||
+              e.dataTransfer.types.includes('application/x-wrriter-note') ||
+              e.dataTransfer.types.includes('Files')
+            ) {
+              e.preventDefault();
+              setDropTargetFolder(folder.relPath);
+            }
+          }}
+          onDragLeave={() => {
+            if (dropTargetFolder === folder.relPath) {
+              setDropTargetFolder(null);
+            }
+          }}
+          onDrop={(e) => handleDropOnFolder(e, folder.relPath)}
           style={{
             marginLeft: depth * 24,
             cursor: 'pointer',
-            position: 'relative'
+            position: 'relative',
+            outline: isDropTarget ? '1px dashed var(--acc)' : undefined,
+            backgroundColor: isDropTarget ? 'color-mix(in srgb, var(--acc) 15%, transparent)' : undefined
           }}
           onClick={() => onSelectFolder(folder.relPath)}
           onContextMenu={(e) => {
@@ -451,6 +541,16 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
           display: 'flex',
           flexDirection: 'column'
         }}
+        onDragOver={(e) => {
+          if (
+            e.dataTransfer.types.includes('application/x-wrriter-folder') ||
+            e.dataTransfer.types.includes('application/x-wrriter-note') ||
+            e.dataTransfer.types.includes('Files')
+          ) {
+            e.preventDefault();
+          }
+        }}
+        onDrop={(e) => handleDropOnFolder(e, '')}
         onContextMenu={(e) => {
           // Right-clicking empty space in tree opens root context menu
           e.preventDefault();
@@ -460,7 +560,27 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
         {/* 1. All Notes root item */}
         <div
           className={`fr ${selectedFolder === null ? 'sel' : ''}`}
-          style={{ cursor: 'pointer' }}
+          style={{
+            cursor: 'pointer',
+            outline: dropTargetFolder === '' ? '1px dashed var(--acc)' : undefined,
+            backgroundColor: dropTargetFolder === '' ? 'color-mix(in srgb, var(--acc) 15%, transparent)' : undefined
+          }}
+          onDragOver={(e) => {
+            if (
+              e.dataTransfer.types.includes('application/x-wrriter-folder') ||
+              e.dataTransfer.types.includes('application/x-wrriter-note') ||
+              e.dataTransfer.types.includes('Files')
+            ) {
+              e.preventDefault();
+              setDropTargetFolder('');
+            }
+          }}
+          onDragLeave={() => {
+            if (dropTargetFolder === '') {
+              setDropTargetFolder(null);
+            }
+          }}
+          onDrop={(e) => handleDropOnFolder(e, '')}
           onClick={() => onSelectFolder(null)}
           tabIndex={0}
         >

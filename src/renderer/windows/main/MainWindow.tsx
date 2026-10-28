@@ -1327,6 +1327,73 @@ export const MainWindow: React.FC = () => {
   const pinnedNotes = notes.filter((n) => n.pinned);
   const unpinnedNotes = notes.filter((n) => !n.pinned);
 
+  // Drag and drop: manual reorder notes in note list
+  const handleReorderNotes = async (
+    draggedPath: string,
+    targetPath: string,
+    position: 'before' | 'after'
+  ) => {
+    const allCurrentNotes = [...pinnedNotes, ...unpinnedNotes];
+    const targetIdx = allCurrentNotes.findIndex((n) => n.path === targetPath);
+    if (targetIdx === -1) return;
+
+    let beforeKey: string | undefined = undefined;
+    let afterKey: string | undefined = undefined;
+
+    if (position === 'before') {
+      const prevNote = allCurrentNotes[targetIdx - 1];
+      const targetNote = allCurrentNotes[targetIdx]!;
+      beforeKey = prevNote?.orderKey;
+      afterKey = targetNote.orderKey;
+    } else {
+      const targetNote = allCurrentNotes[targetIdx]!;
+      const nextNote = allCurrentNotes[targetIdx + 1];
+      beforeKey = targetNote.orderKey;
+      afterKey = nextNote?.orderKey;
+    }
+
+    if (window.wrriter?.note?.setOrder) {
+      await window.wrriter.note.setOrder({
+        path: draggedPath,
+        folder: selectedFolder ?? undefined,
+        beforeKey,
+        afterKey
+      });
+      setSortBy('manual');
+      void updateSettings({ noteList: { sortBy: 'manual', showSortIcon, showPreviews, showDates, showImages } });
+      await refreshNotes(selectedFolder, 'manual');
+    }
+  };
+
+  // Drag and drop: external files dropped on note list pane
+  const handleNotesPaneDrop = async (e: React.DragEvent) => {
+    const files = Array.from(e.dataTransfer.files || []);
+    if (files.length > 0 && window.wrriter?.attachment?.importDroppedPath) {
+      e.preventDefault();
+      e.stopPropagation();
+      let lastImportedNotePath: string | undefined = undefined;
+      for (const file of files) {
+        const sourcePath = window.wrriter?.getPathForFile
+          ? window.wrriter.getPathForFile(file)
+          : (file as any).path || '';
+        if (sourcePath) {
+          const res = await window.wrriter.attachment.importDroppedPath({
+            targetFolder: selectedFolder ?? '',
+            sourcePath
+          });
+          if (res.ok && res.value.notePath) {
+            lastImportedNotePath = res.value.notePath;
+          }
+        }
+      }
+      await refreshFolders();
+      await refreshNotes(selectedFolder, sortBy);
+      if (lastImportedNotePath) {
+        handleSelectNote(undefined, lastImportedNotePath);
+      }
+    }
+  };
+
   // Compute folder title in notes pane header
   const getFolderHeaderName = () => {
     if (activeTile === 'tags') {
@@ -1709,7 +1776,16 @@ export const MainWindow: React.FC = () => {
                 No notes yet. Click new note to begin writing.
               </div>
             ) : (
-              <div className="notes-scroll" style={{ flex: 1, overflowY: 'auto' }}>
+              <div
+                className="notes-scroll"
+                style={{ flex: 1, overflowY: 'auto' }}
+                onDragOver={(e) => {
+                  if (e.dataTransfer.types.includes('Files')) {
+                    e.preventDefault();
+                  }
+                }}
+                onDrop={handleNotesPaneDrop}
+              >
                 {/* Pinned Group */}
                 {pinnedNotes.length > 0 && (
                   <>
@@ -1728,6 +1804,7 @@ export const MainWindow: React.FC = () => {
                           showPreviews={showPreviews}
                           showImages={showImages}
                           onSelect={(e) => handleSelectNote(e, note.path)}
+                          onReorder={handleReorderNotes}
                           onContextMenu={(e, item) => {
                             e.preventDefault();
                             e.stopPropagation();
@@ -1757,6 +1834,7 @@ export const MainWindow: React.FC = () => {
                       showPreviews={showPreviews}
                       showImages={showImages}
                       onSelect={(e) => handleSelectNote(e, note.path)}
+                      onReorder={handleReorderNotes}
                       onContextMenu={(e, item) => {
                         e.preventDefault();
                         e.stopPropagation();

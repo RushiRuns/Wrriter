@@ -16,7 +16,7 @@ import { LinkService } from './link-service';
 import { SearchService } from './search-service';
 import { IndexClient } from './index-client';
 import { Result, ok, err } from '../../shared/result';
-import type { StartupState, AccentName, SetPaneWidthsArgs, SetOpenTabsArgs } from '../../shared/ipc';
+import type { StartupState, AccentName, SetPaneWidthsArgs, SetOpenTabsArgs, AppSettingsContract } from '../../shared/ipc';
 
 export interface WindowServiceOptions {
   appDataStore: AppDataStore;
@@ -33,6 +33,8 @@ export interface WindowServiceOptions {
   watcherFactory?: ((vaultPath: string) => { start(): Promise<void>; stop(): Promise<void> }) | undefined;
   jobService?: JobService | undefined;
   htmlPath?: string | undefined;
+  onSaveSettings?: ((patch: Partial<AppSettingsContract>) => Promise<Result<AppSettingsContract>>) | undefined;
+  getHotkeyStatus?: ((accelerator?: string) => { registered: boolean; accelerator: string; error?: string }) | undefined;
 }
 
 export class WindowService {
@@ -50,6 +52,8 @@ export class WindowService {
   private readonly watcherFactory?: (vaultPath: string) => { start(): Promise<void>; stop(): Promise<void> };
   private readonly jobService?: JobService;
   private readonly htmlPath: string;
+  private onSaveSettings?: ((patch: Partial<AppSettingsContract>) => Promise<Result<AppSettingsContract>>) | undefined;
+  private getHotkeyStatusHandler?: ((accelerator?: string) => { registered: boolean; accelerator: string; error?: string }) | undefined;
 
   private mainWindow: BrowserWindow | null = null;
   private currentWindowState: WindowState | null = null;
@@ -108,8 +112,18 @@ export class WindowService {
       this.jobService = options.jobService;
     }
     this.htmlPath = options.htmlPath ?? path.join(__dirname, '../renderer/windows/main/index.html');
+    this.onSaveSettings = options.onSaveSettings;
+    this.getHotkeyStatusHandler = options.getHotkeyStatus;
 
     this.registerIpcHandlers();
+  }
+
+  setOnSaveSettings(handler: (patch: Partial<AppSettingsContract>) => Promise<Result<AppSettingsContract>>): void {
+    this.onSaveSettings = handler;
+  }
+
+  setGetHotkeyStatus(handler: (accelerator?: string) => { registered: boolean; accelerator: string; error?: string }): void {
+    this.getHotkeyStatusHandler = handler;
   }
 
   getMainWindow(): BrowserWindow | null {
@@ -123,6 +137,7 @@ export class WindowService {
    * 3. Show window only when ready-to-show (first frame ready) with zero white flash.
    */
   async createMainWindow(): Promise<BrowserWindow> {
+    this.isIdleWorkStarted = false;
     // 1. Initialize vault service and read settings, window state, and vaults
     await this.vaultService.initialize();
     const [settings, windowState, vaults] = await Promise.all([
@@ -436,7 +451,18 @@ export class WindowService {
 
     // 7. Settings channels
     this.ipcRouter.register('app.getSettings', async () => ok(await this.appDataStore.getSettings()));
-    this.ipcRouter.register('app.saveSettings', async (args) => this.appDataStore.saveSettings(args));
+    this.ipcRouter.register('app.saveSettings', async (args) => {
+      if (this.onSaveSettings) {
+        return this.onSaveSettings(args);
+      }
+      return this.appDataStore.saveSettings(args);
+    });
+    this.ipcRouter.register('app.getHotkeyStatus', async (args) => {
+      if (this.getHotkeyStatusHandler) {
+        return ok(this.getHotkeyStatusHandler(args.hotkey));
+      }
+      return ok({ registered: true, accelerator: args.hotkey ?? 'Ctrl+Alt+N' });
+    });
     this.ipcRouter.register('app.openLogFolder', async () => {
       const logsDir = this.appDataStore.getLogsDir();
       try {
@@ -525,6 +551,43 @@ export class WindowService {
     } else {
       this.firstPaintState = null;
     }
+  }
+
+  /**
+   * Pauses file watching, cancels timers, and optionally shuts down index worker
+   * while Wrriter is idle in the Windows Notification Area (system tray).
+   */
+  async pauseForTrayIdle(shutdownIndexWorker = false): Promise<void> {
+    if (this.boundsSaveTimer) {
+      clearTimeout(this.boundsSaveTimer);
+      this.boundsSaveTimer = null;
+    }
+    if (this.currentWindowState) {
+      try {
+        await this.appDataStore.saveWindowState(this.currentWindowState);
+      } catch {
+        // Safe skip
+      }
+    }
+
+    if (this.activeWatcher) {
+      try {
+        await this.activeWatcher.stop();
+      } catch {
+        // Safe skip
+      }
+      this.activeWatcher = undefined;
+    }
+
+    if (shutdownIndexWorker && this.indexClient) {
+      try {
+        await this.indexClient.close();
+      } catch {
+        // Safe skip
+      }
+    }
+
+    this.isIdleWorkStarted = false;
   }
 
   /**

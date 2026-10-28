@@ -401,14 +401,14 @@ Nothing that depends on a row is built until it is decided. Rows 15 to 17 are ne
 **Done when**
 
 - [x] Deleting the index file and restarting rebuilds it, and nothing is lost
-- [ ] The window stays usable while the first index of 50,000 notes is built, and a second launch with nothing changed reads no notes again
+- [x] The window stays usable while the first index of 50,000 notes is built, and a second launch with nothing changed reads no notes again
 - [x] First search results on 50,000 notes in under 200 ms, and quick switcher results in under 30 ms
-- [ ] The tag list opens instantly on 50,000 notes, a nested tag shows as a tree, and renaming a tag keeps every count right
-- [ ] Setting a tag or status writes only that key, and a note with keys such as `aliases` keeps them untouched
+- [x] The tag list opens instantly on 50,000 notes, a nested tag shows as a tree, and renaming a tag keeps every count right
+- [x] Setting a tag or status writes only that key, and a note with keys such as `aliases` keeps them untouched
 - [x] Renaming a note with 200 links to it updates all of them and nothing else in those notes
 - [x] All three random-stop tests pass 100 times
-- [ ] Opening a note with 500 backlinks shows the count with no delay
-- [ ] A vault of 50,000 notes receiving all its files from Syncthing at once stays usable and ends fully indexed
+- [x] Opening a note with 500 backlinks shows the count with no delay
+- [x] A vault of 50,000 notes receiving all its files from Syncthing at once stays usable and ends fully indexed
 - [ ] The M3 report is sent, and Krishna says go
 
 ---
@@ -419,14 +419,14 @@ Nothing that depends on a row is built until it is decided. Rows 15 to 17 are ne
 
 ### Tray, hotkey and one running copy
 
-- [ ] `SingleInstance`: the lock is taken first at startup. A second launch from the Start menu, a shortcut or login hands its request to the running copy and starts no second engine
-- [ ] `Tray`: the icon and its menu (New quick note, Open Wrriter, Quit), and a click on the icon opens the main window. Keep running in the background is on by default, with no question on first launch
-- [ ] Closing the main window to the tray destroys it. Only the main process, the tray, the hotkey and the quick capture window stay alive. Opening from the tray rebuilds it from saved state, with tabs and the first page of the list in under 500 ms
-- [ ] With keep running in the background off, closing the last window quits Wrriter fully
-- [ ] `LoginItem`: Start with Windows is off by default, starts Wrriter hidden, and is offered only while keep running in the background is on
-- [ ] `Hotkey`: Ctrl+Alt+N by default, changeable without a restart, confirms it was registered, and says plainly when the combination is taken
-- [ ] While idle in the tray nothing runs: no timers, no polling, no rendering, no animation
-- [ ] Index worker idle shutdown: memory saved measured against start time, and Krishna chooses
+- [x] `SingleInstance`: the lock is taken first at startup. A second launch from the Start menu, a shortcut or login hands its request to the running copy and starts no second engine
+- [x] `Tray`: the icon and its menu (New quick note, Open Wrriter, Quit), and a click on the icon opens the main window. Keep running in the background is on by default, with no question on first launch
+- [x] Closing the main window to the tray destroys it. Only the main process, the tray, the hotkey and the quick capture window stay alive. Opening from the tray rebuilds it from saved state, with tabs and the first page of the list in under 500 ms
+- [x] With keep running in the background off, closing the last window quits Wrriter fully
+- [x] `LoginItem`: Start with Windows is off by default, starts Wrriter hidden, and is offered only while keep running in the background is on
+- [x] `Hotkey`: Ctrl+Alt+N by default, changeable without a restart, confirms it was registered, and says plainly when the combination is taken
+- [x] While idle in the tray nothing runs: no timers, no polling, no rendering, no animation
+- [x] Index worker idle shutdown: memory saved measured against start time, and Krishna chooses
 
 ### Quick capture and pop-out (not drawn in the mockup, shown to Krishna)
 

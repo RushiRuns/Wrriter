@@ -251,53 +251,24 @@ export class Indexer {
 
   /**
    * Indexes a specific list of relative file paths.
+   * Processes with concurrency and commits in batches of batchSize to remain responsive.
    */
   async indexFiles(relPaths: string[]): Promise<void> {
-    const toUpsert: {
+    type PreparedItem = {
       note: NoteRecord;
       tags: readonly string[];
       links: readonly (string | { target: string; lineText: string })[];
       bodyForSearch: string;
-    }[] = [];
+    };
 
-    for (const relPath of relPaths) {
-      const fullPath = path.join(this.vaultRoot, relPath);
-      if (!fs.existsSync(fullPath)) {
-        this.db.deleteNote(relPath);
-        this.titleList.remove(relPath);
-        continue;
-      }
+    let pendingItems: PreparedItem[] = [];
 
-      try {
-        const stat = await fs.promises.stat(fullPath);
-        const text = await fs.promises.readFile(fullPath, 'utf8');
-        const parsed = lightIndexNote(relPath, text);
-
-        toUpsert.push({
-          note: {
-            path: relPath,
-            title: parsed.title,
-            folder: parsed.folder,
-            mtime_ms: stat.mtimeMs,
-            size: stat.size,
-            created: parsed.created,
-            status: parsed.status,
-            preview: parsed.preview,
-            cover_path: parsed.coverPath,
-            has_frontmatter: parsed.hasFrontmatter ? 1 : 0
-          },
-          tags: parsed.tags,
-          links: parsed.linkItems,
-          bodyForSearch: parsed.bodyForSearch
-        });
-      } catch {
-        // Skip inaccessible file
-      }
-    }
-
-    if (toUpsert.length > 0) {
+    const flush = () => {
+      if (pendingItems.length === 0) return;
+      const items = pendingItems;
+      pendingItems = [];
       this.db.runInTransaction(() => {
-        for (const item of toUpsert) {
+        for (const item of items) {
           this.db.upsertNote(item.note, item.tags, item.links, item.bodyForSearch);
           this.titleList.set({
             path: item.note.path,
@@ -306,7 +277,56 @@ export class Indexer {
           });
         }
       });
+    };
+
+    for (let i = 0; i < relPaths.length; i += this.concurrency) {
+      const slice = relPaths.slice(i, i + this.concurrency);
+      const parsedResults = await Promise.all(
+        slice.map(async (relPath) => {
+          const fullPath = path.join(this.vaultRoot, relPath);
+          try {
+            if (!fs.existsSync(fullPath)) {
+              this.db.deleteNote(relPath);
+              this.titleList.remove(relPath);
+              return null;
+            }
+            const stat = await fs.promises.stat(fullPath);
+            const text = await fs.promises.readFile(fullPath, 'utf8');
+            const parsed = lightIndexNote(relPath, text);
+
+            return {
+              note: {
+                path: relPath,
+                title: parsed.title,
+                folder: parsed.folder,
+                mtime_ms: stat.mtimeMs,
+                size: stat.size,
+                created: parsed.created,
+                status: parsed.status,
+                preview: parsed.preview,
+                cover_path: parsed.coverPath,
+                has_frontmatter: parsed.hasFrontmatter ? 1 : 0
+              },
+              tags: parsed.tags,
+              links: parsed.linkItems,
+              bodyForSearch: parsed.bodyForSearch
+            };
+          } catch {
+            return null;
+          }
+        })
+      );
+
+      for (const item of parsedResults) {
+        if (item) pendingItems.push(item);
+      }
+
+      if (pendingItems.length >= this.batchSize) {
+        flush();
+      }
     }
+
+    flush();
   }
 
   /**

@@ -243,6 +243,16 @@ export interface AppSettingsContract {
 export type GetSettingsArgs = Record<string, never>;
 export type SaveSettingsArgs = Partial<AppSettingsContract>;
 
+export interface GetHotkeyStatusArgs {
+  readonly hotkey?: string | undefined;
+}
+
+export interface HotkeyStatusResult {
+  readonly registered: boolean;
+  readonly accelerator: string;
+  readonly error?: string | undefined;
+}
+
 // 6. index.*
 export interface IndexGetNotesArgs {
   readonly folder?: string | undefined;
@@ -359,6 +369,7 @@ export interface IpcChannelTable {
   'app.setAccent': { args: SetAccentArgs; result: void };
   'app.getSettings': { args: GetSettingsArgs; result: AppSettingsContract };
   'app.saveSettings': { args: SaveSettingsArgs; result: AppSettingsContract };
+  'app.getHotkeyStatus': { args: GetHotkeyStatusArgs; result: HotkeyStatusResult };
   'app.openLogFolder': { args: OpenLogFolderArgs; result: void };
   'index.getNotes': { args: IndexGetNotesArgs; result: readonly NoteListItem[] };
   'index.getFolderCounts': { args: IndexGetFolderCountsArgs; result: readonly IndexFolderCount[] };
@@ -609,6 +620,12 @@ export const IPC_VALIDATORS: { readonly [K in IpcChannel]: Validator<IpcChannelT
   'app.saveSettings': (input: unknown): Result<SaveSettingsArgs> => {
     if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });
     return ok(input as SaveSettingsArgs);
+  },
+
+  'app.getHotkeyStatus': (input: unknown): Result<GetHotkeyStatusArgs> => {
+    if (!isObject(input)) return ok({});
+    const hotkey = typeof input['hotkey'] === 'string' ? input['hotkey'] : undefined;
+    return ok({ hotkey });
   },
 
   'app.openLogFolder': validateEmptyArgs,

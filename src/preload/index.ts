@@ -81,6 +81,7 @@ const api: WrriterApi = {
     setAccent: (args: SetAccentArgs) => invoke('app.setAccent', args),
     getSettings: () => invoke('app.getSettings', {}),
     saveSettings: (args: SaveSettingsArgs) => invoke('app.saveSettings', args),
+    getHotkeyStatus: (args = {}) => invoke('app.getHotkeyStatus', args),
     openLogFolder: () => invoke('app.openLogFolder', {})
   },
   index: {

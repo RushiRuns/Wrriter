@@ -233,6 +233,7 @@ export class IndexDb {
       );
 
       CREATE INDEX IF NOT EXISTS idx_tags_tag ON note_tags(tag, note_path);
+      CREATE INDEX IF NOT EXISTS idx_tags_nocase ON note_tags(tag COLLATE NOCASE, note_path);
 
       CREATE TABLE IF NOT EXISTS note_links (
         source_path TEXT NOT NULL,

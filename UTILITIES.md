@@ -141,6 +141,7 @@ Record every request here as it is written, so a second one is not added for the
 | `app.setAccent` | `{ accent: AccentName }` | `void` | M1 | Built |
 | `app.getSettings` | `{}` | `AppSettingsContract` | M1 | Built |
 | `app.saveSettings` | `Partial<AppSettingsContract>` | `AppSettingsContract` | M1 | Built |
+| `app.getHotkeyStatus` | `{ hotkey?: string }` | `HotkeyStatusResult` | M4 | Built |
 | `app.openLogFolder` | `{}` | `void` | M1 | Built |
 | `index.getNotes` | `{ folder?: string, sortBy?: string, after?: KeysetCursor, limit?: number }` | `NoteListItem[]` | M3 | Built |
 | `index.getFolderCounts` | `{}` | `IndexFolderCount[]` | M3 | Built |
@@ -232,10 +233,11 @@ Record every query here as it is written.
 
 | Name | Purpose | Milestone | Status |
 |---|---|---|---|
-| `Tray` | Tray icon and menu | M4 | Planned |
-| `Hotkey` | Global hotkey, live change, taken-combination message | M4 | Planned |
-| `SingleInstance` | One running copy, hand over arguments | M4 | Planned |
-| `LoginItem` | Start with Windows, hidden | M4 | Planned |
+| `Tray` | Tray icon and menu (`src/main/platform/tray.ts`) | M4 | Built |
+| `Hotkey` | Global hotkey, live change, taken-combination message (`src/main/platform/hotkey.ts`) | M4 | Built |
+| `SingleInstance` | One running copy, hand over arguments (`src/main/platform/single-instance.ts`) | M4 | Built |
+| `LoginItem` | Start with Windows, hidden (`src/main/platform/login-item.ts`) | M4 | Built |
+| `AppLifecycle` | Background persistence, tray, hotkey, and single instance coordination (`src/main/app/app-lifecycle.ts`) | M4 | Built |
 | `RecycleBin` | Delete to the Windows Recycle Bin (`src/main/platform/recycle-bin.ts`) | M1 | Built |
 | `ShellOpen` | Open in the default app, show in File Explorer, web links after checking | M4 | Planned |
 | `VaultProtocol` | The one app protocol serving files inside open vaults (`src/main/platform/vault-protocol.ts`) | M2 | Built |

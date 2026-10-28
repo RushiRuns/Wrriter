@@ -94,6 +94,7 @@ export interface WrriterApi {
     setAccent(args: SetAccentArgs): Promise<Result<void>>;
     getSettings(): Promise<Result<AppSettingsContract>>;
     saveSettings(args: SaveSettingsArgs): Promise<Result<AppSettingsContract>>;
+    getHotkeyStatus(args?: import('./contracts').GetHotkeyStatusArgs): Promise<Result<import('./contracts').HotkeyStatusResult>>;
     openLogFolder(): Promise<Result<void>>;
   };
   readonly index: {

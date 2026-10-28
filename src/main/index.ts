@@ -1,7 +1,6 @@
-import { app, BrowserWindow } from 'electron';
+import { app } from 'electron';
 import { join } from 'path';
 import { IpcRouter } from './ipc/router';
-import { startMainLagMonitor } from './platform/lag-monitor';
 import { AppDataStore } from './store/app-data-store';
 import { WindowService } from './services/window-service';
 import { VaultReader } from './services/vault-reader';
@@ -14,10 +13,12 @@ import { TagService } from './services/tag-service';
 import { LinkService } from './services/link-service';
 import { IndexClient } from './services/index-client';
 import { registerVaultProtocolPrivileges, setupVaultProtocolHandler } from './platform/vault-protocol';
+import { SingleInstanceAdapter } from './platform/single-instance';
+import { AppLifecycle } from './app/app-lifecycle';
 
-// 1. Single-instance lock
-const gotTheLock = app.requestSingleInstanceLock();
-if (!gotTheLock) {
+// 1. Single-instance lock taken first at startup (ARCHITECTURE.md rule 19)
+const singleInstance = new SingleInstanceAdapter();
+if (!singleInstance.requestLock()) {
   app.quit();
 }
 
@@ -75,28 +76,38 @@ const windowService = new WindowService({
   htmlPath: join(__dirname, '../renderer/windows/main/index.html')
 });
 
+const appLifecycle = new AppLifecycle({
+  appDataStore,
+  windowService,
+  singleInstanceAdapter: singleInstance
+});
+
+windowService.setOnSaveSettings((patch) => appLifecycle.handleSaveSettings(patch));
+windowService.setGetHotkeyStatus((acc) => appLifecycle.getHotkeyStatus(acc));
+
 app.whenReady().then(async () => {
   if (process.argv.includes('--benchmark-launch')) {
     app.quit();
     return;
   }
-  startMainLagMonitor();
+
   ipcRouter.initialize();
   setupVaultProtocolHandler(vaultService);
 
-  // Create main window with settings pre-read and hidden in theme background color
-  await windowService.createMainWindow();
+  const isHiddenStartup = process.argv.includes('--hidden');
+  await appLifecycle.initialize({ isHiddenStartup });
+
+  if (process.argv.includes('--quick-note')) {
+    appLifecycle.triggerQuickNote();
+  }
 
   app.on('activate', async () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      await windowService.createMainWindow();
-    }
+    await appLifecycle.openMainWindow();
   });
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
+  if (!appLifecycle.shouldKeepRunningInBackground()) {
     app.quit();
   }
 });
-

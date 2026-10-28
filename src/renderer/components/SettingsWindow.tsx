@@ -43,6 +43,9 @@ export const SettingsWindow: React.FC<SettingsWindowProps> = ({
   const [noteMargin, setNoteMargin] = useState(currentSettings.noteMargin);
   const [keepRunning, setKeepRunning] = useState(currentSettings.keepRunningInBackground);
   const [startWithWindows, setStartWithWindows] = useState(currentSettings.startWithWindows);
+  const [captureHotkey, setCaptureHotkey] = useState(currentSettings.captureHotkey || 'Ctrl+Alt+N');
+  const [hotkeyStatusMessage, setHotkeyStatusMessage] = useState<string | null>(null);
+  const [hotkeyIsError, setHotkeyIsError] = useState<boolean>(false);
   const [shortcutFilter, setShortcutFilter] = useState('');
 
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -55,6 +58,7 @@ export const SettingsWindow: React.FC<SettingsWindowProps> = ({
     setNoteMargin(currentSettings.noteMargin);
     setKeepRunning(currentSettings.keepRunningInBackground);
     setStartWithWindows(currentSettings.startWithWindows);
+    setCaptureHotkey(currentSettings.captureHotkey || 'Ctrl+Alt+N');
   }, [currentSettings]);
 
   // Handle Escape key
@@ -379,7 +383,6 @@ export const SettingsWindow: React.FC<SettingsWindowProps> = ({
                   <div>
                     <div className="wr-settings-label">
                       Keep running in the background
-                      <span className="wr-settings-badge">Takes effect in M4</span>
                     </div>
                     <div className="wr-settings-desc">
                       Closing the main window leaves Wrriter ready in the Windows notification area for instant capture
@@ -401,13 +404,78 @@ export const SettingsWindow: React.FC<SettingsWindowProps> = ({
                   <div>
                     <div className="wr-settings-label">
                       Start with Windows
-                      <span className="wr-settings-badge">Takes effect in M4</span>
                     </div>
                     <div className="wr-settings-desc">
                       Launch Wrriter hidden at Windows startup. Offered only while keep running in the background is on
                     </div>
                   </div>
                 </label>
+              </div>
+
+              {/* Quick capture shortcut */}
+              <div className="wr-settings-section">
+                <div className="wr-settings-label">Quick capture global shortcut</div>
+                <div className="wr-settings-desc">
+                  Open quick note capture from any application (default Ctrl+Alt+N)
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)', marginTop: 'var(--s-2)' }}>
+                  <input
+                    type="text"
+                    className="wr-settings-shortcuts-search"
+                    style={{ width: '180px' }}
+                    value={captureHotkey}
+                    onChange={(e) => setCaptureHotkey(e.target.value)}
+                    placeholder="e.g. Ctrl+Alt+N"
+                  />
+                  <button
+                    type="button"
+                    className="wr-settings-btn"
+                    onClick={async () => {
+                      setHotkeyStatusMessage(null);
+                      setHotkeyIsError(false);
+                      await onSaveSettings({ captureHotkey });
+                      const status = await window.wrriter?.app?.getHotkeyStatus?.({ hotkey: captureHotkey });
+                      if (status && status.ok) {
+                        if (!status.value.registered) {
+                          setHotkeyIsError(true);
+                          setHotkeyStatusMessage(status.value.error || `Shortcut "${captureHotkey}" is taken.`);
+                        } else {
+                          setHotkeyIsError(false);
+                          setHotkeyStatusMessage(`Shortcut registered: ${status.value.accelerator}`);
+                        }
+                      }
+                    }}
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    className="wr-settings-btn"
+                    onClick={async () => {
+                      setCaptureHotkey('Ctrl+Alt+N');
+                      setHotkeyStatusMessage(null);
+                      setHotkeyIsError(false);
+                      await onSaveSettings({ captureHotkey: 'Ctrl+Alt+N' });
+                      const status = await window.wrriter?.app?.getHotkeyStatus?.({ hotkey: 'Ctrl+Alt+N' });
+                      if (status && status.ok && status.value.registered) {
+                        setHotkeyStatusMessage('Shortcut reset to Ctrl+Alt+N');
+                      }
+                    }}
+                  >
+                    Reset
+                  </button>
+                </div>
+                {hotkeyStatusMessage && (
+                  <div
+                    style={{
+                      fontSize: '12px',
+                      marginTop: 'var(--s-1)',
+                      color: hotkeyIsError ? 'var(--cor)' : 'var(--tx2)'
+                    }}
+                  >
+                    {hotkeyStatusMessage}
+                  </div>
+                )}
               </div>
             </>
           )}

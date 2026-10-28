@@ -1,10 +1,15 @@
 import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
+import { markdownToTipTapDoc } from '../markdown-converter';
 
 /**
  * Converts basic HTML elements into clean Markdown syntax without raw HTML injection.
  */
-function htmlToCleanMarkdown(html: string): string {
+export function htmlToCleanMarkdown(html: string): string {
+  if (typeof DOMParser === 'undefined') {
+    return html.replace(/<[^>]+>/g, '').trim();
+  }
+
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
 
@@ -60,14 +65,25 @@ function htmlToCleanMarkdown(html: string): string {
       }
       case 'blockquote':
         return `\n> ${childrenText.trim().replace(/\n/g, '\n> ')}\n\n`;
-      case 'li':
+      case 'li': {
+        const parentTag = el.parentElement?.tagName.toLowerCase();
+        if (parentTag === 'ol') {
+          const index = Array.from(el.parentElement?.children ?? []).indexOf(el) + 1;
+          return `${index}. ${childrenText.trim()}\n`;
+        }
         return `- ${childrenText.trim()}\n`;
+      }
       case 'ul':
       case 'ol':
         return `\n${childrenText}\n`;
       case 'a': {
         const href = el.getAttribute('href') ?? '';
         return href ? `[${childrenText}](${href})` : childrenText;
+      }
+      case 'img': {
+        const src = el.getAttribute('src') ?? '';
+        const alt = el.getAttribute('alt') ?? '';
+        return src ? `![${alt}](${src})` : '';
       }
       case 'br':
         return '\n';
@@ -101,11 +117,11 @@ export const PasteHandlerExtension = Extension.create({
             const isShift = shiftHeld;
             shiftHeld = false;
 
-            // 1. Plain text shortcut (Ctrl+Shift+V or text/plain preferred)
             const plainText = clipboardData.getData('text/plain');
             const htmlText = clipboardData.getData('text/html');
 
-            if (!htmlText || isShift) {
+            // 1. Shift+Ctrl+V: Paste as unformatted plain text
+            if (isShift) {
               if (plainText) {
                 view.dispatch(view.state.tr.replaceSelectionWith(view.state.schema.text(plainText)));
                 return true;
@@ -113,14 +129,80 @@ export const PasteHandlerExtension = Extension.create({
               return false;
             }
 
-            // 2. Web HTML content -> clean Markdown
-            const cleanMarkdown = htmlToCleanMarkdown(htmlText);
-            if (cleanMarkdown) {
-              view.dispatch(view.state.tr.replaceSelectionWith(view.state.schema.text(cleanMarkdown)));
-              return true;
+            // 2. Code block: preserve literal code text without parsing markdown
+            const { $from } = view.state.selection;
+            if ($from.parent.type.name === 'codeBlock') {
+              const codeText = plainText || (htmlText ? htmlToCleanMarkdown(htmlText) : '');
+              if (codeText) {
+                view.dispatch(view.state.tr.replaceSelectionWith(view.state.schema.text(codeText)));
+                return true;
+              }
+              return false;
             }
 
-            return false;
+            // 3. Determine markdown content to parse
+            let markdown = '';
+            if (htmlText) {
+              markdown = htmlToCleanMarkdown(htmlText);
+            }
+            if (!markdown.trim() && plainText) {
+              markdown = plainText;
+            }
+
+            if (!markdown.trim()) {
+              if (plainText) {
+                view.dispatch(view.state.tr.replaceSelectionWith(view.state.schema.text(plainText)));
+                return true;
+              }
+              return false;
+            }
+
+            // 4. Parse markdown to TipTap document structure and insert formatted nodes
+            try {
+              const docJson = markdownToTipTapDoc(markdown);
+              if (docJson && docJson.content && docJson.content.length > 0) {
+                const BLOCK_START_REGEX = /^[ ]{0,3}(?:#{1,6}\s|[-*+][ \t]|\d+[.)][ \t]|>[ \t]?|`{3,}|~{3,}|\||---|\*\*\*|___|!\[.*\]\(.*\)|<img)/;
+                const isMultiBlock =
+                  markdown.includes('\n') ||
+                  BLOCK_START_REGEX.test(markdown) ||
+                  docJson.content.length > 1;
+
+                if (!isMultiBlock && docJson.content.length === 1 && docJson.content[0]?.type === 'paragraph') {
+                  const inlineJson = docJson.content[0]?.content ?? [];
+                  if (inlineJson.length > 0) {
+                    const inlineNodes = inlineJson.map((n) => view.state.schema.nodeFromJSON(n));
+                    const { from, to } = view.state.selection;
+                    const tr = view.state.tr.replaceWith(from, to, inlineNodes);
+                    tr.scrollIntoView();
+                    view.dispatch(tr);
+                    return true;
+                  }
+                } else {
+                  const blockNodes = docJson.content.map((n) => view.state.schema.nodeFromJSON(n));
+                  let { from, to } = view.state.selection;
+                  const tr = view.state.tr;
+                  const res = tr.doc.resolve(from);
+                  if (
+                    from === to &&
+                    res.parent.isTextblock &&
+                    !res.parent.type.spec.code &&
+                    res.parent.content.size === 0
+                  ) {
+                    from = res.before();
+                    to = res.after();
+                  }
+                  tr.replaceWith(from, to, blockNodes);
+                  tr.scrollIntoView();
+                  view.dispatch(tr);
+                  return true;
+                }
+              }
+            } catch {
+              // Fallback to literal text if parsing fails
+            }
+
+            view.dispatch(view.state.tr.replaceSelectionWith(view.state.schema.text(plainText || markdown)));
+            return true;
           }
         }
       })

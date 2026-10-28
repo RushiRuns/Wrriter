@@ -156,6 +156,7 @@ flowchart TD
 | [`.../extensions/file-chip.ts`](file:///c:/Dev/Wrriter/src/renderer/editor/extensions/file-chip.ts) | Non-image attachment chip representation. |
 | [`.../extensions/links.ts`](file:///c:/Dev/Wrriter/src/renderer/editor/extensions/links.ts) | Internal Wikilinks (`[[Note Name]]`) and external web links. |
 | [`.../extensions/markdown-shortcuts.ts`](file:///c:/Dev/Wrriter/src/renderer/editor/extensions/markdown-shortcuts.ts) | Live markdown input rules (`# `, `- [ ] `, `> `, etc.). |
+| [`.../extensions/paste-handler.ts`](file:///c:/Dev/Wrriter/src/renderer/editor/extensions/paste-handler.ts) | Sanitizes and converts pasted HTML and markdown, immediately inserting rich formatted nodes. |
 | [`.../extensions/slash-menu.ts`](file:///c:/Dev/Wrriter/src/renderer/editor/extensions/slash-menu.ts) | Slash command popup trigger and state machine. |
 | [`.../extensions/slash-menu-items.ts`](file:///c:/Dev/Wrriter/src/renderer/editor/extensions/slash-menu-items.ts) | Item list and icons for the slash menu. |
 | [`.../extensions/floating-toolbar.ts`](file:///c:/Dev/Wrriter/src/renderer/editor/extensions/floating-toolbar.ts) | Text selection floating formatting toolbar. |

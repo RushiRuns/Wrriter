@@ -40,7 +40,7 @@ import { FloatingToolbar } from '../components/FloatingToolbar';
 import { ContextMenu } from '../components/menu/ContextMenu';
 import { TabStrip } from '../components/TabStrip';
 import { markdownToTipTapDoc, tipTapDocToMarkdown } from './markdown-converter';
-import { planSave } from '../../shared/markdown/save';
+import { planSave, encodeUtf8 } from '../../shared/markdown/save';
 import { parseFrontmatter } from '../../shared/domain/frontmatter';
 import {
   extractTitleFromFirstLine,
@@ -96,6 +96,7 @@ export interface TabSession {
   scrollTop: number;
   isDirty: boolean;
   originalBytes: Uint8Array;
+  lastSavedText?: string;
   initialFileName: string;
   initialTitle: string;
   isManualRenamed?: boolean;
@@ -238,6 +239,7 @@ export const EditorHost: React.FC<EditorHostProps> = ({
 
         if (res.ok) {
           tab.originalBytes = plan.bytes;
+          tab.lastSavedText = plan.text;
           tab.isDirty = false;
           return true;
         } else {
@@ -578,7 +580,7 @@ export const EditorHost: React.FC<EditorHostProps> = ({
 
       if (!targetTab) {
         let rawText = '';
-        let originalBytes = new Uint8Array(0);
+        let originalBytes: Uint8Array = new Uint8Array(0);
         const fileName = activeNotePath.split('/').pop() ?? activeNotePath;
         const initialBase = fileName.replace(/\.md$/i, '');
         let title = initialBase;
@@ -589,7 +591,7 @@ export const EditorHost: React.FC<EditorHostProps> = ({
           const res = await window.wrriter.note.read({ path: activeNotePath });
           if (res.ok) {
             rawText = res.value.text;
-            originalBytes = new Uint8Array(res.value.bytes);
+            originalBytes = encodeUtf8(rawText);
             const firstLine = rawText.split(/\r?\n/)[0];
             title = extractTitleFromFirstLine(firstLine) || initialBase;
 
@@ -606,6 +608,7 @@ export const EditorHost: React.FC<EditorHostProps> = ({
           scrollTop: 0,
           isDirty: false,
           originalBytes,
+          lastSavedText: rawText,
           initialFileName: fileName,
           initialTitle: title,
           tags,
@@ -702,15 +705,16 @@ export const EditorHost: React.FC<EditorHostProps> = ({
         continue;
       }
 
-      const diskBytes = new Uint8Array(res.value.bytes);
-      const isDifferent =
-        diskBytes.length !== tab.originalBytes.length ||
-        diskBytes.some((byte, idx) => byte !== tab.originalBytes[idx]);
+      const diskText = res.value.text;
+      const lastSavedText = tab.lastSavedText ?? (tab.originalBytes.length > 0 ? new TextDecoder().decode(tab.originalBytes) : '');
+      const isDifferent = diskText !== lastSavedText;
 
       if (isDifferent) {
+        const diskBytes = encodeUtf8(diskText);
         if (!tab.isDirty) {
           tab.originalBytes = diskBytes;
-          const newText = res.value.text;
+          tab.lastSavedText = diskText;
+          const newText = diskText;
           const docJson = markdownToTipTapDoc(newText);
           if (editorRef.current && tab.path === activePathRef.current) {
             const currentSelection = editorRef.current.state.selection;
@@ -726,18 +730,20 @@ export const EditorHost: React.FC<EditorHostProps> = ({
           }
         } else {
           const dir = tab.path.includes('/') ? tab.path.slice(0, tab.path.lastIndexOf('/')) : '';
-          const baseName = tab.initialFileName.replace(/\.md$/i, '');
+          const currentFileName = tab.path.split('/').pop() ?? tab.initialFileName;
+          const baseName = currentFileName.replace(/\.md$/i, '');
           const externalName = `${baseName} (External).md`;
           const externalPath = dir ? `${dir}/${externalName}` : externalName;
 
           if (window.wrriter?.note?.save) {
             await window.wrriter.note.save({
               path: externalPath,
-              text: res.value.text
+              text: diskText
             });
             onNoticeRef.current?.(`"${tab.title}" was edited outside Wrriter. External version saved as ${externalName}.`);
           }
           tab.originalBytes = diskBytes;
+          tab.lastSavedText = diskText;
         }
       }
     }

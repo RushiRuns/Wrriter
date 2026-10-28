@@ -87,6 +87,11 @@ export const MainWindow: React.FC = () => {
   const [noteTitle, setNoteTitle] = useState('Welcome to Wrriter');
   const [noteContent, setNoteContent] = useState('');
   const [noteDate, setNoteDate] = useState<number>(Date.now());
+  const selectedNotePathRef = useRef<string | null>(selectedNotePath);
+  selectedNotePathRef.current = selectedNotePath;
+  const noteTitleRef = useRef<string>(noteTitle);
+  noteTitleRef.current = noteTitle;
+  const prevSelectedNotePathRef = useRef<string | null>(null);
 
   // Notes pane 3-dot menu, editor menu, and context menu state
   const [notesMenuOpen, setNotesMenuOpen] = useState(false);
@@ -179,18 +184,43 @@ export const MainWindow: React.FC = () => {
         sortBy: currentSort
       });
       if (res.ok) {
-        setNotes(res.value);
+        setNotes((prevNotes) => {
+          const currentSelected = selectedNotePathRef.current;
+          const currentTitle = noteTitleRef.current;
+
+          let updated: NoteListItem[] = res.value.map((diskNote: NoteListItem): NoteListItem => {
+            const prev = prevNotes.find((p) => p.path === diskNote.path);
+            if (diskNote.path === currentSelected && currentTitle) {
+              return { ...diskNote, title: currentTitle };
+            }
+            if (prev && prev.title && prev.title !== diskNote.title && diskNote.title.startsWith('Untitled')) {
+              return { ...diskNote, title: prev.title };
+            }
+            return diskNote;
+          });
+
+          // Preserve unsaved active note that is not yet on disk
+          if (currentSelected && !updated.some((n: NoteListItem) => n.path === currentSelected)) {
+            const unsaved = prevNotes.find((n) => n.path === currentSelected);
+            if (unsaved) {
+              updated = [{ ...unsaved, title: currentTitle || unsaved.title }, ...updated];
+            }
+          }
+
+          return updated;
+        });
+
         // If current selected note no longer exists, select first available
         if (res.value.length > 0) {
-          const currentExists = res.value.some((n: NoteListItem) => n.path === selectedNotePath);
-          if (!currentExists && !selectedNotePath) {
+          const currentExists = res.value.some((n: NoteListItem) => n.path === selectedNotePathRef.current);
+          if (!currentExists && !selectedNotePathRef.current) {
             setSelectedNotePath(res.value[0]?.path ?? null);
             setNoteTitle(res.value[0]?.title ?? 'Untitled');
           }
         }
       }
     }
-  }, [selectedFolder, sortBy, selectedNotePath]);
+  }, [selectedFolder, sortBy]);
 
   // Load note text from disk
   const loadNoteContent = useCallback(async (relPath: string) => {
@@ -413,12 +443,19 @@ export const MainWindow: React.FC = () => {
   // When selected note changes, load note body
   useEffect(() => {
     if (selectedNotePath) {
-      void loadNoteContent(selectedNotePath);
-      const matched = notes.find((n) => n.path === selectedNotePath);
-      if (matched) {
-        setNoteTitle(matched.title);
-        setNoteDate(matched.modified);
+      const isSwitchingNote = selectedNotePath !== prevSelectedNotePathRef.current;
+      prevSelectedNotePathRef.current = selectedNotePath;
+
+      if (isSwitchingNote) {
+        void loadNoteContent(selectedNotePath);
+        const matched = notes.find((n) => n.path === selectedNotePath);
+        if (matched) {
+          setNoteTitle(matched.title);
+          setNoteDate(matched.modified);
+        }
       }
+    } else {
+      prevSelectedNotePathRef.current = null;
     }
   }, [selectedNotePath, notes, loadNoteContent]);
 
@@ -765,8 +802,16 @@ export const MainWindow: React.FC = () => {
       }
     };
 
+    const handleNewNoteEvent = () => {
+      handleCreateNewNote();
+    };
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('wrriter:new-note', handleNewNoteEvent);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('wrriter:new-note', handleNewNoteEvent);
+    };
   }, [
     handleToggleBothPanes,
     handleCreateNewNote,

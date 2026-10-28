@@ -12,6 +12,20 @@ export interface VirtualListProps<T> {
   enableGlideAnimation?: boolean;
 }
 
+/**
+ * Helper to determine whether list items have actually reordered or changed membership,
+ * warranting a FLIP glide animation. Pure selection changes, content edits, or title updates
+ * with identical keys and ordering do not trigger reorder animations.
+ */
+export function shouldAnimateReorder(
+  prevKeys: readonly string[],
+  currentKeys: readonly string[]
+): boolean {
+  if (prevKeys.length === 0) return false;
+  if (prevKeys.length !== currentKeys.length) return true;
+  return prevKeys.some((key, idx) => key !== currentKeys[idx]);
+}
+
 export function VirtualList<T>({
   items,
   itemHeight = 84, // 80px row + 4px margin
@@ -29,6 +43,7 @@ export function VirtualList<T>({
   // Position tracking for FLIP glide animations
   const prevRectsRef = useRef<Map<string, DOMRect>>(new Map());
   const itemRefsRef = useRef<Map<string, HTMLElement>>(new Map());
+  const prevKeysRef = useRef<string[]>([]);
 
   // Update viewport dimensions
   useEffect(() => {
@@ -65,23 +80,31 @@ export function VirtualList<T>({
 
     const prevRects = prevRectsRef.current;
     const currentItemRefs = itemRefsRef.current;
+    const prevKeys = prevKeysRef.current;
+    const currentKeys = items.map((item, idx) => getKey(item, idx));
 
-    for (const [key, element] of currentItemRefs.entries()) {
-      const prevRect = prevRects.get(key);
-      if (prevRect && element) {
-        flipGlide(element, prevRect);
-      }
-    }
-
-    // Capture current positions for next render
+    // 1. Capture clean, untransformed layout positions BEFORE starting any animations
+    // to prevent active Web Animation transforms from polluting next render coordinates
     const newRects = new Map<string, DOMRect>();
     for (const [key, element] of currentItemRefs.entries()) {
       if (element) {
         newRects.set(key, element.getBoundingClientRect());
       }
     }
+
+    // 2. Only trigger FLIP glide animations when items have actually changed order or membership
+    if (shouldAnimateReorder(prevKeys, currentKeys)) {
+      for (const [key, element] of currentItemRefs.entries()) {
+        const prevRect = prevRects.get(key);
+        if (prevRect && element) {
+          flipGlide(element, prevRect);
+        }
+      }
+    }
+
     prevRectsRef.current = newRects;
-  }, [items, enableGlideAnimation]);
+    prevKeysRef.current = currentKeys;
+  }, [items, enableGlideAnimation, getKey]);
 
   const totalCount = items.length;
   const totalHeight = totalCount * itemHeight;

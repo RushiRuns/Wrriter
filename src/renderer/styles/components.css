@@ -355,6 +355,35 @@
   color: var(--tx3);
 }
 
+.lbl-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.lbl-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  background: none;
+  border-radius: var(--r-s);
+  color: var(--tx3);
+  cursor: pointer;
+  opacity: 0.35;
+  transition: opacity var(--t-fast) var(--ease-move), color var(--t-fast) var(--ease-move);
+}
+
+.lbl-header:hover .lbl-btn,
+.lbl-btn:hover,
+.lbl-btn:focus-visible {
+  opacity: 1;
+  color: var(--tx);
+}
+
 .tree {
   flex: 1;
   min-height: 0;

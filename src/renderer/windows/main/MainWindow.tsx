@@ -1233,11 +1233,6 @@ export const MainWindow: React.FC = () => {
           {/* 1px divider */}
           <div className="sep" />
 
-          {/* Folders label */}
-          <div className="lbl">
-            FOLDERS
-          </div>
-
           {/* Folder Tree Hierarchy */}
           <FolderTree
             folders={folders}

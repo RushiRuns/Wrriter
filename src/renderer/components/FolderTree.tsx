@@ -3,7 +3,8 @@ import type { FolderNode } from '../../shared/ipc/contracts';
 import {
   FolderClosedIcon,
   FolderOpenIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  PlusIcon
 } from './icons';
 import { ContextMenu } from './menu/ContextMenu';
 import { getFileNameValidationError } from '../../shared/domain/names';
@@ -26,7 +27,7 @@ interface ConfirmDeleteState {
   folder: FolderNode;
 }
 
-interface NewFolderModalState {
+interface CreatingFolderState {
   parentRelPath: string | null;
 }
 
@@ -43,26 +44,33 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
   const [renameError, setRenameError] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<ConfirmDeleteState | null>(null);
-  const [newFolderModal, setNewFolderModal] = useState<NewFolderModalState | null>(null);
-  const [newFolderName, setNewFolderName] = useState('');
-  const [newFolderError, setNewFolderError] = useState<string | null>(null);
+  const [creatingFolder, setCreatingFolder] = useState<CreatingFolderState | null>(null);
+  const [createFolderName, setCreateFolderName] = useState('');
+  const [createFolderError, setCreateFolderError] = useState<string | null>(null);
 
   const renameInputRef = useRef<HTMLInputElement | null>(null);
+  const createInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Close context menu on window click, Escape, or close-all event
+  // Close context menu and inputs on window click, Escape, or close-all event
   useEffect(() => {
     const handleOutside = () => setContextMenu(null);
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setContextMenu(null);
         setRenamingPath(null);
+        setRenameError(null);
         setDeleteConfirm(null);
-        setNewFolderModal(null);
+        setCreatingFolder(null);
+        setCreateFolderName('');
+        setCreateFolderError(null);
       }
     };
     const handleCloseAll = (e: Event) => {
       const customEvent = e as CustomEvent<{ except?: string }>;
-      if (customEvent.detail?.except !== 'folder-context-menu') {
+      if (
+        customEvent.detail?.except !== 'folder-context-menu' &&
+        customEvent.detail?.except !== 'context-menu'
+      ) {
         setContextMenu(null);
       }
     };
@@ -85,6 +93,13 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
     }
   }, [renamingPath]);
 
+  // Focus create folder input on creation start
+  useEffect(() => {
+    if (creatingFolder && createInputRef.current) {
+      createInputRef.current.focus();
+    }
+  }, [creatingFolder]);
+
   const toggleExpanded = (relPath: string) => {
     setExpandedPaths((prev) => {
       const next = new Set(prev);
@@ -99,6 +114,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
 
   const handleStartRename = (folder: FolderNode) => {
     setContextMenu(null);
+    cancelCreateFolder();
     setRenamingPath(folder.relPath);
     setRenameValue(folder.name);
     setRenameError(null);
@@ -139,31 +155,52 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
     }
   };
 
-  const handleCreateFolderSubmit = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const trimmed = newFolderName.trim();
-    const validationErr = getFileNameValidationError(trimmed);
-    if (validationErr) {
-      setNewFolderError(validationErr);
+  const startCreateFolder = (parentRelPath: string | null) => {
+    setContextMenu(null);
+    setRenamingPath(null);
+    setRenameError(null);
+    setCreatingFolder({ parentRelPath });
+    setCreateFolderName('');
+    setCreateFolderError(null);
+    if (parentRelPath) {
+      setExpandedPaths((prev) => new Set(prev).add(parentRelPath));
+    }
+  };
+
+  const cancelCreateFolder = () => {
+    setCreatingFolder(null);
+    setCreateFolderName('');
+    setCreateFolderError(null);
+  };
+
+  const commitCreateFolder = async () => {
+    if (!creatingFolder) return;
+    const trimmed = createFolderName.trim();
+    if (!trimmed) {
+      cancelCreateFolder();
       return;
     }
 
-    const parent = newFolderModal?.parentRelPath;
+    const validationErr = getFileNameValidationError(trimmed);
+    if (validationErr) {
+      setCreateFolderError(validationErr);
+      return;
+    }
+
+    const parent = creatingFolder.parentRelPath;
     const folderPath = parent ? `${parent}/${trimmed}` : trimmed;
 
     if (window.wrriter?.folder?.create) {
       const res = await window.wrriter.folder.create({ path: folderPath });
       if (res.ok) {
-        setNewFolderModal(null);
-        setNewFolderName('');
-        setNewFolderError(null);
+        cancelCreateFolder();
         if (parent) {
           setExpandedPaths((prev) => new Set(prev).add(parent));
         }
         await onRefresh();
         onSelectFolder(folderPath);
       } else {
-        setNewFolderError(res.error.kind === 'ruleViolation' ? res.error.rule : 'Failed to create folder');
+        setCreateFolderError(res.error.kind === 'ruleViolation' ? res.error.rule : 'Failed to create folder');
       }
     }
   };
@@ -184,11 +221,84 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
     }
   };
 
+  const renderInlineCreateRow = (depth: number) => {
+    return (
+      <div
+        key="__new_folder_input__"
+        className="fr"
+        style={{
+          marginLeft: depth * 24,
+          position: 'relative'
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="fslot">
+          <FolderClosedIcon />
+        </div>
+        <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
+          <input
+            ref={createInputRef}
+            type="text"
+            placeholder="Folder name"
+            value={createFolderName}
+            onChange={(e) => {
+              setCreateFolderName(e.target.value);
+              setCreateFolderError(null);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                void commitCreateFolder();
+              } else if (e.key === 'Escape') {
+                e.preventDefault();
+                cancelCreateFolder();
+              }
+            }}
+            onBlur={() => void commitCreateFolder()}
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%',
+              height: 24,
+              padding: '0 6px',
+              fontSize: 'var(--fs-ui)',
+              fontFamily: 'inherit',
+              backgroundColor: 'var(--pop)',
+              border: createFolderError ? '1px solid var(--dgr)' : '1px solid var(--accent)',
+              borderRadius: 'var(--r-s)',
+              color: 'var(--tx)',
+              outline: 'none'
+            }}
+          />
+          {createFolderError && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                zIndex: 60,
+                fontSize: 11,
+                color: 'var(--dgr)',
+                backgroundColor: 'var(--pop)',
+                padding: '2px 6px',
+                borderRadius: 'var(--r-s)',
+                boxShadow: 'var(--shadow)',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {createFolderError}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const renderFolderItem = (folder: FolderNode, depth: number = 0) => {
     const isSelected = selectedFolder === folder.relPath;
     const isExpanded = expandedPaths.has(folder.relPath);
     const hasChildren = folder.children && folder.children.length > 0;
     const isRenaming = renamingPath === folder.relPath;
+    const isCreatingHere = creatingFolder?.parentRelPath === folder.relPath;
 
     return (
       <React.Fragment key={folder.relPath}>
@@ -214,7 +324,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
           tabIndex={0}
         >
           {/* Folder Icon Toggle */}
-          {hasChildren ? (
+          {hasChildren || isCreatingHere ? (
             <button
               type="button"
               className="ftg fslot"
@@ -264,7 +374,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
                   fontFamily: 'inherit',
                   backgroundColor: 'var(--pop)',
                   border: renameError ? '1px solid var(--dgr)' : '1px solid var(--accent)',
-                  borderRadius: 4,
+                  borderRadius: 'var(--r-s)',
                   color: 'var(--tx)',
                   outline: 'none'
                 }}
@@ -280,7 +390,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
                     color: 'var(--dgr)',
                     backgroundColor: 'var(--pop)',
                     padding: '2px 6px',
-                    borderRadius: 4,
+                    borderRadius: 'var(--r-s)',
                     boxShadow: 'var(--shadow)',
                     whiteSpace: 'nowrap'
                   }}
@@ -297,10 +407,11 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
           <span className="ct">{folder.noteCount}</span>
         </div>
 
-        {/* Subfolders (children loaded on expand) */}
-        {hasChildren && isExpanded && (
+        {/* Subfolders or inline creation row */}
+        {(hasChildren || isCreatingHere) && isExpanded && (
           <div>
-            {folder.children.map((child) => renderFolderItem(child as FolderNode, depth + 1))}
+            {isCreatingHere && renderInlineCreateRow(depth + 1)}
+            {hasChildren && folder.children.map((child) => renderFolderItem(child as FolderNode, depth + 1))}
           </div>
         )}
       </React.Fragment>
@@ -308,251 +419,177 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
   };
 
   return (
-    <div
-      className="tree"
-      style={{
-        flex: 1,
-        minHeight: 0,
-        overflowY: 'auto',
-        display: 'flex',
-        flexDirection: 'column'
-      }}
-      onContextMenu={(e) => {
-        // Right-clicking empty space in tree opens root context menu
-        e.preventDefault();
-        setContextMenu({ x: e.clientX, y: e.clientY, folder: null });
-      }}
-    >
-      {/* 1. All Notes root item */}
-      <div
-        className={`fr ${selectedFolder === null ? 'sel' : ''}`}
-        style={{ cursor: 'pointer' }}
-        onClick={() => onSelectFolder(null)}
-        tabIndex={0}
-      >
-        <div className="fslot">
-          <FolderClosedIcon />
-        </div>
-        <span className="nm">Notes</span>
-        <span className="ct">{totalVaultNotesCount}</span>
+    <>
+      {/* FOLDERS Header with hover + button */}
+      <div className="lbl lbl-header">
+        <span>FOLDERS</span>
+        <button
+          type="button"
+          className="lbl-btn"
+          title="New folder"
+          aria-label="New folder"
+          onClick={(e) => {
+            e.stopPropagation();
+            startCreateFolder(null);
+          }}
+        >
+          <PlusIcon />
+        </button>
       </div>
 
-      {/* 2. Folders hierarchy */}
-      {folders.map((folder) => renderFolderItem(folder, 0))}
+      <div
+        className="tree"
+        style={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: 'auto',
+          display: 'flex',
+          flexDirection: 'column'
+        }}
+        onContextMenu={(e) => {
+          // Right-clicking empty space in tree opens root context menu
+          e.preventDefault();
+          setContextMenu({ x: e.clientX, y: e.clientY, folder: null });
+        }}
+      >
+        {/* 1. All Notes root item */}
+        <div
+          className={`fr ${selectedFolder === null ? 'sel' : ''}`}
+          style={{ cursor: 'pointer' }}
+          onClick={() => onSelectFolder(null)}
+          tabIndex={0}
+        >
+          <div className="fslot">
+            <FolderClosedIcon />
+          </div>
+          <span className="nm">Notes</span>
+          <span className="ct">{totalVaultNotesCount}</span>
+        </div>
 
-      {/* Context Menu */}
-      {contextMenu && (
-        <ContextMenu
-          isOpen={true}
-          x={contextMenu.x}
-          y={contextMenu.y}
-          onClose={() => setContextMenu(null)}
-          items={[
-            {
-              id: 'new-folder',
-              label: 'New folder',
-              onClick: () => {
-                const parentPath = contextMenu.folder?.relPath ?? null;
-                setNewFolderModal({ parentRelPath: parentPath });
-                setNewFolderName('');
-                setNewFolderError(null);
-              }
-            },
-            ...(contextMenu.folder
-              ? [
-                  {
-                    id: 'rename',
-                    label: 'Rename',
-                    shortcut: 'F2',
-                    onClick: () => handleStartRename(contextMenu.folder!)
-                  },
-                  {
-                    id: 'explorer',
-                    label: 'Show in File Explorer',
-                    onClick: () => {
-                      if (contextMenu.folder?.relPath && window.wrriter?.showItemInFolder) {
-                        void window.wrriter.showItemInFolder(contextMenu.folder.relPath);
+        {/* Root-level inline folder creation row */}
+        {creatingFolder?.parentRelPath === null && renderInlineCreateRow(0)}
+
+        {/* 2. Folders hierarchy */}
+        {folders.map((folder) => renderFolderItem(folder, 0))}
+
+        {/* Context Menu */}
+        {contextMenu && (
+          <ContextMenu
+            isOpen={true}
+            menuId="folder-context-menu"
+            x={contextMenu.x}
+            y={contextMenu.y}
+            onClose={() => setContextMenu(null)}
+            items={[
+              {
+                id: 'new-folder',
+                label: 'New folder',
+                onClick: () => {
+                  const parentPath = contextMenu.folder?.relPath ?? null;
+                  startCreateFolder(parentPath);
+                }
+              },
+              ...(contextMenu.folder
+                ? [
+                    {
+                      id: 'rename',
+                      label: 'Rename',
+                      shortcut: 'F2',
+                      onClick: () => handleStartRename(contextMenu.folder!)
+                    },
+                    {
+                      id: 'explorer',
+                      label: 'Show in File Explorer',
+                      onClick: () => {
+                        if (contextMenu.folder?.relPath && window.wrriter?.showItemInFolder) {
+                          void window.wrriter.showItemInFolder(contextMenu.folder.relPath);
+                        }
+                      }
+                    },
+                    { id: 'div-1', label: '', isDivider: true },
+                    {
+                      id: 'delete',
+                      label: 'Delete folder',
+                      isDanger: true,
+                      onClick: () => {
+                        setDeleteConfirm({ folder: contextMenu.folder! });
                       }
                     }
-                  },
-                  { id: 'div-1', label: '', isDivider: true },
-                  {
-                    id: 'delete',
-                    label: 'Delete folder',
-                    isDanger: true,
-                    onClick: () => {
-                      setDeleteConfirm({ folder: contextMenu.folder! });
-                    }
-                  }
-                ]
-              : [])
-          ]}
-        />
-      )}
+                  ]
+                : [])
+            ]}
+          />
+        )}
 
-      {/* Confirmation Dialog for Delete Folder */}
-      {deleteConfirm && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.45)',
-            zIndex: 200,
-            display: 'grid',
-            placeItems: 'center'
-          }}
-          onClick={() => setDeleteConfirm(null)}
-        >
+        {/* Confirmation Dialog for Delete Folder */}
+        {deleteConfirm && (
           <div
             style={{
-              width: 380,
-              backgroundColor: 'var(--pop)',
-              borderRadius: 'var(--r-l)',
-              boxShadow: 'var(--shadow)',
-              border: '1px solid var(--line)',
-              padding: 24,
-              animation: 'lin var(--t-fast) var(--ease-arrive) both'
+              position: 'fixed',
+              inset: 0,
+              backgroundColor: 'rgba(0,0,0,0.45)',
+              zIndex: 200,
+              display: 'grid',
+              placeItems: 'center'
             }}
-            onClick={(e) => e.stopPropagation()}
+            onClick={() => setDeleteConfirm(null)}
           >
-            <h3 style={{ margin: '0 0 12px', fontSize: 18, fontWeight: 700, color: 'var(--tx)' }}>
-              Delete folder
-            </h3>
-            <p style={{ margin: '0 0 20px', fontSize: 'var(--fs-ui)', color: 'var(--tx2)', lineHeight: 1.4 }}>
-              Delete folder "{deleteConfirm.folder.name}" and its {deleteConfirm.folder.noteCount} notes? This will send them to the Recycle Bin.
-            </p>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-              <button
-                type="button"
-                className="fb"
-                onClick={() => setDeleteConfirm(null)}
-                style={{
-                  height: 32,
-                  padding: '0 16px',
-                  borderRadius: 8,
-                  border: '1px solid var(--div)',
-                  background: 'none',
-                  color: 'var(--tx)',
-                  cursor: 'pointer'
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleDeleteFolderSubmit()}
-                style={{
-                  height: 32,
-                  padding: '0 16px',
-                  borderRadius: 8,
-                  border: 'none',
-                  backgroundColor: 'var(--dgr)',
-                  color: '#fff',
-                  cursor: 'pointer',
-                  fontWeight: 600
-                }}
-              >
-                Delete
-              </button>
+            <div
+              style={{
+                width: 380,
+                backgroundColor: 'var(--pop)',
+                borderRadius: 'var(--r-l)',
+                boxShadow: 'var(--shadow)',
+                border: '1px solid var(--line)',
+                padding: 24,
+                animation: 'lin var(--t-fast) var(--ease-arrive) both'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 style={{ margin: '0 0 12px', fontSize: 18, fontWeight: 700, color: 'var(--tx)' }}>
+                Delete folder
+              </h3>
+              <p style={{ margin: '0 0 20px', fontSize: 'var(--fs-ui)', color: 'var(--tx2)', lineHeight: 1.4 }}>
+                Delete folder "{deleteConfirm.folder.name}" and its {deleteConfirm.folder.noteCount} notes? This will send them to the Recycle Bin.
+              </p>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                <button
+                  type="button"
+                  className="fb"
+                  onClick={() => setDeleteConfirm(null)}
+                  style={{
+                    height: 32,
+                    padding: '0 16px',
+                    borderRadius: 8,
+                    border: '1px solid var(--div)',
+                    background: 'none',
+                    color: 'var(--tx)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleDeleteFolderSubmit()}
+                  style={{
+                    height: 32,
+                    padding: '0 16px',
+                    borderRadius: 8,
+                    border: 'none',
+                    backgroundColor: 'var(--dgr)',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    fontWeight: 600
+                  }}
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* New Folder Modal */}
-      {newFolderModal && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.45)',
-            zIndex: 200,
-            display: 'grid',
-            placeItems: 'center'
-          }}
-          onClick={() => setNewFolderModal(null)}
-        >
-          <form
-            onSubmit={(e) => void handleCreateFolderSubmit(e)}
-            style={{
-              width: 380,
-              backgroundColor: 'var(--pop)',
-              borderRadius: 'var(--r-l)',
-              boxShadow: 'var(--shadow)',
-              border: '1px solid var(--line)',
-              padding: 24,
-              animation: 'lin var(--t-fast) var(--ease-arrive) both'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 style={{ margin: '0 0 12px', fontSize: 18, fontWeight: 700, color: 'var(--tx)' }}>
-              New folder
-            </h3>
-            <div style={{ marginBottom: 16 }}>
-              <input
-                type="text"
-                autoFocus
-                placeholder="Folder name"
-                value={newFolderName}
-                onChange={(e) => {
-                  setNewFolderName(e.target.value);
-                  setNewFolderError(null);
-                }}
-                style={{
-                  width: '100%',
-                  height: 36,
-                  padding: '0 10px',
-                  fontSize: 'var(--fs-ui)',
-                  fontFamily: 'inherit',
-                  backgroundColor: 'var(--pop)',
-                  border: newFolderError ? '1px solid var(--dgr)' : '1px solid var(--div)',
-                  borderRadius: 8,
-                  color: 'var(--tx)',
-                  outline: 'none'
-                }}
-              />
-              {newFolderError && (
-                <div style={{ marginTop: 6, fontSize: 12, color: 'var(--dgr)' }}>
-                  {newFolderError}
-                </div>
-              )}
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-              <button
-                type="button"
-                className="fb"
-                onClick={() => setNewFolderModal(null)}
-                style={{
-                  height: 32,
-                  padding: '0 16px',
-                  borderRadius: 8,
-                  border: '1px solid var(--div)',
-                  background: 'none',
-                  color: 'var(--tx)',
-                  cursor: 'pointer'
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                style={{
-                  height: 32,
-                  padding: '0 16px',
-                  borderRadius: 8,
-                  border: 'none',
-                  backgroundColor: 'var(--accent)',
-                  color: 'var(--onacc)',
-                  cursor: 'pointer',
-                  fontWeight: 600
-                }}
-              >
-                Create
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </>
   );
 };

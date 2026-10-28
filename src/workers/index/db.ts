@@ -1,6 +1,8 @@
 import Database, { type Database as DatabaseType, type Statement } from 'better-sqlite3';
 import * as fs from 'fs';
 import * as path from 'path';
+import { parseSearchQuery } from '../../shared/domain/search-filters';
+import { ftsEscape } from './fts';
 
 export const INDEX_SCHEMA_VERSION = '2';
 
@@ -51,9 +53,19 @@ export interface KeysetCursor {
   readonly sortVal: string | number;
 }
 
+export interface IndexSearchOptions {
+  readonly query?: string;
+  readonly textQuery?: string;
+  readonly tags?: readonly string[];
+  readonly statuses?: readonly string[];
+  readonly folders?: readonly string[];
+  readonly limit?: number;
+}
+
 export class IndexDb {
   private db: DatabaseType;
   private readonly dbPath: string;
+  private readonly dynamicStmtCache = new Map<string, Statement>();
 
   // Prepared statements
   private stmtInsertNote!: Statement;
@@ -530,11 +542,166 @@ export class IndexDb {
   }
 
   /**
-   * Performs an FTS5 search.
+   * Performs an FTS5 search with support for tag:, status:, and folder: filters,
+   * title-matches-first ordering, and snippet extraction (M3).
    */
-  search(escapedQuery: string, limit = 50): SearchResultItem[] {
-    if (!escapedQuery) return [];
-    return this.stmtSearchFts.all(escapedQuery, limit) as SearchResultItem[];
+  search(queryOrOptions: string | IndexSearchOptions, limit = 50): SearchResultItem[] {
+    let rawQuery = '';
+    const tags: string[] = [];
+    const statuses: string[] = [];
+    const folders: string[] = [];
+    let maxLimit = limit;
+
+    if (typeof queryOrOptions === 'string') {
+      rawQuery = queryOrOptions;
+    } else if (queryOrOptions) {
+      rawQuery = queryOrOptions.query ?? queryOrOptions.textQuery ?? '';
+      if (queryOrOptions.tags) tags.push(...queryOrOptions.tags);
+      if (queryOrOptions.statuses) statuses.push(...queryOrOptions.statuses);
+      if (queryOrOptions.folders) folders.push(...queryOrOptions.folders);
+      if (queryOrOptions.limit !== undefined) maxLimit = queryOrOptions.limit;
+    }
+
+    const parsed = parseSearchQuery(rawQuery);
+    if (parsed.tags.length > 0) {
+      for (const t of parsed.tags) {
+        if (!tags.some((existing) => existing.toLowerCase() === t.toLowerCase())) {
+          tags.push(t);
+        }
+      }
+    }
+    if (parsed.statuses.length > 0) {
+      for (const s of parsed.statuses) {
+        if (!statuses.some((existing) => existing.toLowerCase() === s.toLowerCase())) {
+          statuses.push(s);
+        }
+      }
+    }
+    if (parsed.folders.length > 0) {
+      for (const f of parsed.folders) {
+        if (!folders.some((existing) => existing.toLowerCase() === f.toLowerCase())) {
+          folders.push(f);
+        }
+      }
+    }
+
+    const textQuery = parsed.textQuery.trim();
+
+    // Case 1: Search query has text keywords
+    if (textQuery) {
+      const escaped = ftsEscape(textQuery);
+      if (!escaped) {
+        return [];
+      }
+
+      const params: any[] = [escaped];
+      const whereClauses: string[] = ['fts_notes MATCH ?'];
+
+      for (const t of tags) {
+        whereClauses.push(`EXISTS (
+          SELECT 1 FROM note_tags nt
+          WHERE nt.note_path = n.path
+            AND (nt.tag = ? COLLATE NOCASE OR nt.tag LIKE (? || '/%'))
+        )`);
+        params.push(t, t);
+      }
+
+      for (const s of statuses) {
+        whereClauses.push('n.status = ? COLLATE NOCASE');
+        params.push(s);
+      }
+
+      for (const f of folders) {
+        whereClauses.push("(n.folder = ? OR n.folder LIKE (? || '/%'))");
+        params.push(f, f);
+      }
+
+      // Title matches first, then most recently modified
+      const firstWord = parsed.words[0] ?? textQuery;
+      const titleLikeParam = `%${firstWord.toLowerCase()}%`;
+      params.push(titleLikeParam);
+
+      params.push(maxLimit);
+
+      const sql = `
+        SELECT
+          n.path,
+          n.title,
+          n.folder,
+          n.mtime_ms,
+          n.preview,
+          snippet(fts_notes, 2, '<mark>', '</mark>', '...', 10) as snippet,
+          rank
+        FROM fts_notes
+        JOIN notes n ON fts_notes.path = n.path
+        WHERE ${whereClauses.join(' AND ')}
+        ORDER BY
+          CASE WHEN LOWER(n.title) LIKE ? THEN 0 ELSE 1 END ASC,
+          n.mtime_ms DESC
+        LIMIT ?
+      `;
+
+      let stmt = this.dynamicStmtCache.get(sql);
+      if (!stmt) {
+        stmt = this.db.prepare(sql);
+        this.dynamicStmtCache.set(sql, stmt);
+      }
+
+      return stmt.all(...params) as SearchResultItem[];
+    }
+
+    // Case 2: No text query, but tag/status/folder filters are present
+    if (tags.length > 0 || statuses.length > 0 || folders.length > 0) {
+      const params: any[] = [];
+      const whereClauses: string[] = ['1=1'];
+
+      for (const t of tags) {
+        whereClauses.push(`EXISTS (
+          SELECT 1 FROM note_tags nt
+          WHERE nt.note_path = n.path
+            AND (nt.tag = ? COLLATE NOCASE OR nt.tag LIKE (? || '/%'))
+        )`);
+        params.push(t, t);
+      }
+
+      for (const s of statuses) {
+        whereClauses.push('n.status = ? COLLATE NOCASE');
+        params.push(s);
+      }
+
+      for (const f of folders) {
+        whereClauses.push("(n.folder = ? OR n.folder LIKE (? || '/%'))");
+        params.push(f, f);
+      }
+
+      params.push(maxLimit);
+
+      const sql = `
+        SELECT
+          n.path,
+          n.title,
+          n.folder,
+          n.mtime_ms,
+          n.preview,
+          '' as snippet,
+          0 as rank
+        FROM notes n
+        WHERE ${whereClauses.join(' AND ')}
+        ORDER BY n.mtime_ms DESC
+        LIMIT ?
+      `;
+
+      let stmt = this.dynamicStmtCache.get(sql);
+      if (!stmt) {
+        stmt = this.db.prepare(sql);
+        this.dynamicStmtCache.set(sql, stmt);
+      }
+
+      return stmt.all(...params) as SearchResultItem[];
+    }
+
+    // Case 3: Empty query and no filters
+    return [];
   }
 
   /**

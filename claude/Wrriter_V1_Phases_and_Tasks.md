@@ -390,8 +390,8 @@ Nothing that depends on a row is built until it is decided. Rows 15 to 17 are ne
 
 ### Search and switching
 
-- [ ] `SearchService` and the Search view (Ctrl+Shift+F and the Search tile, not drawn in the mockup, shown to Krishna): results as you type with the title, the folder and a snippet built only for rows on screen, title matches first and then the most recently modified, the filters `tag:`, `status:` and `folder:` combined with words, the current vault only
-- [ ] Quick switcher (Ctrl+P): loose title matching against the in-memory list, recent notes when the box is empty, Ctrl+Enter for a new tab, and Create "what you typed" when nothing matches
+- [x] `SearchService` and the Search view (Ctrl+Shift+F and the Search tile, not drawn in the mockup, shown to Krishna): results as you type with the title, the folder and a snippet built only for rows on screen, title matches first and then the most recently modified, the filters `tag:`, `status:` and `folder:` combined with words, the current vault only
+- [x] Quick switcher (Ctrl+P): loose title matching against the in-memory list, recent notes when the box is empty, Ctrl+Enter for a new tab, and Create "what you typed" when nothing matches
 
 ### Notes features that need the index or frontmatter
 
@@ -402,7 +402,7 @@ Nothing that depends on a row is built until it is decided. Rows 15 to 17 are ne
 
 - [ ] Deleting the index file and restarting rebuilds it, and nothing is lost
 - [ ] The window stays usable while the first index of 50,000 notes is built, and a second launch with nothing changed reads no notes again
-- [ ] First search results on 50,000 notes in under 200 ms, and quick switcher results in under 30 ms
+- [x] First search results on 50,000 notes in under 200 ms, and quick switcher results in under 30 ms
 - [ ] The tag list opens instantly on 50,000 notes, a nested tag shows as a tree, and renaming a tag keeps every count right
 - [ ] Setting a tag or status writes only that key, and a note with keys such as `aliases` keeps them untouched
 - [x] Renaming a note with 200 links to it updates all of them and nothing else in those notes

@@ -13,6 +13,7 @@ import { FolderService } from './folder-service';
 import { NoteService } from './note-service';
 import { TagService } from './tag-service';
 import { LinkService } from './link-service';
+import { SearchService } from './search-service';
 import { IndexClient } from './index-client';
 import { Result, ok, err } from '../../shared/result';
 import type { StartupState, AccentName, SetPaneWidthsArgs, SetOpenTabsArgs } from '../../shared/ipc';
@@ -25,6 +26,7 @@ export interface WindowServiceOptions {
   noteService?: NoteService | undefined;
   tagService?: TagService | undefined;
   linkService?: LinkService | undefined;
+  searchService?: SearchService | undefined;
   indexClient?: IndexClient | undefined;
   vaultReader?: VaultReader | undefined;
   watcherAdapter?: { start(): Promise<void>; stop(): Promise<void> } | undefined;
@@ -41,6 +43,7 @@ export class WindowService {
   private readonly noteService: NoteService;
   private readonly tagService: TagService;
   private readonly linkService: LinkService;
+  private readonly searchService: SearchService;
   private readonly indexClient?: IndexClient | undefined;
   private readonly vaultReader: VaultReader;
   private readonly watcherAdapter?: { start(): Promise<void>; stop(): Promise<void> };
@@ -89,6 +92,11 @@ export class WindowService {
         jobService: options.jobService ?? new JobService(new JobsStore(path.join(process.cwd(), '.wrriter'))),
         indexClient: this.indexClient,
         vaultReader: this.vaultReader
+      });
+    this.searchService =
+      options.searchService ??
+      new SearchService({
+        indexClient: this.indexClient as IndexClient
       });
     if (options.watcherAdapter) {
       this.watcherAdapter = options.watcherAdapter;
@@ -448,7 +456,7 @@ export class WindowService {
       this.indexClient ? this.indexClient.getTitleList() : ok([])
     );
     this.ipcRouter.register('index.search', async (args) =>
-      this.indexClient ? this.indexClient.search(args.query, args.limit) : ok([])
+      this.searchService ? this.searchService.search(args.query, args.limit) : ok([])
     );
     this.ipcRouter.register('index.getStatus', async () =>
       this.indexClient ? this.indexClient.getStatus() : ok({ isIndexing: false, totalNotes: 0 })

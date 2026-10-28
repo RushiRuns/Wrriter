@@ -83,7 +83,7 @@ Each of these exists exactly once. A second copy is a bug.
 | `FolderService` | New, rename, move, delete with a count (`src/main/services/folder-service.ts`) | M1 | Built |
 | `OrderService` | Manual order and pins in `.wrriter` (`src/main/services/order-service.ts`) | M1 | Built |
 | `JobService` | Writes jobs to the pending list, hands them to the job worker, finishes them at start (`src/main/services/job-service.ts`) | M1 | Built |
-| `SearchService` | Vault search with filters, the quick switcher | M3 | Planned |
+| `SearchService` | Vault search with filters, the quick switcher (`src/main/services/search-service.ts`) | M3 | Built |
 | `TagService` | Tag list with counts, rename and merge (as jobs) (`src/main/services/tag-service.ts`) | M3 | Built |
 | `LinkService` | Backlinks, link updates on rename and move (as jobs) (`src/main/services/link-service.ts`) | M3 | Built |
 | `CaptureService` | Quick capture window, pop-outs, Inbox, last active vault | M4 | Planned |
@@ -190,6 +190,8 @@ Record every query here as it is written.
 | `FindBar` | Find and replace floating bar over note column with toggles and counts (`src/renderer/components/FindBar.tsx`) | M2 | Built |
 | `SettingsWindow` | Settings, including Note margin and the shortcut list (`src/renderer/components/SettingsWindow.tsx`) | M2 | Built |
 | `WikilinkSuggest` | Auto-suggest popover listing note titles from the index when typing `[[` (`src/renderer/components/WikilinkSuggest.tsx`) | M3 | Built |
+| `SearchView` | Search view in notes pane with live results, filter pills (tag:, status:, folder:), and highlighted snippets (`src/renderer/components/SearchView.tsx`) | M3 | Built |
+| `QuickSwitcher` | Quick switcher modal (Ctrl+P) with loose title matching, recent notes, and create candidate (`src/renderer/components/QuickSwitcher.tsx`) | M3 | Built |
 
 | `FileChip` | The ticket-shaped file chip, and the missing file state | M4 | Planned |
 | `Icon` | The icon set copied from the UI reference (`src/renderer/components/icons.tsx`) | M1 | Built |

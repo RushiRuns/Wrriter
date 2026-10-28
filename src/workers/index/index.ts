@@ -170,8 +170,7 @@ export class IndexWorkerCore {
             this.postMessage({ id, ok: false, error: 'Index worker not initialized' });
             return;
           }
-          const escaped = ftsEscape(msg.payload.query);
-          const results = this.db.search(escaped, msg.payload.limit);
+          const results = this.db.search(msg.payload.query, msg.payload.limit);
           this.postMessage({ id, ok: true, data: results });
           return;
         }

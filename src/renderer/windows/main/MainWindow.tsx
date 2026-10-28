@@ -31,6 +31,8 @@ import { EditorHost } from '../../editor/EditorHost';
 import { EditorMenu } from '../../components/menu/EditorMenu';
 import { ContextMenu, type ContextMenuItem } from '../../components/menu/ContextMenu';
 import { CommandPalette } from '../../components/CommandPalette';
+import { QuickSwitcher } from '../../components/QuickSwitcher';
+import { SearchView } from '../../components/SearchView';
 import { commandRegistry, type Command } from '../../palette/command-registry';
 import { matchesShortcut } from '../../../shared/shortcuts';
 import { formatDefaultTitle, deriveFileNameFromTitle } from '../../../shared';
@@ -144,6 +146,7 @@ export const MainWindow: React.FC = () => {
     setNoticeMessage(null);
   }, []);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [quickSwitcherOpen, setQuickSwitcherOpen] = useState(false);
 
   // Per-tab navigation history and panes state
   const tabHistoriesRef = useRef<Map<string, { stack: string[]; index: number }>>(new Map());
@@ -886,6 +889,20 @@ export const MainWindow: React.FC = () => {
         setCommandPaletteOpen((prev) => !prev);
         return;
       }
+      if (matchesShortcut(e, 'Ctrl+P')) {
+        e.preventDefault();
+        setQuickSwitcherOpen((prev) => !prev);
+        return;
+      }
+      if (matchesShortcut(e, 'Ctrl+Shift+F')) {
+        e.preventDefault();
+        setActiveTile('search');
+        setSidebarOpen(true);
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('wrriter:focus-search'));
+        }, 0);
+        return;
+      }
       if (matchesShortcut(e, 'Ctrl+N')) {
         e.preventDefault();
         handleCreateNewNote();
@@ -1122,6 +1139,28 @@ export const MainWindow: React.FC = () => {
         isEnabled: () => canGoForward
       },
       {
+        id: 'wrriter:quick-switcher',
+        title: 'Quick switcher: Open note',
+        category: 'Navigation',
+        shortcut: 'Ctrl+P',
+        keywords: ['switch', 'open', 'find', 'quick', 'goto'],
+        run: () => setQuickSwitcherOpen(true)
+      },
+      {
+        id: 'wrriter:search-in-vault',
+        title: 'Search in vault',
+        category: 'Search',
+        shortcut: 'Ctrl+Shift+F',
+        keywords: ['search', 'find', 'vault', 'filter', 'locate'],
+        run: () => {
+          setActiveTile('search');
+          setSidebarOpen(true);
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('wrriter:focus-search'));
+          }, 0);
+        }
+      },
+      {
         id: 'wrriter:find-in-note',
         title: 'Find in note',
         category: 'Search',
@@ -1213,6 +1252,9 @@ export const MainWindow: React.FC = () => {
       if (selectedTag) return `#${selectedTag}`;
       return 'All Tags';
     }
+    if (activeTile === 'search') {
+      return 'Search';
+    }
     if (!selectedFolder) return 'Notes';
     const parts = selectedFolder.split('/');
     return parts[parts.length - 1] || 'Notes';
@@ -1299,7 +1341,12 @@ export const MainWindow: React.FC = () => {
             <button
               type="button"
               className={`tile ${activeTile === 'search' ? 'on' : ''}`}
-              onClick={() => setActiveTile('search')}
+              onClick={() => {
+                setActiveTile('search');
+                setTimeout(() => {
+                  window.dispatchEvent(new CustomEvent('wrriter:focus-search'));
+                }, 0);
+              }}
               title="Search (Ctrl+Shift+F)"
             >
               <SearchTileIcon />
@@ -1547,75 +1594,95 @@ export const MainWindow: React.FC = () => {
           </div>
         </div>
 
-        {/* Note List / Virtualized Note Rows */}
-        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-          {notes.length === 0 ? (
-            <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--tx3)', fontSize: 'var(--fs-small)' }}>
-              No notes yet. Click new note to begin writing.
-            </div>
-          ) : (
-            <div className="notes-scroll" style={{ flex: 1, overflowY: 'auto' }}>
-              {/* Pinned Group */}
-              {pinnedNotes.length > 0 && (
-                <>
-                  <div className="grp first">
-                    <PinIcon style={{ width: 12, height: 12, marginRight: 4 }} />
-                    PINNED
-                  </div>
-                  <VirtualList
-                    items={pinnedNotes}
-                    getKey={(n) => n.path}
-                    renderItem={(note) => (
-                      <NoteRow
-                        note={note}
-                        isSelected={selectedNotePath === note.path}
-                        showDates={showDates}
-                        showPreviews={showPreviews}
-                        showImages={showImages}
-                        onSelect={(e) => handleSelectNote(e, note.path)}
-                        onContextMenu={(e, item) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          if (selectedNotePath !== item.path) {
-                            handleSelectNote(undefined, item.path);
-                          }
-                          setNoteContextMenu({ x: e.clientX, y: e.clientY, note: item });
-                        }}
-                      />
-                    )}
-                  />
-                </>
-              )}
-
-              {/* Unpinned Notes Group */}
-              <div className={`grp ${pinnedNotes.length === 0 ? 'first' : ''}`}>
-                NOTES
+        {/* Note List / Virtualized Note Rows / Search View */}
+        {activeTile === 'search' ? (
+          <SearchView
+            selectedNotePath={selectedNotePath}
+            onSelectNote={(relPath, isNewTab) => {
+              handleSelectNote(isNewTab ? ({ ctrlKey: true } as any) : undefined, relPath);
+            }}
+            onContextMenu={(e, itemPath, itemTitle) => {
+              const matched = notes.find((n) => n.path === itemPath);
+              const item: NoteListItem = matched ?? {
+                path: itemPath,
+                title: itemTitle,
+                modified: Date.now(),
+                preview: '',
+                pinned: false
+              };
+              setNoteContextMenu({ x: e.clientX, y: e.clientY, note: item });
+            }}
+          />
+        ) : (
+          <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            {notes.length === 0 ? (
+              <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--tx3)', fontSize: 'var(--fs-small)' }}>
+                No notes yet. Click new note to begin writing.
               </div>
-              <VirtualList
-                items={unpinnedNotes}
-                getKey={(n) => n.path}
-                renderItem={(note) => (
-                  <NoteRow
-                    note={note}
-                    isSelected={selectedNotePath === note.path}
-                    showDates={showDates}
-                    showPreviews={showPreviews}
-                    showImages={showImages}
-                    onSelect={(e) => handleSelectNote(e, note.path)}
-                    onContextMenu={(e, item) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      if (selectedNotePath !== item.path) {
-                        handleSelectNote(undefined, item.path);
-                      }
-                      setNoteContextMenu({ x: e.clientX, y: e.clientY, note: item });
-                    }}
-                  />
+            ) : (
+              <div className="notes-scroll" style={{ flex: 1, overflowY: 'auto' }}>
+                {/* Pinned Group */}
+                {pinnedNotes.length > 0 && (
+                  <>
+                    <div className="grp first">
+                      <PinIcon style={{ width: 12, height: 12, marginRight: 4 }} />
+                      PINNED
+                    </div>
+                    <VirtualList
+                      items={pinnedNotes}
+                      getKey={(n) => n.path}
+                      renderItem={(note) => (
+                        <NoteRow
+                          note={note}
+                          isSelected={selectedNotePath === note.path}
+                          showDates={showDates}
+                          showPreviews={showPreviews}
+                          showImages={showImages}
+                          onSelect={(e) => handleSelectNote(e, note.path)}
+                          onContextMenu={(e, item) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (selectedNotePath !== item.path) {
+                              handleSelectNote(undefined, item.path);
+                            }
+                            setNoteContextMenu({ x: e.clientX, y: e.clientY, note: item });
+                          }}
+                        />
+                      )}
+                    />
+                  </>
                 )}
-              />
-            </div>
-          )}
-        </div>
+
+                {/* Unpinned Notes Group */}
+                <div className={`grp ${pinnedNotes.length === 0 ? 'first' : ''}`}>
+                  NOTES
+                </div>
+                <VirtualList
+                  items={unpinnedNotes}
+                  getKey={(n) => n.path}
+                  renderItem={(note) => (
+                    <NoteRow
+                      note={note}
+                      isSelected={selectedNotePath === note.path}
+                      showDates={showDates}
+                      showPreviews={showPreviews}
+                      showImages={showImages}
+                      onSelect={(e) => handleSelectNote(e, note.path)}
+                      onContextMenu={(e, item) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (selectedNotePath !== item.path) {
+                          handleSelectNote(undefined, item.path);
+                        }
+                        setNoteContextMenu({ x: e.clientX, y: e.clientY, note: item });
+                      }}
+                    />
+                  )}
+                />
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Note Context Menu (Right Click on Note Row) */}
         {noteContextMenu && (() => {
@@ -1928,6 +1995,40 @@ export const MainWindow: React.FC = () => {
       <CommandPalette
         isOpen={commandPaletteOpen}
         onClose={() => setCommandPaletteOpen(false)}
+      />
+
+      {/* Quick Switcher Overlay (Ctrl+P) */}
+      <QuickSwitcher
+        isOpen={quickSwitcherOpen}
+        onClose={() => setQuickSwitcherOpen(false)}
+        onOpenNote={(path, isNewTab) => {
+          handleSelectNote(isNewTab ? ({ ctrlKey: true } as any) : undefined, path);
+        }}
+        onCreateNote={(title, isNewTab) => {
+          const folder = selectedFolder;
+          const fileName = deriveFileNameFromTitle(title);
+          const newPath = folder ? `${folder}/${fileName}` : fileName;
+
+          const newNoteItem: NoteListItem = {
+            path: newPath,
+            title,
+            preview: '',
+            modified: Date.now(),
+            pinned: false,
+            hasImage: false
+          };
+
+          setNotes((prev) => [newNoteItem, ...prev]);
+          setTotalVaultNotesCount((prev) => prev + 1);
+
+          handleSelectNote(isNewTab ? ({ ctrlKey: true } as any) : undefined, newPath);
+
+          setTimeout(() => {
+            if (typeof document !== 'undefined') {
+              document.querySelector<HTMLElement>('.wrriter-prosemirror')?.focus();
+            }
+          }, 0);
+        }}
       />
 
       {/* Settings Window Overlay (Loaded on first use) */}

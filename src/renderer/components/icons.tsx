@@ -490,4 +490,9 @@ export const FolderAddIcon: React.FC<IconProps> = ({ className = 'ic', style }) 
 // 57. MoreDotsIcon alias
 export const MoreDotsIcon = ThreeDotsHorizontalIcon;
 
+// 58. SearchIcon and FileIcon aliases
+export const SearchIcon = SearchTileIcon;
+export const FileIcon = NewNoteIcon;
+
+
 

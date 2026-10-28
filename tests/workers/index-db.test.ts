@@ -223,4 +223,63 @@ describe('IndexDb (src/workers/index/db.ts)', () => {
     expect(recoveredDb.totalNotes()).toBe(0);
     recoveredDb.close();
   });
+
+  it('stores links with line snippets and queries backlinks accurately', () => {
+    const db = new IndexDb(dbFile);
+
+    const note1: NoteRecord = {
+      path: 'Docs/Meeting.md',
+      title: 'Meeting Notes',
+      folder: 'Docs',
+      mtime_ms: 1000,
+      size: 200,
+      created: null,
+      status: null,
+      preview: 'meeting preview',
+      cover_path: null,
+      has_frontmatter: 0
+    };
+
+    const note2: NoteRecord = {
+      path: 'Docs/Summary.md',
+      title: 'Project Summary',
+      folder: 'Docs',
+      mtime_ms: 2000,
+      size: 300,
+      created: null,
+      status: null,
+      preview: 'summary preview',
+      cover_path: null,
+      has_frontmatter: 0
+    };
+
+    db.upsertNote(
+      note1,
+      [],
+      [{ target: 'Project Alpha', lineText: 'Discussed [[Project Alpha]] timeline.' }],
+      'Discussed Project Alpha timeline.'
+    );
+
+    db.upsertNote(
+      note2,
+      [],
+      [
+        { target: 'Project Alpha', lineText: 'See [[Project Alpha|details]] for spec.' },
+        { target: 'OtherNote', lineText: 'Also check [[OtherNote]].' }
+      ],
+      'See Project Alpha for spec.'
+    );
+
+    const backlinks = db.getBacklinks('Project Alpha');
+    expect(backlinks).toHaveLength(2);
+    // Ordered by modified DESC (note2 then note1)
+    expect(backlinks[0]?.sourcePath).toBe('Docs/Summary.md');
+    expect(backlinks[0]?.sourceTitle).toBe('Project Summary');
+    expect(backlinks[0]?.lineText).toBe('See [[Project Alpha|details]] for spec.');
+    expect(backlinks[1]?.sourcePath).toBe('Docs/Meeting.md');
+    expect(backlinks[1]?.sourceTitle).toBe('Meeting Notes');
+    expect(backlinks[1]?.lineText).toBe('Discussed [[Project Alpha]] timeline.');
+
+    db.close();
+  });
 });

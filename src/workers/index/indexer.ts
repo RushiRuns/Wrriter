@@ -158,7 +158,7 @@ export class Indexer {
       type PreparedItem = {
         note: NoteRecord;
         tags: readonly string[];
-        links: readonly string[];
+        links: readonly (string | { target: string; lineText: string })[];
         bodyForSearch: string;
       };
 
@@ -205,7 +205,7 @@ export class Indexer {
               return {
                 note: noteRecord,
                 tags: parsed.tags,
-                links: parsed.wikilinks,
+                links: parsed.linkItems,
                 bodyForSearch: parsed.bodyForSearch
               };
             } catch {
@@ -256,7 +256,7 @@ export class Indexer {
     const toUpsert: {
       note: NoteRecord;
       tags: readonly string[];
-      links: readonly string[];
+      links: readonly (string | { target: string; lineText: string })[];
       bodyForSearch: string;
     }[] = [];
 
@@ -287,7 +287,7 @@ export class Indexer {
             has_frontmatter: parsed.hasFrontmatter ? 1 : 0
           },
           tags: parsed.tags,
-          links: parsed.wikilinks,
+          links: parsed.linkItems,
           bodyForSearch: parsed.bodyForSearch
         });
       } catch {

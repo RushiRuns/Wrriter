@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { flushSync } from 'react-dom';
+import { Extension } from '@tiptap/core';
 import { Editor } from '@tiptap/core';
-import { EditorState } from '@tiptap/pm/state';
+import { EditorState, Plugin as ProseMirrorPlugin } from '@tiptap/pm/state';
+import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { history, undo, redo } from '@tiptap/pm/history';
 import { keymap } from '@tiptap/pm/keymap';
 import {
@@ -37,6 +39,7 @@ import { FloatingToolbarExtension, type FloatingToolbarState } from './extension
 import { TypingTouchesExtension } from './extensions/typing-touches';
 import { FindBar } from '../components/FindBar';
 import { SlashMenu } from '../components/SlashMenu';
+import { WikilinkSuggest } from '../components/WikilinkSuggest';
 import { FloatingToolbar } from '../components/FloatingToolbar';
 import { ContextMenu } from '../components/menu/ContextMenu';
 import { TabStrip } from '../components/TabStrip';
@@ -44,8 +47,11 @@ import { markdownToTipTapDoc, tipTapDocToMarkdown } from './markdown-converter';
 import { planSave, encodeUtf8 } from '../../shared/markdown/save';
 import { parseFrontmatter, updateFrontmatter, formatCreatedDate } from '../../shared/domain/frontmatter';
 import { parseTagsInput } from '../../shared/domain/tags';
+import { resolveLink } from '../../shared/domain/links';
+import { WikilinkSuggestExtension, type WikilinkSuggestState } from './extensions/wikilink-suggest';
 import { PropertiesLineExtension, propertiesLinePluginKey } from './extensions/properties-line';
 import { Dialog } from '../components/Dialog';
+import type { BacklinkRecord } from '../../shared/ipc/contracts';
 import {
   extractTitleFromFirstLine,
   shouldRenameFileOnLeave,
@@ -117,29 +123,37 @@ export interface TabSession {
 export interface EditorHostProps {
   activeNotePath: string | null;
   noteMargin?: number;
+  availableNotes?: readonly { path: string; title: string; modified: number }[];
   onTitleChange?: (newTitle: string) => void;
   onNotice?: (message: string) => void;
   onPathChange?: (oldPath: string, newPath: string) => void;
   onSelectTab?: (path: string | null) => void;
   onTabsUpdate?: (tabs: readonly TabSession[], activePath: string | null) => void;
   onNoteSummaryChange?: (summary: { path: string; title: string; preview: string; hasImage: boolean; imageSrc?: string | undefined }) => void;
+  onFollowLink?: (target: string, isNewTab: boolean) => void;
 }
 
 export const EditorHost: React.FC<EditorHostProps> = ({
   activeNotePath,
   noteMargin = 24,
+  availableNotes,
   onTitleChange,
   onNotice,
   onPathChange,
   onSelectTab,
   onTabsUpdate,
-  onNoteSummaryChange
+  onNoteSummaryChange,
+  onFollowLink
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<Editor | null>(null);
 
   // Stable callback refs to isolate effect/useCallback dependencies from parent re-renders
+  const availableNotesRef = useRef(availableNotes ?? []);
+  availableNotesRef.current = availableNotes ?? [];
+  const onFollowLinkRef = useRef(onFollowLink);
+  onFollowLinkRef.current = onFollowLink;
   const onTitleChangeRef = useRef(onTitleChange);
   onTitleChangeRef.current = onTitleChange;
   const onNoteSummaryChangeRef = useRef(onNoteSummaryChange);
@@ -194,6 +208,11 @@ export const EditorHost: React.FC<EditorHostProps> = ({
   const [slashMenuState, setSlashMenuState] = useState<SlashMenuState | null>(null);
   const [floatingToolbarState, setFloatingToolbarState] = useState<FloatingToolbarState | null>(null);
   const [tabContextMenu, setTabContextMenu] = useState<{ x: number; y: number; tabPath: string } | null>(null);
+  const [wikilinkSuggestState, setWikilinkSuggestState] = useState<WikilinkSuggestState | null>(null);
+
+  // Backlinks State
+  const [backlinks, setBacklinks] = useState<readonly BacklinkRecord[]>([]);
+  const [backlinksExpanded, setBacklinksExpanded] = useState(true);
 
   // Stats and saving state for TabStrip
   const [wordCount, setWordCount] = useState(0);
@@ -214,6 +233,24 @@ export const EditorHost: React.FC<EditorHostProps> = ({
       });
     }
   }, []);
+
+  // Fetch backlinks for current active note
+  useEffect(() => {
+    if (!activeTabPath || !window.wrriter?.index?.getBacklinks) {
+      setBacklinks([]);
+      return;
+    }
+
+    const session = tabsRef.current.get(activeTabPath);
+    const title = session?.title || deriveFileNameFromTitle(activeTabPath).replace(/\.md$/i, '');
+    const normPath = activeTabPath.replace(/\.md$/i, '');
+
+    void window.wrriter.index.getBacklinks({ target: title, altTarget: normPath }).then((res: any) => {
+      if (res && res.ok && res.value) {
+        setBacklinks(res.value);
+      }
+    });
+  }, [activeTabPath, tabsList]);
 
   const handleSetDragHintShown = useCallback(() => {
     setDragHintShown(true);
@@ -534,6 +571,40 @@ export const EditorHost: React.FC<EditorHostProps> = ({
           onStateChange: (state) => setFloatingToolbarState(state)
         }),
         TypingTouchesExtension,
+        WikilinkSuggestExtension.configure({
+          onStateChange: (state) => setWikilinkSuggestState(state)
+        }),
+        Extension.create({
+          name: 'wikilinkDecorations',
+          addProseMirrorPlugins() {
+            return [
+              new ProseMirrorPlugin({
+                props: {
+                  decorations: (state) => {
+                    const available = availableNotesRef.current;
+                    if (!available || available.length === 0) return DecorationSet.empty;
+                    const decos: Decoration[] = [];
+                    const activePath = activePathRef.current ?? '';
+                    state.doc.descendants((node, pos) => {
+                      if (node.isText && node.marks) {
+                        for (const mark of node.marks) {
+                          if (mark.type.name === 'wikilink') {
+                            const target = (mark.attrs['target'] as string) || node.text || '';
+                            const res = resolveLink(target, activePath, available);
+                            if (res.isMissing) {
+                              decos.push(Decoration.inline(pos, pos + node.nodeSize, { class: 'missing' }));
+                            }
+                          }
+                        }
+                      }
+                    });
+                    return DecorationSet.create(state.doc, decos);
+                  }
+                }
+              })
+            ];
+          }
+        }),
         PropertiesLineExtension.configure({
           onStatusClick: () => void handleOpenSetStatus(),
           onAddTagClick: () => handleOpenAddTag()
@@ -586,17 +657,36 @@ export const EditorHost: React.FC<EditorHostProps> = ({
             }
           }
 
-          // 3. Web link click (check address and open in browser)
-          const linkEl = target.closest('a.wl.web') as HTMLAnchorElement | null;
+          // 3a. Wikilink click (.wl:not(.web))
+          const wlEl = target.closest('.wl:not(.web)') as HTMLElement | null;
+          if (wlEl) {
+            event.preventDefault();
+            const targetNote = wlEl.getAttribute('data-target') || wlEl.textContent || '';
+            const isNewTab = Boolean(event.ctrlKey || event.metaKey || event.button === 1);
+            if (targetNote && onFollowLinkRef.current) {
+              onFollowLinkRef.current(targetNote, isNewTab);
+            }
+            return true;
+          }
+
+          // 3b. Web link or vault markdown link click
+          const linkEl = target.closest('a.wl.web, a.wl.md-link') as HTMLAnchorElement | null;
           if (linkEl && linkEl.href) {
             event.preventDefault();
+            const rawHref = linkEl.getAttribute('href') || linkEl.href;
+            const isNewTab = Boolean(event.ctrlKey || event.metaKey || event.button === 1);
             try {
               const parsed = new URL(linkEl.href);
               if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
                 window.open(linkEl.href, '_blank', 'noopener,noreferrer');
+                return true;
               }
             } catch {
               // Ignore invalid address
+            }
+
+            if (onFollowLinkRef.current) {
+              onFollowLinkRef.current(rawHref, isNewTab);
             }
             return true;
           }
@@ -1563,14 +1653,50 @@ export const EditorHost: React.FC<EditorHostProps> = ({
 
           {/* TipTap Live Editor DOM Container (Properties line rendered under title by PropertiesLineExtension) */}
           <div ref={containerRef} className="editor-container" />
+
+          {/* Backlinks from the index with containing line snippets */}
+          {activeTabPath && backlinks.length > 0 && (
+            <div className="note-backlinks">
+              <button
+                type="button"
+                className="note-backlinks-header"
+                onClick={() => setBacklinksExpanded((prev) => !prev)}
+              >
+                <span>Backlinks</span>
+                <span className="note-backlinks-count">{backlinks.length}</span>
+              </button>
+              {backlinksExpanded && (
+                <div className="note-backlinks-list">
+                  {backlinks.map((bl) => (
+                    <button
+                      key={`${bl.sourcePath}-${bl.lineText}`}
+                      type="button"
+                      className="note-backlink-card"
+                      onClick={() => onFollowLinkRef.current?.(bl.sourcePath, false)}
+                    >
+                      <div className="note-backlink-source-title">{bl.sourceTitle || bl.sourcePath}</div>
+                      <div className="note-backlink-snippet">{bl.lineText}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Slash Menu and Floating Toolbar Overlays */}
+      {/* Slash Menu, Wikilink Suggest, and Floating Toolbar Overlays */}
       <SlashMenu
         editor={editorRef.current}
         menuState={slashMenuState}
         onClose={() => setSlashMenuState(null)}
+      />
+
+      <WikilinkSuggest
+        editor={editorRef.current}
+        suggestState={wikilinkSuggestState}
+        availableNotes={availableNotesRef.current}
+        onClose={() => setWikilinkSuggestState(null)}
       />
 
       <FloatingToolbar

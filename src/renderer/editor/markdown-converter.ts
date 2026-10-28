@@ -1,5 +1,6 @@
 import { blockSplitter, type MarkdownBlock } from '../../shared/markdown/blocks';
 import { parseFrontmatter } from '../../shared/domain/frontmatter';
+import { parseWikilinkContent, formatWikilink } from '../../shared/domain/wikilinks';
 
 export interface TipTapNodeJSON {
   type: string;
@@ -22,12 +23,12 @@ export function parseInlineMarkdown(text: string): TipTapNodeJSON[] {
 
   // Regex matching inline formatting tokens
   // 1: Wikilink [[target|alias]]
-  // 2: Web link [text](url)
+  // 2: Link [text](url) (web url or vault markdown note)
   // 3: Code `code`
   // 4: Bold **text**
   // 5: Strike ~~text~~
   // 6: Italic *text*
-  const TOKEN_REGEX = /(\[\[([^\]|]+)(?:\|([^\]]+))?\]\])|(\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\))|(`([^`]+)`)|(\*\*([^*]+)\*\*)|(~~([^~]+)~~)|(\*([^*]+)\*)/g;
+  const TOKEN_REGEX = /(\[\[([^\]\n]+)\]\])|(\[([^\]]+)\]\(([^\s\)]+)\))|(`([^`]+)`)|(\*\*([^*]+)\*\*)|(~~([^~]+)~~)|(\*([^*]+)\*)/g;
 
   const result: TipTapNodeJSON[] = [];
   let lastIndex = 0;
@@ -42,49 +43,66 @@ export function parseInlineMarkdown(text: string): TipTapNodeJSON[] {
     }
 
     if (match[1]) {
-      // Wikilink [[target|alias]]
-      const target = match[2]?.trim() ?? '';
-      const alias = match[3]?.trim() ?? '';
-      result.push({
-        type: 'text',
-        text: alias || target,
-        marks: [{ type: 'wikilink', attrs: { target, alias } }]
-      });
-    } else if (match[4]) {
-      // Web link [text](url)
-      const linkText = match[5] ?? '';
-      const href = match[6] ?? '';
+      // Wikilink [[inner]]
+      const inner = match[2] ?? '';
+      const parsed = parseWikilinkContent(inner, match[1]);
+      if (!parsed) {
+        // Unknown form (e.g. [[Note#^id]]) or empty: keep as plain text byte for byte
+        result.push({
+          type: 'text',
+          text: match[1]
+        });
+      } else {
+        result.push({
+          type: 'text',
+          text: parsed.displayText,
+          marks: [
+            {
+              type: 'wikilink',
+              attrs: {
+                target: parsed.target,
+                alias: parsed.alias ?? '',
+                heading: parsed.heading ?? ''
+              }
+            }
+          ]
+        });
+      }
+    } else if (match[3]) {
+      // Link [text](url)
+      const linkText = match[4] ?? '';
+      const href = match[5] ?? '';
       result.push({
         type: 'text',
         text: linkText,
         marks: [{ type: 'webLink', attrs: { href, title: linkText } }]
       });
-    } else if (match[7]) {
+    } else if (match[6]) {
       // Code `code`
       result.push({
         type: 'text',
-        text: match[8] ?? '',
+        text: match[7] ?? '',
         marks: [{ type: 'code' }]
       });
-    } else if (match[9]) {
+    } else if (match[8]) {
       // Bold **text**
       result.push({
         type: 'text',
-        text: match[10] ?? '',
+        text: match[9] ?? '',
         marks: [{ type: 'bold' }]
       });
-    } else if (match[11]) {
+    } else if (match[10]) {
       // Strike ~~text~~
       result.push({
         type: 'text',
-        text: match[12] ?? '',
+        text: match[11] ?? '',
         marks: [{ type: 'strike' }]
       });
-    } else if (match[13]) {
+    } else if (match[12]) {
       // Italic *text*
       result.push({
         type: 'text',
-        text: match[14] ?? '',
+        text: match[13] ?? '',
         marks: [{ type: 'italic' }]
       });
     }
@@ -127,8 +145,13 @@ export function serializeInlineNodes(nodes: TipTapNodeJSON[] | undefined): strin
           t = `\`${t}\``;
         } else if (mark.type === 'wikilink') {
           const target = (mark.attrs?.['target'] as string) || t;
-          const alias = (mark.attrs?.['alias'] as string) || (t !== target ? t : '');
-          t = alias ? `[[${target}|${alias}]]` : `[[${target}]]`;
+          const heading = (mark.attrs?.['heading'] as string) || '';
+          const alias = (mark.attrs?.['alias'] as string) || '';
+          const defaultText = heading ? `${target} > ${heading}` : (target.includes('/') ? target.slice(target.lastIndexOf('/') + 1) : target);
+          t = formatWikilink(target, {
+            heading: heading || undefined,
+            alias: alias || (t !== defaultText && t !== target ? t : undefined)
+          });
         } else if (mark.type === 'webLink') {
           const href = (mark.attrs?.['href'] as string) || '';
           t = `[${t}](${href})`;

@@ -130,6 +130,15 @@ describe('IndexClient Integration (src/main/services/index-client.ts)', () => {
       expect(searchRes.value[0]?.title).toBe('Product Roadmap');
     }
 
+    // 5b. Query Backlinks
+    const backlinksRes = await client.getBacklinks('Life/Goals');
+    expect(backlinksRes.ok).toBe(true);
+    if (backlinksRes.ok) {
+      expect(backlinksRes.value.length).toBe(1);
+      expect(backlinksRes.value[0]?.sourcePath).toBe('Work/Roadmap.md');
+      expect(backlinksRes.value[0]?.lineText).toContain('See [[Life/Goals]].');
+    }
+
     // 6. Test note update
     fs.writeFileSync(
       path.join(testRoot, 'Work', 'Roadmap.md'),

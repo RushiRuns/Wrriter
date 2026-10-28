@@ -2,7 +2,7 @@ import Database, { type Database as DatabaseType, type Statement } from 'better-
 import * as fs from 'fs';
 import * as path from 'path';
 
-export const INDEX_SCHEMA_VERSION = '1';
+export const INDEX_SCHEMA_VERSION = '2';
 
 export interface NoteRecord {
   readonly path: string;
@@ -15,6 +15,14 @@ export interface NoteRecord {
   readonly preview: string;
   readonly cover_path: string | null;
   readonly has_frontmatter: number;
+}
+
+export interface BacklinkRecord {
+  readonly sourcePath: string;
+  readonly sourceTitle: string;
+  readonly targetName: string;
+  readonly lineText: string;
+  readonly modified: number;
 }
 
 export interface SearchResultItem {
@@ -58,6 +66,7 @@ export class IndexDb {
   private stmtDeleteTags!: Statement;
   private stmtInsertLink!: Statement;
   private stmtDeleteLinks!: Statement;
+  private stmtGetBacklinks!: Statement;
 
   private stmtGetStatuses!: Statement;
   private stmtGetTags!: Statement;
@@ -216,7 +225,8 @@ export class IndexDb {
       CREATE TABLE IF NOT EXISTS note_links (
         source_path TEXT NOT NULL,
         target_name TEXT NOT NULL,
-        PRIMARY KEY (source_path, target_name),
+        line_text TEXT NOT NULL DEFAULT '',
+        PRIMARY KEY (source_path, target_name, line_text),
         FOREIGN KEY (source_path) REFERENCES notes(path) ON DELETE CASCADE
       );
 
@@ -255,8 +265,21 @@ export class IndexDb {
     this.stmtInsertTag = db.prepare(`INSERT OR REPLACE INTO note_tags (note_path, tag) VALUES (?, ?)`);
     this.stmtDeleteTags = db.prepare(`DELETE FROM note_tags WHERE note_path = ?`);
 
-    this.stmtInsertLink = db.prepare(`INSERT OR REPLACE INTO note_links (source_path, target_name) VALUES (?, ?)`);
+    this.stmtInsertLink = db.prepare(`INSERT OR REPLACE INTO note_links (source_path, target_name, line_text) VALUES (?, ?, ?)`);
     this.stmtDeleteLinks = db.prepare(`DELETE FROM note_links WHERE source_path = ?`);
+    this.stmtGetBacklinks = db.prepare(`
+      SELECT
+        nl.source_path as sourcePath,
+        n.title as sourceTitle,
+        nl.target_name as targetName,
+        nl.line_text as lineText,
+        n.mtime_ms as modified
+      FROM note_links nl
+      JOIN notes n ON nl.source_path = n.path
+      WHERE nl.target_name = ? COLLATE NOCASE
+         OR nl.target_name = ? COLLATE NOCASE
+      ORDER BY n.mtime_ms DESC
+    `);
 
     this.stmtGetStatuses = db.prepare(`
       SELECT DISTINCT status FROM notes
@@ -387,7 +410,7 @@ export class IndexDb {
   upsertNote(
     note: NoteRecord,
     tags: readonly string[],
-    links: readonly string[],
+    links: readonly (string | { target: string; lineText?: string })[],
     bodyForSearch: string
   ): void {
     // 1. Upsert core note
@@ -410,10 +433,14 @@ export class IndexDb {
       this.stmtInsertTag.run(note.path, tag);
     }
 
-    // 3. Update links
+    // 3. Update links (with line snippet for backlinks)
     this.stmtDeleteLinks.run(note.path);
-    for (const target of links) {
-      this.stmtInsertLink.run(note.path, target);
+    for (const item of links) {
+      if (typeof item === 'string') {
+        this.stmtInsertLink.run(note.path, item, '');
+      } else {
+        this.stmtInsertLink.run(note.path, item.target, item.lineText ?? '');
+      }
     }
 
     // 4. Update FTS
@@ -459,6 +486,14 @@ export class IndexDb {
   getStatuses(): string[] {
     const rows = this.stmtGetStatuses.all() as { status: string }[];
     return rows.map((r) => r.status);
+  }
+
+  /**
+   * Retrieves all backlinks pointing to the given target note (by name, path, or alias).
+   */
+  getBacklinks(targetName: string, altTargetName?: string): BacklinkRecord[] {
+    if (!targetName) return [];
+    return this.stmtGetBacklinks.all(targetName, altTargetName ?? targetName) as BacklinkRecord[];
   }
 
   /**

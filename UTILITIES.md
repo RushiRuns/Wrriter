@@ -61,8 +61,8 @@ Each of these exists exactly once. A second copy is a bug.
 | `names` | `shared/domain/names.ts` | Windows-safe names, reserved names, 100-character cap, numbering on clash, case-only clash check | M1 | Built |
 | `titles` | `shared/domain/titles.ts` | Title from the first line, Untitled numbering, when a file follows its title | M2 | Built |
 | `frontmatter` | `shared/domain/frontmatter.ts` | Read and edit the owned keys, keep every other key, comment and the order | M2 / M3 | Built |
-| `wikilinks` | `shared/domain/wikilinks.ts` | Parse `[[...]]` forms, rewrite on rename keeping alias and heading | M3 | Planned |
-| `links` | `shared/domain/links.ts` | Resolve a plain link: same folder first, then most recently modified | M3 | Planned |
+| `wikilinks` | `shared/domain/wikilinks.ts` | Parse `[[...]]` forms, rewrite on rename keeping alias and heading | M3 | Built |
+| `links` | `shared/domain/links.ts` | Resolve a plain link: same folder first, then most recently modified | M3 | Built |
 | `tags` | `shared/domain/tags.ts` | Allowed characters, case folding, nesting by slash, rename and merge | M3 | Built |
 | `FractionalIndex` | `shared/domain/ordering.ts` | Positions between neighbours, rebalance | M1 | Built |
 | `searchFilters` | `shared/domain/search-filters.ts` | Parse `tag:`, `status:` and `folder:` with words | M3 | Planned |
@@ -148,6 +148,7 @@ Record every request here as it is written, so a second one is not added for the
 | `index.getStatuses` | `{}` | `string[]` | M3 | Built |
 | `index.getTags` | `{}` | `string[]` | M3 | Built |
 | `index.getTagCounts` | `{}` | `IndexTagCount[]` | M3 | Built |
+| `index.getBacklinks` | `{ target: string, altTarget?: string }` | `BacklinkRecord[]` | M3 | Built |
 | `tag.rename` | `{ oldTag: string, newTag: string }` | `TagRenameResult` | M3 | Built |
 
 ## Index Queries
@@ -164,6 +165,7 @@ Record every query here as it is written.
 | `index.getStatuses` | `readonly string[]` | M3 | Built |
 | `index.getTags` | `readonly string[]` | M3 | Built |
 | `index.getTagCounts` | `readonly IndexTagCount[]` | M3 | Built |
+| `index.getBacklinks` | `readonly BacklinkRecord[]` | M3 | Built |
 
 ## Shared Components (`src/renderer/components`)
 
@@ -185,6 +187,7 @@ Record every query here as it is written.
 | `Palette` | Command palette and quick switcher overlay (`src/renderer/components/CommandPalette.tsx`, `src/renderer/palette/command-registry.ts`) | M2 to M3 | Built |
 | `FindBar` | Find and replace floating bar over note column with toggles and counts (`src/renderer/components/FindBar.tsx`) | M2 | Built |
 | `SettingsWindow` | Settings, including Note margin and the shortcut list (`src/renderer/components/SettingsWindow.tsx`) | M2 | Built |
+| `WikilinkSuggest` | Auto-suggest popover listing note titles from the index when typing `[[` (`src/renderer/components/WikilinkSuggest.tsx`) | M3 | Built |
 
 | `FileChip` | The ticket-shaped file chip, and the missing file state | M4 | Planned |
 | `Icon` | The icon set copied from the UI reference (`src/renderer/components/icons.tsx`) | M1 | Built |

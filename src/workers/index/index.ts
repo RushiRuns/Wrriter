@@ -41,6 +41,7 @@ export type IndexWorkerIncomingMessage =
   | { id: string; type: 'query.getTagCounts'; payload?: Record<string, never> }
   | { id: string; type: 'query.getNotePathsWithTag'; payload: { tag: string } }
   | { id: string; type: 'query.getTagNotesCount'; payload: { tag: string } }
+  | { id: string; type: 'query.getBacklinks'; payload: { target: string; altTarget?: string } }
   | { id: string; type: 'close'; payload?: Record<string, never> };
 
 export type IndexWorkerOutgoingMessage =
@@ -229,6 +230,16 @@ export class IndexWorkerCore {
           }
           const count = this.db.getTagNotesCount(msg.payload.tag);
           this.postMessage({ id, ok: true, data: { count } });
+          return;
+        }
+
+        case 'query.getBacklinks': {
+          if (!this.db) {
+            this.postMessage({ id, ok: false, error: 'Index worker not initialized' });
+            return;
+          }
+          const backlinks = this.db.getBacklinks(msg.payload.target, msg.payload.altTarget);
+          this.postMessage({ id, ok: true, data: backlinks });
           return;
         }
 

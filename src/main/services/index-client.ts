@@ -8,6 +8,7 @@ import type {
   IndexTitleItem,
   IndexStatus,
   IndexTagCount,
+  BacklinkRecord,
   NoteListItem
 } from '../../shared/ipc/contracts';
 import type { IndexProgress, IndexSummary } from '../../workers/index/indexer';
@@ -232,6 +233,13 @@ export class IndexClient {
       return ok({ count: 0 });
     }
     return this.sendRequest<{ count: number }>('query.getTagNotesCount', { tag });
+  }
+
+  async getBacklinks(target: string, altTarget?: string): Promise<Result<readonly BacklinkRecord[]>> {
+    if (!this.isStarted) {
+      return ok([]);
+    }
+    return this.sendRequest<readonly BacklinkRecord[]>('query.getBacklinks', { target, altTarget });
   }
 
   async close(): Promise<void> {

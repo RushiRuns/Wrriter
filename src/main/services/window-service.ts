@@ -434,6 +434,9 @@ export class WindowService {
     this.ipcRouter.register('index.getTagCounts', async () =>
       this.activeVault ? this.tagService.getTagsWithCounts(this.activeVault.path) : ok([])
     );
+    this.ipcRouter.register('index.getBacklinks', async (args) =>
+      this.indexClient ? this.indexClient.getBacklinks(args.target, args.altTarget) : ok([])
+    );
 
     // 9. Tag channels (M3)
     this.ipcRouter.register('tag.rename', async (args) =>

@@ -1,12 +1,14 @@
 import { parseFrontmatter } from '../domain/frontmatter';
 import { extractNotePreviewAndImage, extractTitleFromFirstLine } from '../domain/titles';
 import { cleanTag, isValidTag, normalizeTag } from '../domain/tags';
+import { extractWikilinksWithLines } from '../domain/wikilinks';
 
 export interface LightIndexResult {
   readonly title: string;
   readonly folder: string;
   readonly tags: readonly string[];
   readonly wikilinks: readonly string[];
+  readonly linkItems: readonly { target: string; lineText: string }[];
   readonly preview: string;
   readonly coverPath: string | null;
   readonly created: string | null;
@@ -95,18 +97,14 @@ export function lightIndexNote(relPath: string, text: string): LightIndexResult 
   const coverPath = previewInfo.imageSrc ?? null;
 
   // 4. Wikilinks extraction: [[Target]], [[Target|Alias]], [[Target#Heading]], [[Folder/Target]]
-  // Must NOT match embeds like ![[pic.png]]
+  // Captures target and snippet line while ignoring embeds like ![[pic.png]] and block links [[Note#^id]]
+  const extracted = extractWikilinksWithLines(body);
   const linkSet = new Set<string>();
-  const wikiRegex = /(^|[^!])\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|[^\]]*)?\]\]/g;
-  let match: RegExpExecArray | null = null;
-  while ((match = wikiRegex.exec(body)) !== null) {
-    const rawTarget = match[2];
-    if (rawTarget) {
-      const target = rawTarget.trim();
-      if (target) {
-        linkSet.add(target);
-      }
-    }
+  const linkItems: { target: string; lineText: string }[] = [];
+
+  for (const item of extracted) {
+    linkSet.add(item.link.target);
+    linkItems.push({ target: item.link.target, lineText: item.lineText });
   }
   const wikilinks = Array.from(linkSet);
 
@@ -115,6 +113,7 @@ export function lightIndexNote(relPath: string, text: string): LightIndexResult 
     folder,
     tags,
     wikilinks,
+    linkItems,
     preview,
     coverPath,
     created,

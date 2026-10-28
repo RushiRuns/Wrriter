@@ -241,6 +241,19 @@ export type IndexGetStatusesArgs = Record<string, never>;
 export type IndexGetTagsArgs = Record<string, never>;
 export type IndexGetTagCountsArgs = Record<string, never>;
 
+export interface IndexGetBacklinksArgs {
+  readonly target: string;
+  readonly altTarget?: string | undefined;
+}
+
+export interface BacklinkRecord {
+  readonly sourcePath: string;
+  readonly sourceTitle: string;
+  readonly targetName: string;
+  readonly lineText: string;
+  readonly modified: number;
+}
+
 export interface IndexTagCount {
   readonly tag: string;
   readonly count: number;
@@ -328,6 +341,7 @@ export interface IpcChannelTable {
   'index.getStatuses': { args: IndexGetStatusesArgs; result: readonly string[] };
   'index.getTags': { args: IndexGetTagsArgs; result: readonly string[] };
   'index.getTagCounts': { args: IndexGetTagCountsArgs; result: readonly IndexTagCount[] };
+  'index.getBacklinks': { args: IndexGetBacklinksArgs; result: readonly BacklinkRecord[] };
   'tag.rename': { args: TagRenameArgs; result: TagRenameResult };
 }
 
@@ -594,6 +608,13 @@ export const IPC_VALIDATORS: { readonly [K in IpcChannel]: Validator<IpcChannelT
   'index.getStatuses': validateEmptyArgs,
   'index.getTags': validateEmptyArgs,
   'index.getTagCounts': validateEmptyArgs,
+  'index.getBacklinks': (input: unknown): Result<IndexGetBacklinksArgs> => {
+    if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });
+    const target = validateNonEmptyString('target', input['target']);
+    if (!target.ok) return target;
+    const altTarget = typeof input['altTarget'] === 'string' ? input['altTarget'] : undefined;
+    return ok({ target: target.value, altTarget });
+  },
 
   'tag.rename': (input: unknown): Result<TagRenameArgs> => {
     if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });

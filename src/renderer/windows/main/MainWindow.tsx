@@ -34,6 +34,7 @@ import { CommandPalette } from '../../components/CommandPalette';
 import { commandRegistry, type Command } from '../../palette/command-registry';
 import { matchesShortcut } from '../../../shared/shortcuts';
 import { formatDefaultTitle, deriveFileNameFromTitle } from '../../../shared';
+import { resolveLink, resolveMarkdownLink } from '../../../shared/domain/links';
 import { crossFadeTransition, subscribeThemeSync } from '../../motion';
 import type {
   FolderNode,
@@ -827,6 +828,47 @@ export const MainWindow: React.FC = () => {
       }
     },
     [selectedNotePath, notes]
+  );
+
+  const handleFollowLink = useCallback(
+    async (targetOrHref: string, isNewTab: boolean) => {
+      const activePath = selectedNotePath ?? '';
+
+      // 1. Check if it's a vault markdown link [text](path.md)
+      const mdResolved = resolveMarkdownLink(targetOrHref, activePath, notes);
+      if (mdResolved && mdResolved.path) {
+        handleSelectNote(isNewTab ? ({ ctrlKey: true } as any) : undefined, mdResolved.path);
+        return;
+      }
+
+      // 2. Resolve as wikilink [[target]]
+      const resolved = resolveLink(targetOrHref, activePath, notes);
+      if (resolved.resolved && resolved.path) {
+        handleSelectNote(isNewTab ? ({ ctrlKey: true } as any) : undefined, resolved.path);
+        return;
+      }
+
+      // 3. Link to missing note: create note in current folder
+      if (resolved.isMissing) {
+        const sourceFolder = getNoteFolderRelPath(activePath);
+        const fileNameBase = deriveFileNameFromTitle(resolved.targetName);
+        const fileName = fileNameBase.endsWith('.md') ? fileNameBase : `${fileNameBase}.md`;
+        const newPath = sourceFolder ? `${sourceFolder}/${fileName}` : fileName;
+
+        const defaultContent = `# ${resolved.targetName}\n\n`;
+        if (window.wrriter?.note?.save) {
+          const saveRes = await window.wrriter.note.save({
+            path: newPath,
+            content: defaultContent
+          });
+          if (saveRes.ok) {
+            await refreshFolders();
+            handleSelectNote(isNewTab ? ({ ctrlKey: true } as any) : undefined, newPath);
+          }
+        }
+      }
+    },
+    [selectedNotePath, notes, handleSelectNote, refreshFolders]
   );
 
   // Global Keyboard Shortcuts handler
@@ -1715,6 +1757,8 @@ export const MainWindow: React.FC = () => {
         <EditorHost
           activeNotePath={selectedNotePath}
           noteMargin={noteMargin}
+          availableNotes={notes}
+          onFollowLink={handleFollowLink}
           onTitleChange={(title) => {
             setNoteTitle(title);
             setNotes((prev) => prev.map((n) => (n.path === selectedNotePath ? { ...n, title } : n)));

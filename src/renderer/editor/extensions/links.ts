@@ -10,6 +10,9 @@ export const WikilinkMark = Mark.create({
       },
       alias: {
         default: ''
+      },
+      heading: {
+        default: ''
       }
     };
   },
@@ -23,7 +26,8 @@ export const WikilinkMark = Mark.create({
           const el = element as HTMLElement;
           return {
             target: el.getAttribute('data-target') || el.textContent || '',
-            alias: el.getAttribute('data-alias') || ''
+            alias: el.getAttribute('data-alias') || '',
+            heading: el.getAttribute('data-heading') || ''
           };
         }
       }
@@ -33,6 +37,7 @@ export const WikilinkMark = Mark.create({
   renderHTML({ mark, HTMLAttributes }) {
     const target = (mark.attrs['target'] as string) || '';
     const alias = (mark.attrs['alias'] as string) || '';
+    const heading = (mark.attrs['heading'] as string) || '';
 
     return [
       'span',
@@ -40,7 +45,8 @@ export const WikilinkMark = Mark.create({
         class: 'wl',
         'data-target': target,
         'data-alias': alias,
-        title: `Link to: ${target}`
+        'data-heading': heading,
+        title: heading ? `Link to: ${target} > ${heading}` : `Link to: ${target}`
       }),
       0
     ];
@@ -91,6 +97,19 @@ export const WebLinkMark = Mark.create({
   renderHTML({ mark, HTMLAttributes }) {
     const href = (mark.attrs['href'] as string) || '';
     const title = (mark.attrs['title'] as string) || href;
+    const isVaultMd = href.endsWith('.md') && !/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(href);
+
+    if (isVaultMd) {
+      return [
+        'a',
+        mergeAttributes(HTMLAttributes, {
+          class: 'wl md-link',
+          href,
+          title: `Note: ${title}`
+        }),
+        ['span', { class: 'u' }, 0]
+      ];
+    }
 
     return [
       'a',

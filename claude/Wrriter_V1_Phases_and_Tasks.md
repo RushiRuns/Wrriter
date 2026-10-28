@@ -370,12 +370,12 @@ Nothing that depends on a row is built until it is decided. Rows 15 to 17 are ne
 
 ### Wikilinks and backlinks
 
-- [ ] `shared/domain/wikilinks` and `shared/domain/links`: `[[Note]]`, `[[Note|text]]`, `[[Note#Heading]]`, and `[[Folder/Note]]` when two notes share a name. A plain link resolves to the note in the same folder, otherwise the most recently modified
-- [ ] Typing `[[` lists note names from the index and inserts the link
-- [ ] A click opens the note, Ctrl+click opens it in a new tab, and following a link is a back and forward step. A link to a missing note is styled differently, and clicking it creates the note in the current folder
-- [ ] A markdown link to a .md file in the vault opens in Wrriter. Unknown forms such as `[[Note#^id]]` stay as plain text, byte for byte
-- [ ] Backlinks from the index, each with the line that holds the link. Choosing one opens that note. Where the count and list show waits on open item 15
-- [ ] A link changed in another app updates the backlinks through the watcher, without a restart
+- [x] `shared/domain/wikilinks` and `shared/domain/links`: `[[Note]]`, `[[Note|text]]`, `[[Note#Heading]]`, and `[[Folder/Note]]` when two notes share a name. A plain link resolves to the note in the same folder, otherwise the most recently modified
+- [x] Typing `[[` lists note names from the index and inserts the link
+- [x] A click opens the note, Ctrl+click opens it in a new tab, and following a link is a back and forward step. A link to a missing note is styled differently, and clicking it creates the note in the current folder
+- [x] A markdown link to a .md file in the vault opens in Wrriter. Unknown forms such as `[[Note#^id]]` stay as plain text, byte for byte
+- [x] Backlinks from the index, each with the line that holds the link. Choosing one opens that note. Where the count and list show waits on open item 15
+- [x] A link changed in another app updates the backlinks through the watcher, without a restart
 
 ### Jobs that keep links working
 

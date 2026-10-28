@@ -102,6 +102,7 @@ export interface WrriterApi {
     getStatuses(): Promise<Result<readonly string[]>>;
     getTags(): Promise<Result<readonly string[]>>;
     getTagCounts(): Promise<Result<readonly import('./contracts').IndexTagCount[]>>;
+    getBacklinks(args: import('./contracts').IndexGetBacklinksArgs): Promise<Result<readonly import('./contracts').BacklinkRecord[]>>;
   };
   readonly tag: {
     rename(args: import('./contracts').TagRenameArgs): Promise<Result<import('./contracts').TagRenameResult>>;

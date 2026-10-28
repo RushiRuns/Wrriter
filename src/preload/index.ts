@@ -88,7 +88,8 @@ const api: WrriterApi = {
     getStatus: () => invoke('index.getStatus', {}),
     getStatuses: () => invoke('index.getStatuses', {}),
     getTags: () => invoke('index.getTags', {}),
-    getTagCounts: () => invoke('index.getTagCounts', {})
+    getTagCounts: () => invoke('index.getTagCounts', {}),
+    getBacklinks: (args) => invoke('index.getBacklinks', args)
   },
   tag: {
     rename: (args) => invoke('tag.rename', args)

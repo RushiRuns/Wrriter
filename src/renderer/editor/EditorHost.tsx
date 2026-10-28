@@ -46,7 +46,8 @@ import { parseFrontmatter } from '../../shared/domain/frontmatter';
 import {
   extractTitleFromFirstLine,
   shouldRenameFileOnLeave,
-  deriveFileNameFromTitle
+  deriveFileNameFromTitle,
+  extractNotePreviewAndImage
 } from '../../shared/domain/titles';
 
 export function formatNoteDate(d: Date | number): string {
@@ -114,6 +115,7 @@ export interface EditorHostProps {
   onPathChange?: (oldPath: string, newPath: string) => void;
   onSelectTab?: (path: string | null) => void;
   onTabsUpdate?: (tabs: readonly TabSession[], activePath: string | null) => void;
+  onNoteSummaryChange?: (summary: { path: string; title: string; preview: string; hasImage: boolean; imageSrc?: string | undefined }) => void;
 }
 
 export const EditorHost: React.FC<EditorHostProps> = ({
@@ -123,7 +125,8 @@ export const EditorHost: React.FC<EditorHostProps> = ({
   onNotice,
   onPathChange,
   onSelectTab,
-  onTabsUpdate
+  onTabsUpdate,
+  onNoteSummaryChange
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -132,6 +135,8 @@ export const EditorHost: React.FC<EditorHostProps> = ({
   // Stable callback refs to isolate effect/useCallback dependencies from parent re-renders
   const onTitleChangeRef = useRef(onTitleChange);
   onTitleChangeRef.current = onTitleChange;
+  const onNoteSummaryChangeRef = useRef(onNoteSummaryChange);
+  onNoteSummaryChangeRef.current = onNoteSummaryChange;
   const onNoticeRef = useRef(onNotice);
   onNoticeRef.current = onNotice;
   const onPathChangeRef = useRef(onPathChange);
@@ -242,6 +247,14 @@ export const EditorHost: React.FC<EditorHostProps> = ({
           tab.originalBytes = plan.bytes;
           tab.lastSavedText = plan.text;
           tab.isDirty = false;
+          const summary = extractNotePreviewAndImage(plan.text);
+          onNoteSummaryChangeRef.current?.({
+            path: tab.path,
+            title: tab.title,
+            preview: summary.preview,
+            hasImage: summary.hasImage,
+            imageSrc: summary.imageSrc
+          });
           return true;
         } else {
           // Keep text in tab, show notice and retry if locked

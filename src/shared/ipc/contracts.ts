@@ -33,6 +33,7 @@ export interface FirstPaintNoteSummary {
   readonly modified: number;
   readonly pinned?: boolean;
   readonly hasImage?: boolean;
+  readonly imageSrc?: string;
 }
 
 export interface StartupState {
@@ -147,6 +148,7 @@ export interface NoteListItem {
   readonly modified: number;
   readonly pinned: boolean;
   readonly hasImage?: boolean | undefined;
+  readonly imageSrc?: string | undefined;
   readonly orderKey?: string | undefined;
 }
 

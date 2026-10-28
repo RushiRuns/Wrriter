@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { Result, ok, err, AppError } from '../../shared/result';
+import { extractNotePreviewAndImage } from '../../shared/domain/titles';
 
 export interface NoteContent {
   bytes: Buffer;
@@ -85,9 +86,9 @@ export class VaultReader {
    */
   async listNotes(
     vaultRoot: string
-  ): Promise<Result<Array<{ path: string; title: string; preview: string; modified: number }>>> {
+  ): Promise<Result<Array<{ path: string; title: string; preview: string; modified: number; hasImage?: boolean | undefined; imageSrc?: string | undefined }>>> {
     try {
-      const results: Array<{ path: string; title: string; preview: string; modified: number }> = [];
+      const results: Array<{ path: string; title: string; preview: string; modified: number; hasImage?: boolean | undefined; imageSrc?: string | undefined }> = [];
 
       const scan = async (currentDir: string, relPrefix = ''): Promise<void> => {
         const entries = await fs.promises.readdir(currentDir, { withFileTypes: true });
@@ -103,10 +104,25 @@ export class VaultReader {
           } else if (entry.isFile() && entry.name.endsWith('.md')) {
             const stat = await fs.promises.stat(fullPath);
             const title = entry.name.slice(0, -3);
+            let preview = '';
+            let imageSrc: string | undefined = undefined;
+            let hasImage = false;
+            try {
+              const text = await fs.promises.readFile(fullPath, 'utf8');
+              const summary = extractNotePreviewAndImage(text);
+              preview = summary.preview;
+              imageSrc = summary.imageSrc;
+              hasImage = summary.hasImage;
+            } catch {
+              // fallback if reading fails
+            }
+
             results.push({
               path: relPath,
               title,
-              preview: '',
+              preview,
+              hasImage,
+              imageSrc,
               modified: stat.mtimeMs
             });
           }

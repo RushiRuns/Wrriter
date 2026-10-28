@@ -79,3 +79,105 @@ export function deriveFileNameFromTitle(title: string): string {
   const base = sanitized || 'Untitled';
   return `${base}.md`;
 }
+
+export interface NotePreviewAndImage {
+  readonly preview: string;
+  readonly imageSrc?: string | undefined;
+  readonly hasImage: boolean;
+}
+
+/**
+ * Extracts preview text (excluding title and markdown formatting) and the first image
+ * from a note's raw markdown text.
+ */
+export function extractNotePreviewAndImage(markdown: string | undefined): NotePreviewAndImage {
+  if (!markdown || !markdown.trim()) {
+    return { preview: '', imageSrc: undefined, hasImage: false };
+  }
+
+  let content = markdown;
+
+  // 1. Skip YAML Frontmatter if present
+  if (content.startsWith('---')) {
+    const endFmMatch = content.match(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/);
+    if (endFmMatch) {
+      content = content.slice(endFmMatch[0].length);
+    }
+  }
+
+  // 2. Find the first image across the entire content
+  let imageSrc: string | undefined = undefined;
+
+  // Check markdown image: ![alt](src) or ![alt|400|center](src)
+  const mdImgRegex = /!\[[^\]]*\]\(([^)\s]+)(?:\s+["'][^"']*["'])?\)/g;
+  const mdMatch = mdImgRegex.exec(content);
+
+  // Check HTML image: <img ... src="..." ...>
+  const htmlImgRegex = /<img\s+[^>]*src=["']([^"']+)["'][^>]*>/gi;
+  const htmlMatch = htmlImgRegex.exec(content);
+
+  // Check wikilink image: ![[attachments/photo.png]]
+  const wikiImgRegex = /!\[\[([^\]]+)\]\]/g;
+  const wikiMatch = wikiImgRegex.exec(content);
+
+  const candidates: { index: number; src: string }[] = [];
+  if (mdMatch && mdMatch[1]) candidates.push({ index: mdMatch.index, src: mdMatch[1].trim() });
+  if (htmlMatch && htmlMatch[1]) candidates.push({ index: htmlMatch.index, src: htmlMatch[1].trim() });
+  if (wikiMatch && wikiMatch[1]) candidates.push({ index: wikiMatch.index, src: wikiMatch[1].trim() });
+
+  if (candidates.length > 0) {
+    candidates.sort((a, b) => a.index - b.index);
+    imageSrc = candidates[0]?.src;
+  }
+
+  // 3. Extract preview text by skipping the first non-empty line (the title)
+  const lines = content.split(/\r?\n/).map((l) => l.trim());
+  let titleFound = false;
+  let preview = '';
+
+  for (const line of lines) {
+    if (!line) continue;
+    if (!titleFound) {
+      // First non-empty line is the title, skip it
+      titleFound = true;
+      continue;
+    }
+
+    // Skip pure horizontal rules and empty headings
+    if (/^(?:---|\*\*\*|___)$/.test(line)) continue;
+    if (/^#{1,6}\s*$/.test(line)) continue;
+
+    // Strip markdown formatting to produce clean preview text
+    const cleaned = line
+      .replace(/^#{1,6}\s+/, '')
+      .replace(/^>\s*/, '')
+      .replace(/^[-*+]\s+/, '')
+      .replace(/^\d+\.\s+/, '')
+      .replace(/^-\s*\[[ xX]\]\s*/, '')
+      .replace(/!\[[^\]]*\]\([^)]+\)/g, '')
+      .replace(/!\[\[[^\]]+\]\]/g, '')
+      .replace(/<img[^>]*>/gi, '')
+      .replace(/\[\[(?:[^|\]]*\|)?([^\]]+)\]\]/g, '$1')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/\*([^*]+)\*/g, '$1')
+      .replace(/~~([^~]+)~~/g, '$1')
+      .replace(/__([^_]+)__/g, '$1')
+      .replace(/_([^_]+)_/g, '$1')
+      .replace(/`([^`]+)`/g, '$1')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (cleaned) {
+      preview = cleaned.length > 150 ? `${cleaned.slice(0, 147)}...` : cleaned;
+      break;
+    }
+  }
+
+  return {
+    preview,
+    imageSrc,
+    hasImage: Boolean(imageSrc)
+  };
+}
+

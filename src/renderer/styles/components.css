@@ -767,6 +767,23 @@
   background: var(--pick);
 }
 
+.row .thumb {
+  flex: none;
+  width: var(--tile-size);
+  height: var(--tile-size);
+  border-radius: var(--r-s);
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--sk1, rgba(255, 255, 255, 0.08)), var(--sk2, rgba(255, 255, 255, 0.02)));
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.row .thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 .row .t1, .row .dt, .row .pv {
   display: block;
   white-space: nowrap;

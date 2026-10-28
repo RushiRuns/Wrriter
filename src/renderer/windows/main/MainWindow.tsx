@@ -74,6 +74,7 @@ export function areNoteListsEqual(
       itemA.pinned !== itemB.pinned ||
       itemA.preview !== itemB.preview ||
       itemA.hasImage !== itemB.hasImage ||
+      itemA.imageSrc !== itemB.imageSrc ||
       itemA.orderKey !== itemB.orderKey
     ) {
       return false;
@@ -1653,6 +1654,15 @@ export const MainWindow: React.FC = () => {
           onTitleChange={(title) => {
             setNoteTitle(title);
             setNotes((prev) => prev.map((n) => (n.path === selectedNotePath ? { ...n, title } : n)));
+          }}
+          onNoteSummaryChange={(summary) => {
+            setNotes((prev) =>
+              prev.map((n) =>
+                n.path === summary.path
+                  ? { ...n, preview: summary.preview, hasImage: summary.hasImage, imageSrc: summary.imageSrc }
+                  : n
+              )
+            );
           }}
           onSelectTab={(path) => {
             setSelectedNotePath(path);

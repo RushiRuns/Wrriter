@@ -86,7 +86,7 @@ flowchart TD
 | [`src/shared/domain/frontmatter.ts`](file:///c:/Dev/Wrriter/src/shared/domain/frontmatter.ts) | Safe frontmatter extraction and parsing without raw `eval` or unsafe YAML. |
 | [`src/shared/domain/names.ts`](file:///c:/Dev/Wrriter/src/shared/domain/names.ts) | Windows-safe file/folder name sanitization, collisions, reserved character rules. |
 | [`src/shared/domain/ordering.ts`](file:///c:/Dev/Wrriter/src/shared/domain/ordering.ts) | Natural sort order, pinned notes, custom order positioning. |
-| [`src/shared/domain/titles.ts`](file:///c:/Dev/Wrriter/src/shared/domain/titles.ts) | Default title generator, first-line title extraction, file rename logic on title leave. |
+| [`src/shared/domain/titles.ts`](file:///c:/Dev/Wrriter/src/shared/domain/titles.ts) | Default title generator, first-line title extraction, file rename logic on title leave, note preview text and first-image extraction. |
 | **`src/shared/ipc/`** | |
 | [`src/shared/ipc/contracts.ts`](file:///c:/Dev/Wrriter/src/shared/ipc/contracts.ts) | Complete types and payload contracts for all IPC calls (`window.*`, `note.*`, `folder.*`, `vault.*`, `index.*`). |
 | [`src/shared/ipc/validators.ts`](file:///c:/Dev/Wrriter/src/shared/ipc/validators.ts) | Runtime type validation for external data arriving over the IPC boundary. |
@@ -106,7 +106,7 @@ flowchart TD
 | [`src/main/index.ts`](file:///c:/Dev/Wrriter/src/main/index.ts) | Application entry point: single-instance lock, window setup, worker initialization, IPC router registration. |
 | **`src/main/services/`** | Core backend services |
 | [`src/main/services/safe-writer.ts`](file:///c:/Dev/Wrriter/src/main/services/safe-writer.ts) | Atomic file writer: temporary dotfile write, sync to disk, atomic rename, locked-file backoff, write-memory cache. |
-| [`src/main/services/vault-reader.ts`](file:///c:/Dev/Wrriter/src/main/services/vault-reader.ts) | Vault file reading, directory walking, security checks ensuring paths stay within vault root. |
+| [`src/main/services/vault-reader.ts`](file:///c:/Dev/Wrriter/src/main/services/vault-reader.ts) | Vault file reading, directory walking, security checks, and note preview/image extraction. |
 | [`src/main/services/vault-service.ts`](file:///c:/Dev/Wrriter/src/main/services/vault-service.ts) | Vault switching, opening, creation, recents tracking, metadata caching. |
 | [`src/main/services/note-service.ts`](file:///c:/Dev/Wrriter/src/main/services/note-service.ts) | Note CRUD operations, note saving through `SafeWriter`, note rename/delete. |
 | [`src/main/services/folder-service.ts`](file:///c:/Dev/Wrriter/src/main/services/folder-service.ts) | Folder tree hierarchy discovery, folder creation, folder renames/moves. |
@@ -167,7 +167,7 @@ flowchart TD
 | [`.../components/WindowShell.tsx`](file:///c:/Dev/Wrriter/src/renderer/components/WindowShell.tsx) | Frameless window header with custom minimize, maximize, and close controls. |
 | [`.../components/FolderTree.tsx`](file:///c:/Dev/Wrriter/src/renderer/components/FolderTree.tsx) | Left sidebar folder navigation tree. |
 | [`.../components/VirtualList.tsx`](file:///c:/Dev/Wrriter/src/renderer/components/VirtualList.tsx) | High-performance virtualized list for note lists of any size. |
-| [`.../components/NoteRow.tsx`](file:///c:/Dev/Wrriter/src/renderer/components/NoteRow.tsx) | Individual note row item with pin status, modified timestamp, title, snippet. |
+| [`.../components/NoteRow.tsx`](file:///c:/Dev/Wrriter/src/renderer/components/NoteRow.tsx) | Individual note row item with pin status, modified timestamp, title, preview snippet, and first-image thumbnail. |
 | [`.../components/TabStrip.tsx`](file:///c:/Dev/Wrriter/src/renderer/components/TabStrip.tsx) | Note tabs strip above the editor. |
 | [`.../components/CommandPalette.tsx`](file:///c:/Dev/Wrriter/src/renderer/components/CommandPalette.tsx) | Quick command switcher (`Ctrl+P` / `Ctrl+Shift+P`). |
 | [`.../components/SettingsWindow.tsx`](file:///c:/Dev/Wrriter/src/renderer/components/SettingsWindow.tsx) | Settings modal for themes, accents, and preferences. |

@@ -12,6 +12,20 @@ export interface NoteRowProps {
   onContextMenu: (e: React.MouseEvent, note: NoteListItem) => void;
 }
 
+function resolveThumbnailSrc(src: string): string {
+  if (
+    src.startsWith('data:') ||
+    src.startsWith('http://') ||
+    src.startsWith('https://') ||
+    src.startsWith('wrriter-vault://') ||
+    src.startsWith('file://')
+  ) {
+    return src;
+  }
+  const clean = src.replace(/\\/g, '/').replace(/^\/+/, '');
+  return `wrriter-vault://${clean}`;
+}
+
 export const NoteRow: React.FC<NoteRowProps> = ({
   note,
   isSelected,
@@ -87,17 +101,36 @@ export const NoteRow: React.FC<NoteRowProps> = ({
       {/* 48px square thumbnail on right if image present */}
       {hasImageThumbnail && (
         <div className="thumb">
-          <div
-            style={{
-              width: '100%',
-              height: '100%',
-              background: 'linear-gradient(180deg, var(--sk1), var(--sk2))',
-              display: 'grid',
-              placeItems: 'center'
-            }}
-          >
-            <span style={{ fontSize: 10, color: 'var(--tx3)' }}>IMG</span>
-          </div>
+          {note.imageSrc ? (
+            <img
+              src={resolveThumbnailSrc(note.imageSrc)}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                borderRadius: 'inherit',
+                display: 'block'
+              }}
+              onError={(e) => {
+                (e.currentTarget as HTMLElement).style.display = 'none';
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: '100%',
+                height: '100%',
+                background: 'linear-gradient(180deg, var(--sk1), var(--sk2))',
+                display: 'grid',
+                placeItems: 'center'
+              }}
+            >
+              <span style={{ fontSize: 10, color: 'var(--tx3)' }}>IMG</span>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -132,15 +132,14 @@ export class NoteService {
       const orderKey = folderOrder[normalizedPath];
       const isPinned = pins.includes(normalizedPath);
 
-      const hasImage = Boolean(n.preview && (/!\[.*\]\(.*\)/.test(n.preview) || /<img/i.test(n.preview)));
-
       return {
         path: normalizedPath,
         title: n.title,
         preview: n.preview,
         modified: n.modified,
         pinned: isPinned,
-        hasImage,
+        hasImage: n.hasImage ?? false,
+        imageSrc: n.imageSrc,
         orderKey
       };
     });

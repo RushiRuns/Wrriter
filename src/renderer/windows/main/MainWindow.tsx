@@ -145,6 +145,7 @@ export const MainWindow: React.FC = () => {
     sidebarOpen: true,
     listWidth: 320
   });
+  const lastSavedTabsRef = useRef<string>('');
 
   // Settings state (defaults per SCHEMA.md)
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -1669,6 +1670,9 @@ export const MainWindow: React.FC = () => {
           }}
           onTabsUpdate={(tabsList, activePath) => {
             const paths = tabsList.map((t) => t.path);
+            const signature = `${activePath ?? ''}::${paths.join(',')}`;
+            if (lastSavedTabsRef.current === signature) return;
+            lastSavedTabsRef.current = signature;
             if (window.wrriter?.window?.setOpenTabs) {
               void window.wrriter.window.setOpenTabs({
                 openTabs: paths,

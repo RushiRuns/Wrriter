@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { flushSync } from 'react-dom';
 import { Editor } from '@tiptap/core';
 import { EditorState } from '@tiptap/pm/state';
 import { history, undo, redo } from '@tiptap/pm/history';
@@ -502,8 +503,10 @@ export const EditorHost: React.FC<EditorHostProps> = ({
           const currentTitle = extractTitleFromFirstLine(firstLine) || tab.title;
           if (currentTitle !== tab.title) {
             tab.title = currentTitle;
-            onTitleChangeRef.current?.(currentTitle);
-            notifyTabs();
+            flushSync(() => {
+              onTitleChangeRef.current?.(currentTitle);
+              setTabsList(Array.from(tabsRef.current.values()));
+            });
           }
 
           // Live word and character count

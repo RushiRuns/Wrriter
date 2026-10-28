@@ -221,6 +221,7 @@ All checks are executed prior to builds and gated in CI/tests (`npm run check`):
 | **Empty Folder & Count Regression** | [`tests/renderer/folder-empty-note-leak-regression.test.ts`](file:///c:/Dev/Wrriter/tests/renderer/folder-empty-note-leak-regression.test.ts) | Prevents active note retention leaking across folder boundaries and decouples root folder count badge from filtered list state. |
 | **Note Deletion Regression** | [`tests/renderer/note-deletion-anomalies-regression.test.ts`](file:///c:/Dev/Wrriter/tests/renderer/note-deletion-anomalies-regression.test.ts) | Verifies deletion note removal, immediate selection update, tab eviction on internal delete, and notice auto-dismissal. |
 | **List Jump & Scrollbar Regression** | [`tests/renderer/list-jump-scrollbar-regression.test.ts`](file:///c:/Dev/Wrriter/tests/renderer/list-jump-scrollbar-regression.test.ts) | Verifies polling equality bailouts, short-list virtual scroll pinning (preventing phantom translations), and dark theme scrollbar styling on note list rows. |
+| **Note Title Trail Regression** | [`tests/renderer/note-title-trail-regression.test.ts`](file:///c:/Dev/Wrriter/tests/renderer/note-title-trail-regression.test.ts) | Verifies synchronous flush of live title updates, suppression of redundant IPC during typing, and layout reflow bypass in VirtualList. |
 
 ---
 

@@ -82,27 +82,30 @@ export function VirtualList<T>({
     const currentItemRefs = itemRefsRef.current;
     const prevKeys = prevKeysRef.current;
     const currentKeys = items.map((item, idx) => getKey(item, idx));
+    const orderChanged = shouldAnimateReorder(prevKeys, currentKeys);
 
-    // 1. Capture clean, untransformed layout positions BEFORE starting any animations
-    // to prevent active Web Animation transforms from polluting next render coordinates
-    const newRects = new Map<string, DOMRect>();
-    for (const [key, element] of currentItemRefs.entries()) {
-      if (element) {
-        newRects.set(key, element.getBoundingClientRect());
-      }
-    }
-
-    // 2. Only trigger FLIP glide animations when items have actually changed order or membership
-    if (shouldAnimateReorder(prevKeys, currentKeys)) {
+    // Only capture layout bounding boxes when items have reordered or initially mounted.
+    // In-place text/title edits retain existing rects, avoiding expensive synchronous layout reflows.
+    if (orderChanged || prevRects.size === 0) {
+      const newRects = new Map<string, DOMRect>();
       for (const [key, element] of currentItemRefs.entries()) {
-        const prevRect = prevRects.get(key);
-        if (prevRect && element) {
-          flipGlide(element, prevRect);
+        if (element) {
+          newRects.set(key, element.getBoundingClientRect());
         }
       }
+
+      if (orderChanged) {
+        for (const [key, element] of currentItemRefs.entries()) {
+          const prevRect = prevRects.get(key);
+          if (prevRect && element) {
+            flipGlide(element, prevRect);
+          }
+        }
+      }
+
+      prevRectsRef.current = newRects;
     }
 
-    prevRectsRef.current = newRects;
     prevKeysRef.current = currentKeys;
   }, [items, enableGlideAnimation, getKey]);
 

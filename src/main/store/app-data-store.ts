@@ -91,6 +91,10 @@ export class AppDataStore {
     return path.join(this.appDataDir, 'logs');
   }
 
+  getAppDataDir(): string {
+    return this.appDataDir;
+  }
+
   // --- Vaults List ---
   async getVaults(): Promise<KnownVault[]> {
     const file = path.join(this.appDataDir, 'vaults.json');

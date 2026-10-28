@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseFrontmatter, updateFrontmatter } from '../../src/shared/domain/frontmatter';
+import { parseFrontmatter, updateFrontmatter, formatCreatedDate } from '../../src/shared/domain/frontmatter';
 
 describe('frontmatter parser and surgical updater', () => {
   it('parses frontmatter tags, status, created and unowned keys', () => {
@@ -79,13 +79,58 @@ Body`;
     expect(result).toBe(broken);
   });
 
-  it('adds frontmatter when note previously had none', () => {
+  it('adds frontmatter using list form for new tags key per SCHEMA.md line 123', () => {
     const source = `# Plain Note\n\nNo frontmatter here.`;
-    const result = updateFrontmatter(source, { tags: ['ideas', 'wrriter'], status: 'active' });
+    const result = updateFrontmatter(source, { tags: ['ideas', 'wrriter'], status: 'active', created: '2026-10-28T15:30:00' });
 
     expect(result.startsWith('---\n')).toBe(true);
-    expect(result).toContain('tags: [ideas, wrriter]\n');
+    expect(result).toContain('tags:\n  - ideas\n  - wrriter\n');
     expect(result).toContain('status: active\n');
+    expect(result).toContain('created: 2026-10-28T15:30:00\n');
     expect(result).toContain('# Plain Note\n\nNo frontmatter here.');
+  });
+
+  it('preserves existing list form of tags when modifying tags', () => {
+    const source = `---
+tags:
+  - work
+  - project
+status: draft
+---
+# Content`;
+
+    const updated = updateFrontmatter(source, { tags: ['work', 'project', 'release'] });
+    expect(updated).toContain('tags:\n  - work\n  - project\n  - release\n');
+    expect(updated).toContain('status: draft');
+  });
+
+  it('preserves existing flow form of tags when modifying tags', () => {
+    const source = `---
+tags: [work, project]
+status: draft
+---
+# Content`;
+
+    const updated = updateFrontmatter(source, { tags: ['work', 'project', 'release'] });
+    expect(updated).toContain('tags: [work, project, release]\n');
+    expect(updated).toContain('status: draft');
+  });
+
+  it('adds created timestamp without touching other keys', () => {
+    const source = `---
+tags: [alpha]
+status: active
+---
+# Body`;
+
+    const updated = updateFrontmatter(source, { created: '2026-10-28T12:00:00' });
+    expect(updated).toContain('tags: [alpha]');
+    expect(updated).toContain('status: active');
+    expect(updated).toContain('created: 2026-10-28T12:00:00');
+  });
+
+  it('formats creation date in ISO YYYY-MM-DDTHH:mm:ss format', () => {
+    const d = new Date(2026, 9, 28, 15, 30, 45); // 2026-10-28 15:30:45
+    expect(formatCreatedDate(d)).toBe('2026-10-28T15:30:45');
   });
 });

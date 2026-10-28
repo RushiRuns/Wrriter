@@ -20,10 +20,12 @@ export interface VaultInfo {
 export interface NoteContent {
   readonly path: string;
   readonly text: string;
+  readonly modified?: number | undefined;
 }
 
 export interface SaveOutcome {
   readonly written: boolean;
+  readonly modified?: number | undefined;
 }
 
 export interface FirstPaintNoteSummary {
@@ -216,6 +218,52 @@ export interface AppSettingsContract {
 export type GetSettingsArgs = Record<string, never>;
 export type SaveSettingsArgs = Partial<AppSettingsContract>;
 
+// 6. index.*
+export interface IndexGetNotesArgs {
+  readonly folder?: string | undefined;
+  readonly sortBy?: 'manual' | 'modified' | 'created' | 'title' | undefined;
+  readonly after?: { readonly path: string; readonly sortVal: string | number } | null | undefined;
+  readonly limit?: number | undefined;
+}
+
+export type IndexGetFolderCountsArgs = Record<string, never>;
+export type IndexGetTitleListArgs = Record<string, never>;
+
+export interface IndexSearchArgs {
+  readonly query: string;
+  readonly limit?: number | undefined;
+}
+
+export type IndexGetStatusArgs = Record<string, never>;
+export type IndexGetStatusesArgs = Record<string, never>;
+export type IndexGetTagsArgs = Record<string, never>;
+
+export interface IndexSearchResultItem {
+  readonly path: string;
+  readonly title: string;
+  readonly folder: string;
+  readonly mtime_ms: number;
+  readonly preview: string;
+  readonly snippet: string;
+  readonly rank: number;
+}
+
+export interface IndexFolderCount {
+  readonly folder: string;
+  readonly count: number;
+}
+
+export interface IndexTitleItem {
+  readonly path: string;
+  readonly title: string;
+  readonly mtime_ms: number;
+}
+
+export interface IndexStatus {
+  readonly isIndexing: boolean;
+  readonly totalNotes: number;
+}
+
 // Fixed Channel Registry
 export interface IpcChannelTable {
   'window.minimize': { args: WindowMinimizeArgs; result: void };
@@ -253,6 +301,13 @@ export interface IpcChannelTable {
   'app.getSettings': { args: GetSettingsArgs; result: AppSettingsContract };
   'app.saveSettings': { args: SaveSettingsArgs; result: AppSettingsContract };
   'app.openLogFolder': { args: OpenLogFolderArgs; result: void };
+  'index.getNotes': { args: IndexGetNotesArgs; result: readonly NoteListItem[] };
+  'index.getFolderCounts': { args: IndexGetFolderCountsArgs; result: readonly IndexFolderCount[] };
+  'index.getTitleList': { args: IndexGetTitleListArgs; result: readonly IndexTitleItem[] };
+  'index.search': { args: IndexSearchArgs; result: readonly IndexSearchResultItem[] };
+  'index.getStatus': { args: IndexGetStatusArgs; result: IndexStatus };
+  'index.getStatuses': { args: IndexGetStatusesArgs; result: readonly string[] };
+  'index.getTags': { args: IndexGetTagsArgs; result: readonly string[] };
 }
 
 export type IpcChannel = keyof IpcChannelTable;
@@ -466,6 +521,51 @@ export const IPC_VALIDATORS: { readonly [K in IpcChannel]: Validator<IpcChannelT
     return ok(input as SaveSettingsArgs);
   },
 
-  'app.openLogFolder': validateEmptyArgs
+  'app.openLogFolder': validateEmptyArgs,
+
+  'index.getNotes': (input: unknown): Result<IndexGetNotesArgs> => {
+    if (!isObject(input)) return ok({});
+    const res: {
+      folder?: string | undefined;
+      sortBy?: 'manual' | 'modified' | 'created' | 'title' | undefined;
+      after?: { path: string; sortVal: string | number } | null | undefined;
+      limit?: number | undefined;
+    } = {};
+    if (typeof input['folder'] === 'string') res.folder = input['folder'];
+    if (
+      typeof input['sortBy'] === 'string' &&
+      (input['sortBy'] === 'manual' || input['sortBy'] === 'modified' || input['sortBy'] === 'created' || input['sortBy'] === 'title')
+    ) {
+      res.sortBy = input['sortBy'];
+    }
+    if (isObject(input['after'])) {
+      const p = input['after']['path'];
+      const sv = input['after']['sortVal'];
+      if (typeof p === 'string' && (typeof sv === 'string' || typeof sv === 'number')) {
+        res.after = { path: p, sortVal: sv };
+      }
+    } else if (input['after'] === null) {
+      res.after = null;
+    }
+    if (typeof input['limit'] === 'number' && !isNaN(input['limit'])) {
+      res.limit = input['limit'];
+    }
+    return ok(res);
+  },
+
+  'index.getFolderCounts': validateEmptyArgs,
+  'index.getTitleList': validateEmptyArgs,
+
+  'index.search': (input: unknown): Result<IndexSearchArgs> => {
+    if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });
+    const query = validateString('query', input['query']);
+    if (!query.ok) return query;
+    const limit = typeof input['limit'] === 'number' && !isNaN(input['limit']) ? input['limit'] : undefined;
+    return ok({ query: query.value, limit });
+  },
+
+  'index.getStatus': validateEmptyArgs,
+  'index.getStatuses': validateEmptyArgs,
+  'index.getTags': validateEmptyArgs
 };
 

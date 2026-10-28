@@ -10,6 +10,7 @@ import { SafeWriter } from './services/safe-writer';
 import { JobsStore } from './store/jobs-store';
 import { JobService } from './services/job-service';
 import { VaultService } from './services/vault-service';
+import { IndexClient } from './services/index-client';
 import { registerVaultProtocolPrivileges, setupVaultProtocolHandler } from './platform/vault-protocol';
 
 // 1. Single-instance lock
@@ -26,6 +27,9 @@ const safeWriter = new SafeWriter();
 const appDataStore = new AppDataStore(appDataDir, safeWriter);
 const ipcRouter = new IpcRouter();
 const vaultReader = new VaultReader();
+const indexClient = new IndexClient({
+  workerScriptPath: join(__dirname, '../workers/index.js')
+});
 const jobsStore = new JobsStore(appDataDir, safeWriter);
 const jobService = new JobService(jobsStore);
 const vaultService = new VaultService({
@@ -38,10 +42,18 @@ const windowService = new WindowService({
   ipcRouter,
   vaultService,
   vaultReader,
+  indexClient,
   watcherFactory: (vaultPath: string) =>
     new WatcherAdapter(vaultPath, safeWriter, {
-      onEvents: () => {},
-      onRescanNeeded: () => {}
+      onEvents: (events) => {
+        const mdPaths = events.map((e) => e.path).filter((p) => p.endsWith('.md'));
+        if (mdPaths.length > 0) {
+          void indexClient.notesBatchChanged(mdPaths);
+        }
+      },
+      onRescanNeeded: () => {
+        void indexClient.reindex('');
+      }
     }),
   jobService,
   htmlPath: join(__dirname, '../renderer/windows/main/index.html')

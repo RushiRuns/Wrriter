@@ -945,6 +945,24 @@ export const MainWindow: React.FC = () => {
         run: () => setNoticeMessage('Duplicate note arrives in Milestone 3')
       },
       {
+        id: 'wrriter:add-tag',
+        title: 'Add tag',
+        category: 'Properties',
+        keywords: ['tag', 'properties', 'label', 'pill'],
+        run: () => {
+          window.dispatchEvent(new CustomEvent('wrriter:open-add-tag'));
+        }
+      },
+      {
+        id: 'wrriter:set-status',
+        title: 'Set status',
+        category: 'Properties',
+        keywords: ['status', 'properties', 'state'],
+        run: () => {
+          window.dispatchEvent(new CustomEvent('wrriter:open-set-status'));
+        }
+      },
+      {
         id: 'wrriter:show-in-explorer',
         title: 'Show in File Explorer',
         category: 'File',

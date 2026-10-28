@@ -72,7 +72,7 @@ Each of these exists exactly once. A second copy is a bug.
 | `imagePaths` | `shared/domain/image-paths.ts` | Relative image and attachment paths, percent-encoding, rewrite on move | M2 | Planned |
 | `blockSplitter` | `shared/markdown/blocks.ts` | Split a note into blocks with their exact source text | M2 | Built |
 | `planSave` | `shared/markdown/save.ts` | Re-serialize only edited blocks, keep line endings, byte order mark and style | M2 | Built |
-| `lightIndexer` | `shared/markdown/light-index.ts` | Frontmatter, tags, wikilinks and first lines by pattern matching, for the index | M3 | Planned |
+| `lightIndexer` | `src/shared/markdown/light-index.ts` | Frontmatter, tags, wikilinks and first lines by pattern matching, for the index | M3 | Built |
 
 ## Main Services (`src/main/services`)
 
@@ -101,12 +101,12 @@ Each of these exists exactly once. A second copy is a bug.
 | `Watcher` | `src/main/services/watcher-adapter.ts` | File watcher adapter: batches, ignores own writes, full rescan on lost events | M1 | Built |
 | `AppDataStore` | `src/main/store/app-data-store.ts` | Settings, vault list, window state, first-paint state | M1 | Built |
 | `JobsStore` | `src/main/store/jobs-store.ts` | The pending jobs list, one file per vault, batched ticks | M1 | Built |
-| `IndexDb` | `workers/index/db.ts` | SQLite schema, WAL, batched writes, prepared queries | M3 | Planned |
-| `Indexer` | `workers/index/indexer.ts` | First index, changed-files reindex, folder-on-screen first | M3 | Planned |
-| `TitleList` | `workers/index/titles.ts` | In-memory titles for the quick switcher | M3 | Planned |
+| `IndexDb` | `src/workers/index/db.ts` | SQLite schema, WAL, batched writes, prepared queries, auto-rebuild on corrupt/old cache | M3 | Built |
+| `Indexer` | `src/workers/index/indexer.ts` | First index (active folder first), changed-files incremental reindex, Syncthing batching | M3 | Built |
+| `TitleList` | `src/workers/index/titles.ts` | In-memory titles for the quick switcher | M3 | Built |
 | `JobRunner` | `src/workers/jobs/job-runner.ts` | Runs one job at a time, 4 to 8 files in parallel | M1 | Built |
-| `IndexClient` | `renderer` and `main` | The fixed set of index read requests over the channel | M3 | Planned |
-| `ftsEscape` | `workers/index/fts.ts` | The one function that escapes search text | M3 | Planned |
+| `IndexClient` | `src/main/services/index-client.ts` | The fixed set of index read requests over the channel | M3 | Built |
+| `ftsEscape` | `src/workers/index/fts.ts` | The one function that escapes search text | M3 | Built |
 
 ## IPC Requests (`src/shared/ipc`)
 
@@ -139,6 +139,14 @@ Record every request here as it is written, so a second one is not added for the
 | `app.setAccent` | `{ accent: AccentName }` | `void` | M1 | Built |
 | `app.getSettings` | `{}` | `AppSettingsContract` | M1 | Built |
 | `app.saveSettings` | `Partial<AppSettingsContract>` | `AppSettingsContract` | M1 | Built |
+| `app.openLogFolder` | `{}` | `void` | M1 | Built |
+| `index.getNotes` | `{ folder?: string, sortBy?: string, after?: KeysetCursor, limit?: number }` | `NoteListItem[]` | M3 | Built |
+| `index.getFolderCounts` | `{}` | `IndexFolderCount[]` | M3 | Built |
+| `index.getTitleList` | `{}` | `IndexTitleItem[]` | M3 | Built |
+| `index.search` | `{ query: string, limit?: number }` | `IndexSearchResultItem[]` | M3 | Built |
+| `index.getStatus` | `{}` | `IndexStatus` | M3 | Built |
+| `index.getStatuses` | `{}` | `string[]` | M3 | Built |
+| `index.getTags` | `{}` | `string[]` | M3 | Built |
 
 ## Index Queries
 
@@ -146,7 +154,13 @@ Record every query here as it is written.
 
 | Query | Returns | Milestone | Status |
 |---|---|---|---|
-| (none yet) | | | |
+| `index.getNotes` | `readonly NoteListItem[]` | M3 | Built |
+| `index.getFolderCounts` | `readonly IndexFolderCount[]` | M3 | Built |
+| `index.getTitleList` | `readonly IndexTitleItem[]` | M3 | Built |
+| `index.search` | `readonly IndexSearchResultItem[]` | M3 | Built |
+| `index.getStatus` | `IndexStatus` | M3 | Built |
+| `index.getStatuses` | `readonly string[]` | M3 | Built |
+| `index.getTags` | `readonly string[]` | M3 | Built |
 
 ## Shared Components (`src/renderer/components`)
 

@@ -80,6 +80,15 @@ const api: WrriterApi = {
     saveSettings: (args: SaveSettingsArgs) => invoke('app.saveSettings', args),
     openLogFolder: () => invoke('app.openLogFolder', {})
   },
+  index: {
+    getNotes: (args = {}) => invoke('index.getNotes', args),
+    getFolderCounts: () => invoke('index.getFolderCounts', {}),
+    getTitleList: () => invoke('index.getTitleList', {}),
+    search: (args) => invoke('index.search', args),
+    getStatus: () => invoke('index.getStatus', {}),
+    getStatuses: () => invoke('index.getStatuses', {}),
+    getTags: () => invoke('index.getTags', {})
+  },
   showItemInFolder: (path: string) => invoke('vault.showInExplorer', { path }),
   invoke
 };

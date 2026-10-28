@@ -93,6 +93,15 @@ export interface WrriterApi {
     saveSettings(args: SaveSettingsArgs): Promise<Result<AppSettingsContract>>;
     openLogFolder(): Promise<Result<void>>;
   };
+  readonly index: {
+    getNotes(args?: import('./contracts').IndexGetNotesArgs): Promise<Result<readonly NoteListItem[]>>;
+    getFolderCounts(): Promise<Result<readonly import('./contracts').IndexFolderCount[]>>;
+    getTitleList(): Promise<Result<readonly import('./contracts').IndexTitleItem[]>>;
+    search(args: import('./contracts').IndexSearchArgs): Promise<Result<readonly import('./contracts').IndexSearchResultItem[]>>;
+    getStatus(): Promise<Result<import('./contracts').IndexStatus>>;
+    getStatuses(): Promise<Result<readonly string[]>>;
+    getTags(): Promise<Result<readonly string[]>>;
+  };
   readonly showItemInFolder?: (path: string) => Promise<Result<void>>;
   readonly invoke: <K extends IpcChannel>(
     channel: K,

@@ -341,25 +341,25 @@ Nothing that depends on a row is built until it is decided. Rows 15 to 17 are ne
 
 ### The index
 
-- [ ] The index worker starts after the first paint, on the worker type from ADR-W11. `IndexDb` on the layout proposed in M1 (a cache, version 1), WAL, about 500 files per transaction, prepared statements, relaxed durability. Exact values reported
-- [ ] FTS5 with prefix indexes on the searched columns only. `ftsEscape` is the only place search text is escaped
-- [ ] `lightIndexer`: frontmatter, tags, wikilinks, the first lines and the first image by pattern matching. Never the editor, never a full parse
-- [ ] `Indexer`: the first index at low priority, about 8 files at a time, the folder on screen first. Later launches read again only files whose modified time or size changed
-- [ ] A missing, damaged or older index is deleted and rebuilt without asking, with a delete-and-rebuild test
-- [ ] `TitleList`: every note's title, path and modified time in memory, for the quick switcher
-- [ ] `IndexClient`: the main process hands each window a channel that accepts only the fixed list of index reads. Every query is recorded in UTILITIES.md
-- [ ] Indexing progress such as `Indexing 12,400 of 50,000`, sent a few times a second: where it shows waits on open item 15
-- [ ] The note list now reads from the index: preview lines, thumbnails, sort by created, and folder note counts from COUNT queries
-- [ ] Syncthing delivering thousands of files at once: changes batched, the index updated in the background, the window usable
-- [ ] Idle work after the first paint: the index worker, then any interrupted jobs
+- [x] The index worker starts after the first paint, on the worker type from ADR-W11. `IndexDb` on the layout proposed in M1 (a cache, version 1), WAL, about 500 files per transaction, prepared statements, relaxed durability. Exact values reported
+- [x] FTS5 with prefix indexes on the searched columns only. `ftsEscape` is the only place search text is escaped
+- [x] `lightIndexer`: frontmatter, tags, wikilinks, the first lines and the first image by pattern matching. Never the editor, never a full parse
+- [x] `Indexer`: the first index at low priority, about 8 files at a time, the folder on screen first. Later launches read again only files whose modified time or size changed
+- [x] A missing, damaged or older index is deleted and rebuilt without asking, with a delete-and-rebuild test
+- [x] `TitleList`: every note's title, path and modified time in memory, for the quick switcher
+- [x] `IndexClient`: the main process hands each window a channel that accepts only the fixed list of index reads. Every query is recorded in UTILITIES.md
+- [x] Indexing progress such as `Indexing 12,400 of 50,000`, sent a few times a second: where it shows waits on open item 15
+- [x] The note list now reads from the index: preview lines, thumbnails, sort by created, and folder note counts from COUNT queries
+- [x] Syncthing delivering thousands of files at once: changes batched, the index updated in the background, the window usable
+- [x] Idle work after the first paint: the index worker, then any interrupted jobs
 
 ### Properties
 
-- [ ] `shared/domain/frontmatter` edits only `tags`, `status` and `created` here (`cover` and `remind` are Version 2). Every other key, every comment and the key order are kept, and so is the form of `tags` already in the file. A note gets a block only when its first property is set
-- [ ] Broken frontmatter: shown as text, the file left untouched, a notice, and the properties count as empty
-- [ ] `created:` written when a note is made in Wrriter, and added to a note without it the next time that note is saved for another reason: waits on the `created:` format (open item 14)
-- [ ] The properties line under the title shows tags and status, and renders nothing when both are empty. Add tag and Set status commands. Status words already used in the vault are suggested
-- [ ] Modified is the file's modified time, shown on the date line and never stored in the note
+- [x] `shared/domain/frontmatter` edits only `tags`, `status` and `created` here (`cover` and `remind` are Version 2). Every other key, every comment and the key order are kept, and so is the form of `tags` already in the file. A note gets a block only when its first property is set
+- [x] Broken frontmatter: shown as text, the file left untouched, a notice, and the properties count as empty
+- [x] `created:` written when a note is made in Wrriter, and added to a note without it the next time that note is saved for another reason: waits on the `created:` format (open item 14)
+- [x] The properties line under the title shows tags and status, and renders nothing when both are empty. Add tag and Set status commands. Status words already used in the vault are suggested
+- [x] Modified is the file's modified time, shown on the date line and never stored in the note
 
 ### Tags
 

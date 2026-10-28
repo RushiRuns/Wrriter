@@ -54,4 +54,16 @@ describe('IPC Validators and Request Contracts', () => {
     expect(IPC_VALIDATORS['app.setAccent']({ accent: 'yellow' }).ok).toBe(true);
     expect(IPC_VALIDATORS['app.setAccent']({ accent: 'pink' }).ok).toBe(false);
   });
+
+  it('validates index query arguments', () => {
+    expect(IPC_VALIDATORS['index.getNotes']({}).ok).toBe(true);
+    expect(IPC_VALIDATORS['index.getNotes']({ folder: 'Work', sortBy: 'modified', limit: 20 }).ok).toBe(true);
+    expect(IPC_VALIDATORS['index.getFolderCounts']({}).ok).toBe(true);
+    expect(IPC_VALIDATORS['index.getTitleList']({}).ok).toBe(true);
+    expect(IPC_VALIDATORS['index.search']({ query: 'launch' }).ok).toBe(true);
+    expect(IPC_VALIDATORS['index.search']({ query: 123 }).ok).toBe(false);
+    expect(IPC_VALIDATORS['index.getStatus']({}).ok).toBe(true);
+    expect(IPC_VALIDATORS['index.getStatuses']({}).ok).toBe(true);
+    expect(IPC_VALIDATORS['index.getTags']({}).ok).toBe(true);
+  });
 });

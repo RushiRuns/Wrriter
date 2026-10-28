@@ -1,4 +1,5 @@
 import { blockSplitter, type MarkdownBlock } from '../../shared/markdown/blocks';
+import { parseFrontmatter } from '../../shared/domain/frontmatter';
 
 export interface TipTapNodeJSON {
   type: string;
@@ -151,7 +152,18 @@ export function markdownToTipTapDoc(source: string): TipTapDocJSON {
     }
 
     if (block.type === 'frontmatter') {
-      // Frontmatter preserved in raw format and handled in note header
+      const fm = parseFrontmatter(source);
+      if (fm.isBroken) {
+        // Broken frontmatter: shown as text in the editor
+        const lines = block.raw.split(/\r?\n/).filter((l) => l.length > 0);
+        for (const line of lines) {
+          content.push({
+            type: 'paragraph',
+            content: parseInlineMarkdown(line)
+          });
+        }
+      }
+      // Valid frontmatter is preserved in raw format and rendered in Properties line under title
       continue;
     }
 

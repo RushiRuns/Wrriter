@@ -17,6 +17,22 @@ export interface FrontmatterUpdates {
 }
 
 /**
+ * Formats a creation date timestamp in ISO-8601 (YYYY-MM-DDTHH:mm:ss).
+ * Clean, standard, sorts chronologically in SQLite, portable across markdown tools.
+ */
+export function formatCreatedDate(d: Date | number = new Date()): string {
+  const date = typeof d === 'number' ? new Date(d) : d;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const year = date.getFullYear();
+  const month = pad(date.getMonth() + 1);
+  const day = pad(date.getDate());
+  const hours = pad(date.getHours());
+  const minutes = pad(date.getMinutes());
+  const seconds = pad(date.getSeconds());
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+}
+
+/**
  * Parses frontmatter block from note source.
  */
 export function parseFrontmatter(source: string): FrontmatterResult {
@@ -223,7 +239,10 @@ export function updateFrontmatter(source: string, updates: FrontmatterUpdates): 
 
     const newLines: string[] = ['---'];
     if (updates.tags && updates.tags.length > 0) {
-      newLines.push(`tags: [${updates.tags.join(', ')}]`);
+      newLines.push('tags:');
+      for (const t of updates.tags) {
+        newLines.push(`  - ${t}`);
+      }
     }
     if (updates.status) {
       newLines.push(`status: ${updates.status}`);
@@ -323,9 +342,12 @@ export function updateFrontmatter(source: string, updates: FrontmatterUpdates): 
         const newTagLines = updates.tags.map((t) => `  - ${t}`);
         fmLines.splice(tagsIdx + 1, endListIdx - (tagsIdx + 1), ...newTagLines);
       }
-    } else {
-      // Tags not present: insert flow tags
-      fmLines.push(`tags: [${updates.tags.join(', ')}]`);
+    } else if (updates.tags.length > 0) {
+      // Tags not present: insert list tags (SCHEMA.md: A new key uses the list form)
+      fmLines.push('tags:');
+      for (const t of updates.tags) {
+        fmLines.push(`  - ${t}`);
+      }
     }
   }
 

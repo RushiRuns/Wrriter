@@ -42,7 +42,9 @@ import { ContextMenu } from '../components/menu/ContextMenu';
 import { TabStrip } from '../components/TabStrip';
 import { markdownToTipTapDoc, tipTapDocToMarkdown } from './markdown-converter';
 import { planSave, encodeUtf8 } from '../../shared/markdown/save';
-import { parseFrontmatter } from '../../shared/domain/frontmatter';
+import { parseFrontmatter, updateFrontmatter, formatCreatedDate } from '../../shared/domain/frontmatter';
+import { PropertiesLineExtension, propertiesLinePluginKey } from './extensions/properties-line';
+import { Dialog } from '../components/Dialog';
 import {
   extractTitleFromFirstLine,
   shouldRenameFileOnLeave,
@@ -105,6 +107,10 @@ export interface TabSession {
   findBarState?: FindBarState;
   dateLine?: string;
   tags?: readonly string[];
+  status?: string | null;
+  created?: string | null;
+  frontmatterRaw?: string;
+  isBrokenFrontmatter?: boolean;
 }
 
 export interface EditorHostProps {
@@ -171,9 +177,17 @@ export const EditorHost: React.FC<EditorHostProps> = ({
   const [skippedMatches, setSkippedMatches] = useState(0);
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
 
-  // Active note date line and tags row
+  // Active note date line, tags, and status
   const [activeDateLine, setActiveDateLine] = useState<string>('');
   const [activeTags, setActiveTags] = useState<readonly string[]>([]);
+  const [activeStatus, setActiveStatus] = useState<string | null>(null);
+
+  // Properties dialog states (Add tag and Set status)
+  const [isAddTagOpen, setIsAddTagOpen] = useState(false);
+  const [newTagInput, setNewTagInput] = useState('');
+  const [isSetStatusOpen, setIsSetStatusOpen] = useState(false);
+  const [newStatusInput, setNewStatusInput] = useState('');
+  const [suggestedStatuses, setSuggestedStatuses] = useState<readonly string[]>([]);
 
   // UI Slice 4: Slash menu and Floating toolbar state
   const [slashMenuState, setSlashMenuState] = useState<SlashMenuState | null>(null);
@@ -223,11 +237,39 @@ export const EditorHost: React.FC<EditorHostProps> = ({
     async (tab: TabSession, retryCount = 0): Promise<boolean> => {
       if (!tab.editorState) return true;
 
+      // Broken frontmatter: SCHEMA.md mandates file is left untouched
+      if (tab.isBrokenFrontmatter) {
+        return true;
+      }
+
+      // Add created timestamp to notes without it the next time note is saved for another reason (M3 Properties, Open Item 14)
+      if (!tab.created) {
+        tab.created = formatCreatedDate();
+      }
+
       const docJson = tab.editorState.doc.toJSON();
       const currentMarkdown = tipTapDocToMarkdown(docJson as any);
 
+      let fullMarkdown = currentMarkdown;
+      const hasProperties =
+        (tab.tags && tab.tags.length > 0) ||
+        Boolean(tab.status) ||
+        Boolean(tab.created);
+
+      if (hasProperties || tab.frontmatterRaw) {
+        const baseFm = tab.frontmatterRaw || '';
+        const updatedFm = updateFrontmatter(baseFm, {
+          tags: tab.tags,
+          status: tab.status,
+          created: tab.created
+        });
+        const isCrlf = (tab.lastSavedText || '').includes('\r\n');
+        const eol = isCrlf ? '\r\n' : '\n';
+        fullMarkdown = updatedFm.trimEnd() + eol + (currentMarkdown ? currentMarkdown : '');
+      }
+
       setIsSaving(true);
-      const plan = planSave(tab.originalBytes, currentMarkdown);
+      const plan = planSave(tab.originalBytes, fullMarkdown);
 
       if (plan.unchanged) {
         tab.isDirty = false;
@@ -247,6 +289,10 @@ export const EditorHost: React.FC<EditorHostProps> = ({
           tab.originalBytes = plan.bytes;
           tab.lastSavedText = plan.text;
           tab.isDirty = false;
+          if (res.value.modified) {
+            tab.dateLine = formatNoteDate(res.value.modified);
+            setActiveDateLine(tab.dateLine);
+          }
           const summary = extractNotePreviewAndImage(plan.text);
           onNoteSummaryChangeRef.current?.({
             path: tab.path,
@@ -320,6 +366,124 @@ export const EditorHost: React.FC<EditorHostProps> = ({
     [notifyTabs]
   );
 
+  // Properties Line actions (Add tag, Set status)
+  const handleOpenAddTag = useCallback(() => {
+    setNewTagInput('');
+    setIsAddTagOpen(true);
+  }, []);
+
+  const handleOpenSetStatus = useCallback(async () => {
+    const activeTab = tabsRef.current.get(activePathRef.current ?? '');
+    setNewStatusInput(activeTab?.status || '');
+    if (window.wrriter?.index?.getStatuses) {
+      const res = await window.wrriter.index.getStatuses();
+      if (res.ok) {
+        setSuggestedStatuses(res.value);
+      }
+    }
+    setIsSetStatusOpen(true);
+  }, []);
+
+  const handleConfirmAddTag = useCallback(() => {
+    const activeTab = tabsRef.current.get(activePathRef.current ?? '');
+    if (!activeTab || activeTab.isBrokenFrontmatter) {
+      setIsAddTagOpen(false);
+      return;
+    }
+
+    const raw = newTagInput.trim();
+    if (!raw) {
+      setIsAddTagOpen(false);
+      return;
+    }
+
+    // A space while adding a tag starts the next one (M3 Tags specification)
+    const parts = raw
+      .split(/[\s,]+/)
+      .map((t) => t.replace(/^#/, '').trim())
+      .filter((t) => t.length > 0);
+
+    const currentTags = [...(activeTab.tags || [])];
+    let changed = false;
+
+    for (const tag of parts) {
+      // Tags are case-insensitive with the first spelling shown (M3 Tags specification)
+      if (!currentTags.some((existing) => existing.toLowerCase() === tag.toLowerCase())) {
+        currentTags.push(tag);
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      activeTab.tags = currentTags;
+      setActiveTags(currentTags);
+      if (!activeTab.created) {
+        activeTab.created = formatCreatedDate();
+      }
+      activeTab.isDirty = true;
+      if (editorRef.current) {
+        editorRef.current.view.dispatch(
+          editorRef.current.state.tr.setMeta(propertiesLinePluginKey, {
+            tags: currentTags,
+            status: activeTab.status || null
+          })
+        );
+      }
+      void saveTabSession(activeTab);
+    }
+
+    setIsAddTagOpen(false);
+  }, [newTagInput, saveTabSession]);
+
+  const handleConfirmSetStatus = useCallback(
+    (chosenStatus?: string) => {
+      const activeTab = tabsRef.current.get(activePathRef.current ?? '');
+      if (!activeTab || activeTab.isBrokenFrontmatter) {
+        setIsSetStatusOpen(false);
+        return;
+      }
+
+      const statusVal = (chosenStatus !== undefined ? chosenStatus : newStatusInput).trim() || null;
+      activeTab.status = statusVal;
+      setActiveStatus(statusVal);
+      if (!activeTab.created) {
+        activeTab.created = formatCreatedDate();
+      }
+      activeTab.isDirty = true;
+
+      if (editorRef.current) {
+        editorRef.current.view.dispatch(
+          editorRef.current.state.tr.setMeta(propertiesLinePluginKey, {
+            tags: activeTab.tags || [],
+            status: statusVal
+          })
+        );
+      }
+      void saveTabSession(activeTab);
+      setIsSetStatusOpen(false);
+    },
+    [newStatusInput, saveTabSession]
+  );
+
+  useEffect(() => {
+    const onOpenAddTag = () => handleOpenAddTag();
+    const onOpenSetStatus = () => {
+      void handleOpenSetStatus();
+    };
+
+    window.addEventListener('wrriter:open-add-tag', onOpenAddTag);
+    window.addEventListener('wrriter:add-tag', onOpenAddTag);
+    window.addEventListener('wrriter:open-set-status', onOpenSetStatus);
+    window.addEventListener('wrriter:set-status', onOpenSetStatus);
+
+    return () => {
+      window.removeEventListener('wrriter:open-add-tag', onOpenAddTag);
+      window.removeEventListener('wrriter:add-tag', onOpenAddTag);
+      window.removeEventListener('wrriter:open-set-status', onOpenSetStatus);
+      window.removeEventListener('wrriter:set-status', onOpenSetStatus);
+    };
+  }, [handleOpenAddTag, handleOpenSetStatus]);
+
   // Initialize the single live TipTap editor on mount
   useEffect(() => {
     if (!containerRef.current) return;
@@ -371,7 +535,11 @@ export const EditorHost: React.FC<EditorHostProps> = ({
         FloatingToolbarExtension.configure({
           onStateChange: (state) => setFloatingToolbarState(state)
         }),
-        TypingTouchesExtension
+        TypingTouchesExtension,
+        PropertiesLineExtension.configure({
+          onStatusClick: () => void handleOpenSetStatus(),
+          onAddTagClick: () => handleOpenAddTag()
+        })
       ],
       editorProps: {
         attributes: {
@@ -601,7 +769,11 @@ export const EditorHost: React.FC<EditorHostProps> = ({
         const initialBase = fileName.replace(/\.md$/i, '');
         let title = initialBase;
         let tags: readonly string[] = [];
-        const dateLine = formatNoteDate(Date.now());
+        let status: string | null = null;
+        let created: string | null = null;
+        let isBrokenFrontmatter = false;
+        let frontmatterRaw = '';
+        let dateLine = formatNoteDate(Date.now());
 
         if (window.wrriter?.note?.read) {
           const res = await window.wrriter.note.read({ path: activeNotePath });
@@ -611,8 +783,22 @@ export const EditorHost: React.FC<EditorHostProps> = ({
             const firstLine = rawText.split(/\r?\n/)[0];
             title = extractTitleFromFirstLine(firstLine) || initialBase;
 
+            const mtime = res.value.modified || Date.now();
+            dateLine = formatNoteDate(mtime);
+
             const fm = parseFrontmatter(rawText);
-            tags = fm.tags;
+            if (fm.isBroken) {
+              isBrokenFrontmatter = true;
+              onNoticeRef.current?.('Broken frontmatter; file left untouched');
+              tags = [];
+              status = null;
+              created = null;
+            } else {
+              tags = fm.tags;
+              status = fm.status;
+              created = fm.created;
+              frontmatterRaw = fm.hasFrontmatter ? fm.raw : '';
+            }
           }
         }
 
@@ -628,6 +814,10 @@ export const EditorHost: React.FC<EditorHostProps> = ({
           initialFileName: fileName,
           initialTitle: title,
           tags,
+          status,
+          created,
+          isBrokenFrontmatter,
+          frontmatterRaw,
           dateLine,
           findBarState: {
             isOpen: false,
@@ -643,15 +833,26 @@ export const EditorHost: React.FC<EditorHostProps> = ({
 
         // Set content in live editor
         editor.commands.setContent(docJson as any, { emitUpdate: false });
+        editor.view.dispatch(
+          editor.state.tr.setMeta(propertiesLinePluginKey, { tags, status })
+        );
         targetTab.editorState = editor.state;
         onTitleChangeRef.current?.(title);
         setActiveTags(tags);
+        setActiveStatus(status);
         setActiveDateLine(dateLine);
       } else if (targetTab.editorState) {
         // Swap EditorState in O(1) time without re-mounting editor DOM
         editor.view.updateState(targetTab.editorState);
+        editor.view.dispatch(
+          editor.state.tr.setMeta(propertiesLinePluginKey, {
+            tags: targetTab.tags || [],
+            status: targetTab.status || null
+          })
+        );
         onTitleChangeRef.current?.(targetTab.title);
         setActiveTags(targetTab.tags || []);
+        setActiveStatus(targetTab.status || null);
         setActiveDateLine(targetTab.dateLine || '');
       }
 
@@ -1362,21 +1563,7 @@ export const EditorHost: React.FC<EditorHostProps> = ({
             <div className="meta">{activeDateLine}</div>
           )}
 
-          {/* Tags Row */}
-          {activeTags && activeTags.length > 0 && (
-            <div className="props">
-              {activeTags.map((tag) => {
-                const colorIdx = (hashString(tag) % 5) + 1;
-                return (
-                  <span key={tag} className={`htag c${colorIdx}`}>
-                    #{tag}
-                  </span>
-                );
-              })}
-            </div>
-          )}
-
-          {/* TipTap Live Editor DOM Container */}
+          {/* TipTap Live Editor DOM Container (Properties line rendered under title by PropertiesLineExtension) */}
           <div ref={containerRef} className="editor-container" />
         </div>
       </div>
@@ -1445,6 +1632,137 @@ export const EditorHost: React.FC<EditorHostProps> = ({
         wordCount={wordCount}
         charCount={charCount}
       />
+      {/* Add Tag Dialog */}
+      <Dialog
+        isOpen={isAddTagOpen}
+        onClose={() => setIsAddTagOpen(false)}
+        title="Add tag"
+        width={360}
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleConfirmAddTag();
+          }}
+          style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}
+        >
+          <input
+            autoFocus
+            type="text"
+            className="find-input"
+            style={{
+              width: '100%',
+              height: 'var(--wc-d)',
+              padding: '0 var(--s-2)',
+              borderRadius: 'var(--r-s)',
+              border: '1px solid var(--line)',
+              background: 'var(--bg)',
+              color: 'var(--tx)'
+            }}
+            placeholder="Tag name (e.g. project, work/plan)"
+            value={newTagInput}
+            onChange={(e) => setNewTagInput(e.target.value)}
+          />
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--s-2)', marginTop: 'var(--s-2)' }}>
+            <button
+              type="button"
+              className="fb"
+              onClick={() => setIsAddTagOpen(false)}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="fb"
+              style={{ background: 'var(--accent)', color: 'var(--accent-fg)' }}
+            >
+              Add tag
+            </button>
+          </div>
+        </form>
+      </Dialog>
+
+      {/* Set Status Dialog */}
+      <Dialog
+        isOpen={isSetStatusOpen}
+        onClose={() => setIsSetStatusOpen(false)}
+        title="Set status"
+        width={380}
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleConfirmSetStatus();
+          }}
+          style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-3)' }}
+        >
+          <input
+            autoFocus
+            type="text"
+            className="find-input"
+            style={{
+              width: '100%',
+              height: 'var(--wc-d)',
+              padding: '0 var(--s-2)',
+              borderRadius: 'var(--r-s)',
+              border: '1px solid var(--line)',
+              background: 'var(--bg)',
+              color: 'var(--tx)'
+            }}
+            placeholder="Status word (e.g. active, draft, done)"
+            value={newStatusInput}
+            onChange={(e) => setNewStatusInput(e.target.value)}
+          />
+
+          {suggestedStatuses && suggestedStatuses.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-1)' }}>
+              <div style={{ fontSize: 'var(--fs-small)', color: 'var(--tx3)' }}>
+                Suggestions from vault:
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--s-1)' }}>
+                {suggestedStatuses.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    className="hstatus"
+                    style={{ border: 'none' }}
+                    onClick={() => handleConfirmSetStatus(s)}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'var(--s-2)' }}>
+            <button
+              type="button"
+              className="fb"
+              style={{ color: 'var(--danger, #C15343)' }}
+              onClick={() => handleConfirmSetStatus('')}
+            >
+              Clear status
+            </button>
+            <div style={{ display: 'flex', gap: 'var(--s-2)' }}>
+              <button
+                type="button"
+                className="fb"
+                onClick={() => setIsSetStatusOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="fb"
+                style={{ background: 'var(--accent)', color: 'var(--accent-fg)' }}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </form>
+      </Dialog>
     </div>
   );
 };

@@ -7,6 +7,7 @@ import { resolveInsideVault } from './vault-reader';
 export interface WriteOutcome {
   written: boolean;
   bytesWritten: number;
+  modified?: number | undefined;
 }
 
 export interface SafeWriteOptions {
@@ -128,9 +129,12 @@ export class SafeWriter {
       // 5. Remember write for watcher ignore window
       this.rememberWrite(targetPath);
 
+      const stat = await fs.promises.stat(targetPath).catch(() => null);
+
       return ok({
         written: true,
-        bytesWritten: finalBuffer.length
+        bytesWritten: finalBuffer.length,
+        modified: stat?.mtimeMs ?? Date.now()
       });
     } catch (err_: any) {
       // Clean up temp file on failure

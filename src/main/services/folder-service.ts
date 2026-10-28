@@ -5,8 +5,18 @@ import { isValidFileName, isIgnoredDotPath, isAttachmentsFolder, getFileNameVali
 import { resolveInsideVault } from './vault-reader';
 import { sendToRecycleBin } from '../platform/recycle-bin';
 import type { FolderNode } from '../../shared/ipc/contracts';
+import type { IndexClient } from './index-client';
+
+export interface FolderServiceOptions {
+  indexClient?: IndexClient | undefined;
+}
 
 export class FolderService {
+  private readonly indexClient?: IndexClient | undefined;
+
+  constructor(options: FolderServiceOptions = {}) {
+    this.indexClient = options.indexClient;
+  }
   /**
    * Recursively scans folders in vault, ignoring dot-folders and attachments.
    */
@@ -14,6 +24,18 @@ export class FolderService {
     try {
       if (!fs.existsSync(vaultRoot)) {
         return ok([]);
+      }
+
+      // Check if folder counts can be retrieved from index COUNT query (M3)
+      let indexCountsMap: Map<string, number> | null = null;
+      if (this.indexClient) {
+        const countsRes = await this.indexClient.getFolderCounts();
+        if (countsRes.ok) {
+          indexCountsMap = new Map<string, number>();
+          for (const item of countsRes.value) {
+            indexCountsMap.set(item.folder, item.count);
+          }
+        }
       }
 
       // 1. Recursive scan collecting all folders
@@ -51,7 +73,8 @@ export class FolderService {
             foldersByRelPath.set(childRelPath, folderNode);
 
             const subNotes = await scanDir(childFullPath, childRelPath);
-            folderNode.noteCount = subNotes;
+            // If index count exists, use count from index; otherwise fallback to scan
+            folderNode.noteCount = indexCountsMap !== null ? (indexCountsMap.get(childRelPath) ?? 0) : subNotes;
             noteCountInDir += subNotes;
           } else if (entry.isFile() && entry.name.endsWith('.md')) {
             noteCountInDir++;

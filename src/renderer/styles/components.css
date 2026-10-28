@@ -866,6 +866,54 @@
   margin: 0 calc(var(--s-2) * -1) var(--s-5);
 }
 
+/* Status Pill in Properties Line */
+.hstatus {
+  display: inline-flex;
+  align-items: center;
+  height: var(--wc-d);
+  padding: 0 var(--s-2);
+  margin-right: var(--s-2);
+  border-radius: var(--r-s);
+  font-size: var(--fs-ui);
+  line-height: var(--lh-ui);
+  font-weight: var(--fw-bold);
+  color: var(--tx2);
+  background: var(--soft);
+  cursor: pointer;
+  transition: box-shadow var(--t-fast) var(--ease-move), transform var(--t-fast) var(--ease-move);
+}
+
+.hstatus:hover {
+  background: var(--sel);
+  color: var(--tx);
+}
+
+.hstatus:active {
+  transform: scale(.97);
+}
+
+.props-add-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--wc-d);
+  width: var(--wc-d);
+  padding: 0;
+  border-radius: var(--r-s);
+  border: none;
+  background: transparent;
+  color: var(--tx3);
+  font-size: var(--fs-ui);
+  line-height: var(--lh-ui);
+  cursor: pointer;
+  transition: color var(--t-fast) var(--ease-move), background var(--t-fast) var(--ease-move);
+}
+
+.props-add-btn:hover {
+  background: var(--soft);
+  color: var(--tx);
+}
+
 /* Tags */
 .htag {
   display: inline-flex;

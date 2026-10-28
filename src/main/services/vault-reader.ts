@@ -9,6 +9,7 @@ export interface NoteContent {
   lineEnding: '\r\n' | '\n';
   hasBom: boolean;
   hasFinalNewline: boolean;
+  mtimeMs: number;
 }
 
 /**
@@ -34,7 +35,10 @@ export class VaultReader {
     if (!resolvedPath.ok) return resolvedPath;
 
     try {
-      const bytes = await fs.promises.readFile(resolvedPath.value);
+      const [bytes, stat] = await Promise.all([
+        fs.promises.readFile(resolvedPath.value),
+        fs.promises.stat(resolvedPath.value)
+      ]);
 
       // 1. Detect UTF-8 BOM (0xEF, 0xBB, 0xBF)
       const hasBom = bytes.length >= 3 && bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF;
@@ -51,7 +55,8 @@ export class VaultReader {
         text,
         lineEnding,
         hasBom,
-        hasFinalNewline
+        hasFinalNewline,
+        mtimeMs: stat.mtimeMs
       });
     } catch (error: any) {
       if (error?.code === 'ENOENT') {

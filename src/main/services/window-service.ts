@@ -10,6 +10,7 @@ import { JobService } from './job-service';
 import { VaultService } from './vault-service';
 import { FolderService } from './folder-service';
 import { NoteService } from './note-service';
+import { IndexClient } from './index-client';
 import { Result, ok, err } from '../../shared/result';
 import type { StartupState, AccentName, SetPaneWidthsArgs, SetOpenTabsArgs } from '../../shared/ipc';
 
@@ -19,6 +20,7 @@ export interface WindowServiceOptions {
   vaultService?: VaultService | undefined;
   folderService?: FolderService | undefined;
   noteService?: NoteService | undefined;
+  indexClient?: IndexClient | undefined;
   vaultReader?: VaultReader | undefined;
   watcherAdapter?: { start(): Promise<void>; stop(): Promise<void> } | undefined;
   watcherFactory?: ((vaultPath: string) => { start(): Promise<void>; stop(): Promise<void> }) | undefined;
@@ -32,6 +34,7 @@ export class WindowService {
   private readonly vaultService: VaultService;
   private readonly folderService: FolderService;
   private readonly noteService: NoteService;
+  private readonly indexClient?: IndexClient | undefined;
   private readonly vaultReader: VaultReader;
   private readonly watcherAdapter?: { start(): Promise<void>; stop(): Promise<void> };
   private readonly watcherFactory?: (vaultPath: string) => { start(): Promise<void>; stop(): Promise<void> };
@@ -59,7 +62,13 @@ export class WindowService {
         onActiveVaultChanged: (vault) => this.handleActiveVaultChanged(vault)
       });
     this.folderService = options.folderService ?? new FolderService();
-    this.noteService = options.noteService ?? new NoteService({ vaultReader: this.vaultReader });
+    this.indexClient = options.indexClient;
+    this.noteService =
+      options.noteService ??
+      new NoteService({
+        vaultReader: this.vaultReader,
+        indexClient: this.indexClient
+      });
     if (options.watcherAdapter) {
       this.watcherAdapter = options.watcherAdapter;
     }
@@ -334,7 +343,8 @@ export class WindowService {
       if (!res.ok) return res;
       return ok({
         path: args.path,
-        text: res.value.text
+        text: res.value.text,
+        modified: res.value.mtimeMs
       });
     });
     this.ipcRouter.register('note.save', (args) =>
@@ -387,6 +397,29 @@ export class WindowService {
       }
       return ok(undefined);
     });
+
+    // 8. Index channels (M3)
+    this.ipcRouter.register('index.getNotes', (args) =>
+      this.activeVault ? this.noteService.listNotes(this.activeVault.path, args) : err({ kind: 'vaultUnavailable' })
+    );
+    this.ipcRouter.register('index.getFolderCounts', async () =>
+      this.indexClient ? this.indexClient.getFolderCounts() : ok([])
+    );
+    this.ipcRouter.register('index.getTitleList', async () =>
+      this.indexClient ? this.indexClient.getTitleList() : ok([])
+    );
+    this.ipcRouter.register('index.search', async (args) =>
+      this.indexClient ? this.indexClient.search(args.query, args.limit) : ok([])
+    );
+    this.ipcRouter.register('index.getStatus', async () =>
+      this.indexClient ? this.indexClient.getStatus() : ok({ isIndexing: false, totalNotes: 0 })
+    );
+    this.ipcRouter.register('index.getStatuses', async () =>
+      this.indexClient ? this.indexClient.getStatuses() : ok([])
+    );
+    this.ipcRouter.register('index.getTags', async () =>
+      this.indexClient ? this.indexClient.getTags() : ok([])
+    );
   }
 
   /**
@@ -403,8 +436,19 @@ export class WindowService {
       this.activeWatcher = undefined;
     }
 
+    if (this.indexClient) {
+      try {
+        await this.indexClient.close();
+      } catch {
+        // Safe skip
+      }
+    }
+
     if (vault) {
       this.firstPaintState = await this.appDataStore.getFirstPaintState(vault.id);
+      if (this.indexClient) {
+        void this.indexClient.start(vault.id, vault.path, this.appDataStore.getAppDataDir(), '');
+      }
       if (this.watcherFactory) {
         try {
           this.activeWatcher = this.watcherFactory(vault.path);
@@ -419,7 +463,7 @@ export class WindowService {
   }
 
   /**
-   * After the first paint, when idle: start the watcher and bring the list up to date.
+   * After the first paint, when idle: start the watcher and index worker, then interrupted jobs.
    */
   triggerIdleWork(): void {
     if (this.isIdleWorkStarted) return;
@@ -429,7 +473,21 @@ export class WindowService {
     setImmediate(async () => {
       if (!this.activeVault) return;
 
-      // 1. Start file watcher
+      // 1. Start index worker (M3)
+      if (this.indexClient && this.activeVault) {
+        try {
+          await this.indexClient.start(
+            this.activeVault.id,
+            this.activeVault.path,
+            this.appDataStore.getAppDataDir(),
+            ''
+          );
+        } catch {
+          // Ignore index worker startup errors
+        }
+      }
+
+      // 2. Start file watcher
       if (this.watcherFactory && this.activeVault) {
         try {
           const watcher = this.watcherFactory(this.activeVault.path);
@@ -445,9 +503,9 @@ export class WindowService {
         }
       }
 
-      // 2. Sync note list from disk to update first paint cache
+      // 3. Sync note list from index/disk to update first paint cache
       try {
-        const notesRes = await this.vaultReader.listNotes(this.activeVault.path);
+        const notesRes = await this.noteService.listNotes(this.activeVault.path);
         if (notesRes.ok) {
           const firstPageNotes = notesRes.value.slice(0, 50);
           const updatedState: FirstPaintState = {
@@ -459,10 +517,10 @@ export class WindowService {
           await this.appDataStore.saveFirstPaintState(this.activeVault.id, updatedState);
         }
       } catch {
-        // Safe skip on disk sync failure
+        // Safe skip on sync failure
       }
 
-      // 3. Resume any interrupted jobs
+      // 4. Resume any interrupted jobs
       if (this.jobService) {
         try {
           await this.jobService.resumePendingJobs(this.activeVault.id);

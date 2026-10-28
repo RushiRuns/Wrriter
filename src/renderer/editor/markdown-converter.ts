@@ -1,6 +1,7 @@
 import { blockSplitter, type MarkdownBlock } from '../../shared/markdown/blocks';
 import { parseFrontmatter } from '../../shared/domain/frontmatter';
 import { parseWikilinkContent, formatWikilink } from '../../shared/domain/wikilinks';
+import { isInlineImageExtension, getFileExtension, getFileTypeBadge } from '../../shared/domain/attachments';
 
 export interface TipTapNodeJSON {
   type: string;
@@ -468,6 +469,22 @@ export function markdownToTipTapDoc(source: string): TipTapDocJSON {
       const alignment = (imageMatch[3] as 'left' | 'center' | 'right') || 'center';
       const src = imageMatch[4] || '';
 
+      // Non-inline format (e.g. HEIC, PDF, etc.) written with ![] -> render as fileChip
+      if (!isInlineImageExtension(src) && getFileExtension(src)) {
+        const name = alt || src.split('/').pop() || 'Attachment';
+        content.push({
+          type: 'fileChip',
+          attrs: {
+            name,
+            path: src,
+            fileType: getFileTypeBadge(name || src),
+            size: '',
+            missing: false
+          }
+        });
+        continue;
+      }
+
       content.push({
         type: 'image',
         attrs: {
@@ -481,23 +498,26 @@ export function markdownToTipTapDoc(source: string): TipTapDocJSON {
     }
 
     // Check if block is a standalone File Chip: [filename.ext](path)
-    const fileChipMatch = trimmed.match(/^\[([^\]]+\.(pdf|xlsx?|docx?|csv|zip|ts|js|png|jpg|jpeg|gif|svg))\]\(([^\)]+)\)$/i);
+    const fileChipMatch = trimmed.match(/^\[([^\]]+)\]\(([^\)]+)\)$/);
     if (fileChipMatch) {
       const name = fileChipMatch[1] || 'Attachment';
-      const ext = fileChipMatch[2]?.toUpperCase() || 'FILE';
-      const path = fileChipMatch[3] || '';
+      const path = fileChipMatch[2] || '';
+      const hasExt = Boolean(getFileExtension(name) || getFileExtension(path));
+      const isAttPath = path.includes('attachments/');
 
-      content.push({
-        type: 'fileChip',
-        attrs: {
-          name,
-          path,
-          fileType: ext,
-          size: 'Attachment',
-          missing: false
-        }
-      });
-      continue;
+      if (hasExt || isAttPath) {
+        content.push({
+          type: 'fileChip',
+          attrs: {
+            name,
+            path,
+            fileType: getFileTypeBadge(name || path),
+            size: '',
+            missing: false
+          }
+        });
+        continue;
+      }
     }
 
     // Paragraph or generic text block

@@ -96,11 +96,22 @@ export function htmlToCleanMarkdown(html: string): string {
   return rawMd.replace(/\n{3,}/g, '\n\n').trim();
 }
 
-export const PasteHandlerExtension = Extension.create({
+export interface PasteHandlerOptions {
+  getActiveNotePath?: () => string | null;
+}
+
+export const PasteHandlerExtension = Extension.create<PasteHandlerOptions>({
   name: 'pasteHandler',
+
+  addOptions() {
+    return {
+      getActiveNotePath: () => null
+    };
+  },
 
   addProseMirrorPlugins() {
     let shiftHeld = false;
+    const options = this.options;
 
     return [
       new Plugin({
@@ -116,6 +127,42 @@ export const PasteHandlerExtension = Extension.create({
 
             const isShift = shiftHeld;
             shiftHeld = false;
+
+            // Check for clipboard images/screenshots first
+            const items = Array.from(clipboardData.items || []);
+            const imageItem = items.find((item) => item.type.startsWith('image/'));
+            if (imageItem) {
+              const file = imageItem.getAsFile();
+              if (file) {
+                event.preventDefault();
+                void file.arrayBuffer().then(async (buf) => {
+                  try {
+                    const bytes = new Uint8Array(buf);
+                    const notePath = options.getActiveNotePath?.() || '';
+                    const saveRes = await (window as any).wrriter?.attachment?.savePastedImage?.({
+                      notePath,
+                      bytes
+                    });
+                    if (saveRes?.ok && saveRes.value) {
+                      const { tr, schema } = view.state;
+                      const imageType = schema.nodes['image'];
+                      if (imageType) {
+                        const imageNode = imageType.create({
+                          src: saveRes.value.relativePath,
+                          alt: saveRes.value.fileName,
+                          alignment: 'center'
+                        });
+                        const nextTr = tr.replaceSelectionWith(imageNode).scrollIntoView();
+                        view.dispatch(nextTr);
+                      }
+                    }
+                  } catch {
+                    // Safe skip on clipboard image processing error
+                  }
+                });
+                return true;
+              }
+            }
 
             const plainText = clipboardData.getData('text/plain');
             const htmlText = clipboardData.getData('text/html');

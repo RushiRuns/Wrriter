@@ -109,6 +109,13 @@ const api: WrriterApi = {
     getCaptureState: () => invoke('capture.getCaptureState', {}),
     saveQuickNote: (args) => invoke('capture.saveQuickNote', args)
   },
+  attachment: {
+    save: (args) => invoke('attachment.save', args),
+    savePastedImage: (args) => invoke('attachment.savePastedImage', args),
+    getInfo: (args) => invoke('attachment.getInfo', args),
+    open: (args) => invoke('attachment.open', args),
+    showInExplorer: (args) => invoke('attachment.showInExplorer', args)
+  },
   showItemInFolder: (path: string) => invoke('vault.showInExplorer', { path }),
   invoke
 };

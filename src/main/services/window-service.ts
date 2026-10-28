@@ -15,6 +15,8 @@ import { TagService } from './tag-service';
 import { LinkService } from './link-service';
 import { SearchService } from './search-service';
 import { IndexClient } from './index-client';
+import { AttachmentService } from './attachment-service';
+import { SafeWriter } from './safe-writer';
 import { Result, ok, err } from '../../shared/result';
 import type { StartupState, AccentName, SetPaneWidthsArgs, SetOpenTabsArgs, AppSettingsContract } from '../../shared/ipc';
 
@@ -27,6 +29,7 @@ export interface WindowServiceOptions {
   tagService?: TagService | undefined;
   linkService?: LinkService | undefined;
   searchService?: SearchService | undefined;
+  attachmentService?: AttachmentService | undefined;
   indexClient?: IndexClient | undefined;
   vaultReader?: VaultReader | undefined;
   watcherAdapter?: { start(): Promise<void>; stop(): Promise<void> } | undefined;
@@ -46,6 +49,7 @@ export class WindowService {
   private readonly tagService: TagService;
   private readonly linkService: LinkService;
   private readonly searchService: SearchService;
+  private readonly attachmentService: AttachmentService;
   private readonly indexClient?: IndexClient | undefined;
   private readonly vaultReader: VaultReader;
   private readonly watcherAdapter?: { start(): Promise<void>; stop(): Promise<void> };
@@ -101,6 +105,11 @@ export class WindowService {
       options.searchService ??
       new SearchService({
         indexClient: this.indexClient as IndexClient
+      });
+    this.attachmentService =
+      options.attachmentService ??
+      new AttachmentService({
+        safeWriter: new SafeWriter()
       });
     if (options.watcherAdapter) {
       this.watcherAdapter = options.watcherAdapter;
@@ -512,6 +521,58 @@ export class WindowService {
     this.ipcRouter.register('tag.rename', async (args) =>
       this.activeVault
         ? this.tagService.renameTag(this.activeVault.id, this.activeVault.path, args.oldTag, args.newTag)
+        : err({ kind: 'vaultUnavailable' })
+    );
+
+    // 10. Attachment channels (M4)
+    this.ipcRouter.register('attachment.save', async (args) =>
+      this.activeVault
+        ? this.attachmentService.saveAttachment(
+            this.activeVault.path,
+            args.notePath,
+            args.fileName,
+            Buffer.from(args.bytes)
+          )
+        : err({ kind: 'vaultUnavailable' })
+    );
+
+    this.ipcRouter.register('attachment.savePastedImage', async (args) =>
+      this.activeVault
+        ? this.attachmentService.savePastedImage(
+            this.activeVault.path,
+            args.notePath,
+            Buffer.from(args.bytes)
+          )
+        : err({ kind: 'vaultUnavailable' })
+    );
+
+    this.ipcRouter.register('attachment.getInfo', async (args) =>
+      this.activeVault
+        ? this.attachmentService.getAttachmentInfo(
+            this.activeVault.path,
+            args.notePath,
+            args.path
+          )
+        : err({ kind: 'vaultUnavailable' })
+    );
+
+    this.ipcRouter.register('attachment.open', async (args) =>
+      this.activeVault
+        ? this.attachmentService.openAttachment(
+            this.activeVault.path,
+            args.notePath,
+            args.path
+          )
+        : err({ kind: 'vaultUnavailable' })
+    );
+
+    this.ipcRouter.register('attachment.showInExplorer', async (args) =>
+      this.activeVault
+        ? this.attachmentService.showInExplorer(
+            this.activeVault.path,
+            args.notePath,
+            args.path
+          )
         : err({ kind: 'vaultUnavailable' })
     );
   }

@@ -12,6 +12,7 @@ import { VaultService } from './services/vault-service';
 import { TagService } from './services/tag-service';
 import { LinkService } from './services/link-service';
 import { IndexClient } from './services/index-client';
+import { AttachmentService } from './services/attachment-service';
 import { registerVaultProtocolPrivileges, setupVaultProtocolHandler } from './platform/vault-protocol';
 import { SingleInstanceAdapter } from './platform/single-instance';
 import { AppLifecycle } from './app/app-lifecycle';
@@ -52,11 +53,15 @@ const vaultService = new VaultService({
   appDataStore,
   safeWriter
 });
+const attachmentService = new AttachmentService({
+  safeWriter
+});
 
 const windowService = new WindowService({
   appDataStore,
   ipcRouter,
   vaultService,
+  attachmentService,
   vaultReader,
   indexClient,
   tagService,

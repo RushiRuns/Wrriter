@@ -68,7 +68,8 @@ Each of these exists exactly once. A second copy is a bug.
 | `searchFilters` | `shared/domain/search-filters.ts` | Parse `tag:`, `status:` and `folder:` with words | M3 | Planned |
 | `jobPlans` | `shared/domain/job-plans.ts` | What changes and which files, for rename, move, tag rename and import | M3 | Built |
 | `conflictNames` | `shared/domain/conflicts.ts` | Detect `sync-conflict` copies next to a note | M1 (shown), V2 (handled) | Planned |
-| `captureNames` | `shared/domain/names.ts` | `Quick note YYYY-MM-DD HH.mm`, `Pasted image YYYYMMDD-HHmmss.png` | M4 | Planned |
+| `captureNames` | `shared/domain/names.ts` | `Quick note YYYY-MM-DD HH.mm`, `Pasted image YYYYMMDD-HHmmss.png` | M4 | Built |
+| `attachments` | `shared/domain/attachments.ts` | Inline vs chip, Windows name sanitization, clash naming, note-relative paths, percent-encoding, file sizes | M4 | Built |
 | `imagePaths` | `shared/domain/image-paths.ts` | Relative image and attachment paths, percent-encoding, rewrite on move | M3 | Built |
 | `blockSplitter` | `shared/markdown/blocks.ts` | Split a note into blocks with their exact source text | M2 | Built |
 | `planSave` | `shared/markdown/save.ts` | Re-serialize only edited blocks, keep line endings, byte order mark and style | M2 | Built |
@@ -86,8 +87,8 @@ Each of these exists exactly once. A second copy is a bug.
 | `SearchService` | Vault search with filters, the quick switcher (`src/main/services/search-service.ts`) | M3 | Built |
 | `TagService` | Tag list with counts, rename and merge (as jobs) (`src/main/services/tag-service.ts`) | M3 | Built |
 | `LinkService` | Backlinks, link updates on rename and move (as jobs) (`src/main/services/link-service.ts`) | M3 | Built |
-| `CaptureService` | Quick capture window, pop-outs, Inbox, last active vault | M4 | Planned |
-| `AttachmentService` | Copy in, reuse identical files, names, missing file state | M4 | Planned |
+| `CaptureService` | Quick capture window, pop-outs, Inbox, last active vault (`src/main/services/capture-service.ts`) | M4 | Built |
+| `AttachmentService` | Copy in, reuse identical files, names, missing file state (`src/main/services/attachment-service.ts`) | M4 | Built |
 | `ImportService` | Import notes and folders (as a job with a cancel button) | M4 | Planned |
 | `SettingsService` | Read and write settings, apply them live | M2 | Planned |
 | `WindowService` | Create, restore and destroy windows, saved state for first paint (`src/main/services/window-service.ts`) | M1 | Built |
@@ -153,6 +154,17 @@ Record every request here as it is written, so a second one is not added for the
 | `index.getTagCounts` | `{}` | `IndexTagCount[]` | M3 | Built |
 | `index.getBacklinks` | `{ target: string, altTarget?: string }` | `BacklinkRecord[]` | M3 | Built |
 | `tag.rename` | `{ oldTag: string, newTag: string }` | `TagRenameResult` | M3 | Built |
+| `capture.openQuickCapture` | `{}` | `void` | M4 | Built |
+| `capture.openPopOut` | `{ path: string }` | `void` | M4 | Built |
+| `capture.openInMainWindow` | `{ path: string }` | `void` | M4 | Built |
+| `capture.setAlwaysOnTop` | `{ alwaysOnTop: boolean }` | `void` | M4 | Built |
+| `capture.getCaptureState` | `{}` | `CaptureStateResult` | M4 | Built |
+| `capture.saveQuickNote` | `{ text: string }` | `SaveQuickNoteResult` | M4 | Built |
+| `attachment.save` | `{ notePath: string, fileName: string, bytes: Uint8Array }` | `AttachmentSaveResult` | M4 | Built |
+| `attachment.savePastedImage` | `{ notePath: string, bytes: Uint8Array }` | `AttachmentSaveResult` | M4 | Built |
+| `attachment.getInfo` | `{ notePath: string, path: string }` | `AttachmentGetInfoResult` | M4 | Built |
+| `attachment.open` | `{ notePath: string, path: string }` | `void` | M4 | Built |
+| `attachment.showInExplorer` | `{ notePath: string, path: string }` | `void` | M4 | Built |
 
 ## Index Queries
 

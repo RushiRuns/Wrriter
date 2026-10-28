@@ -5,6 +5,7 @@ import {
   validateEmptyArgs,
   validateNonEmptyString,
   validateString,
+  validateUint8Array,
   type Validator
 } from './validators';
 
@@ -366,6 +367,50 @@ export interface IndexStatus {
   readonly totalNotes: number;
 }
 
+export interface AttachmentSaveArgs {
+  readonly notePath: string;
+  readonly fileName: string;
+  readonly bytes: Uint8Array;
+}
+
+export interface AttachmentSaveResult {
+  readonly fileName: string;
+  readonly relativePath: string;
+  readonly encodedPath: string;
+  readonly isImage: boolean;
+  readonly size: number;
+  readonly markdown: string;
+}
+
+export interface AttachmentSavePastedImageArgs {
+  readonly notePath: string;
+  readonly bytes: Uint8Array;
+}
+
+export interface AttachmentGetInfoArgs {
+  readonly notePath: string;
+  readonly path: string;
+}
+
+export interface AttachmentGetInfoResult {
+  readonly exists: boolean;
+  readonly size: number;
+  readonly formattedSize: string;
+  readonly fileName: string;
+  readonly fileType: string;
+  readonly absolutePath: string;
+}
+
+export interface AttachmentOpenArgs {
+  readonly notePath: string;
+  readonly path: string;
+}
+
+export interface AttachmentShowInExplorerArgs {
+  readonly notePath: string;
+  readonly path: string;
+}
+
 // Fixed Channel Registry
 export interface IpcChannelTable {
   'window.minimize': { args: WindowMinimizeArgs; result: void };
@@ -423,6 +468,11 @@ export interface IpcChannelTable {
   'index.getTagCounts': { args: IndexGetTagCountsArgs; result: readonly IndexTagCount[] };
   'index.getBacklinks': { args: IndexGetBacklinksArgs; result: readonly BacklinkRecord[] };
   'tag.rename': { args: TagRenameArgs; result: TagRenameResult };
+  'attachment.save': { args: AttachmentSaveArgs; result: AttachmentSaveResult };
+  'attachment.savePastedImage': { args: AttachmentSavePastedImageArgs; result: AttachmentSaveResult };
+  'attachment.getInfo': { args: AttachmentGetInfoArgs; result: AttachmentGetInfoResult };
+  'attachment.open': { args: AttachmentOpenArgs; result: void };
+  'attachment.showInExplorer': { args: AttachmentShowInExplorerArgs; result: void };
 }
 
 export type IpcChannel = keyof IpcChannelTable;
@@ -767,6 +817,53 @@ export const IPC_VALIDATORS: { readonly [K in IpcChannel]: Validator<IpcChannelT
     const newTag = validateNonEmptyString('newTag', input['newTag']);
     if (!newTag.ok) return newTag;
     return ok({ oldTag: oldTag.value, newTag: newTag.value });
+  },
+
+  'attachment.save': (input: unknown): Result<AttachmentSaveArgs> => {
+    if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });
+    const notePath = validateString('notePath', input['notePath'] ?? '');
+    if (!notePath.ok) return notePath;
+    const fileName = validateNonEmptyString('fileName', input['fileName']);
+    if (!fileName.ok) return fileName;
+    const bytes = validateUint8Array('bytes', input['bytes']);
+    if (!bytes.ok) return bytes;
+    return ok({ notePath: notePath.value, fileName: fileName.value, bytes: bytes.value });
+  },
+
+  'attachment.savePastedImage': (input: unknown): Result<AttachmentSavePastedImageArgs> => {
+    if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });
+    const notePath = validateString('notePath', input['notePath'] ?? '');
+    if (!notePath.ok) return notePath;
+    const bytes = validateUint8Array('bytes', input['bytes']);
+    if (!bytes.ok) return bytes;
+    return ok({ notePath: notePath.value, bytes: bytes.value });
+  },
+
+  'attachment.getInfo': (input: unknown): Result<AttachmentGetInfoArgs> => {
+    if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });
+    const notePath = validateString('notePath', input['notePath'] ?? '');
+    if (!notePath.ok) return notePath;
+    const pathVal = validateNonEmptyString('path', input['path']);
+    if (!pathVal.ok) return pathVal;
+    return ok({ notePath: notePath.value, path: pathVal.value });
+  },
+
+  'attachment.open': (input: unknown): Result<AttachmentOpenArgs> => {
+    if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });
+    const notePath = validateString('notePath', input['notePath'] ?? '');
+    if (!notePath.ok) return notePath;
+    const pathVal = validateNonEmptyString('path', input['path']);
+    if (!pathVal.ok) return pathVal;
+    return ok({ notePath: notePath.value, path: pathVal.value });
+  },
+
+  'attachment.showInExplorer': (input: unknown): Result<AttachmentShowInExplorerArgs> => {
+    if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });
+    const notePath = validateString('notePath', input['notePath'] ?? '');
+    if (!notePath.ok) return notePath;
+    const pathVal = validateNonEmptyString('path', input['path']);
+    if (!pathVal.ok) return pathVal;
+    return ok({ notePath: notePath.value, path: pathVal.value });
   }
 };
 

@@ -84,6 +84,24 @@ export const ImageNode = Node.create({
     const alignClass = alignment === 'right' ? 'r' : alignment === 'left' ? 'l' : 'c';
     const isPlaceholder = !src || src === 'attachments/image.png';
 
+    let displaySrc = src;
+    if (
+      src &&
+      !src.startsWith('http://') &&
+      !src.startsWith('https://') &&
+      !src.startsWith('data:') &&
+      !src.startsWith('file://') &&
+      !src.startsWith('wrriter-vault://')
+    ) {
+      try {
+        const decoded = decodeURIComponent(src);
+        const norm = decoded.replace(/^(\.\.\/)+/, '').replace(/^\/+/, '');
+        displaySrc = `wrriter-vault:///${encodeURI(norm)}`;
+      } catch {
+        displaySrc = `wrriter-vault:///${src.replace(/^(\.\.\/)+/, '').replace(/^\/+/, '')}`;
+      }
+    }
+
     return [
       'div',
       mergeAttributes(HTMLAttributes, {
@@ -110,7 +128,7 @@ export const ImageNode = Node.create({
           : [
               'img',
               {
-                src,
+                src: displaySrc,
                 alt,
                 loading: 'lazy',
                 decoding: 'async',

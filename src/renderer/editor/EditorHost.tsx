@@ -214,6 +214,15 @@ export const EditorHost: React.FC<EditorHostProps> = ({
   const [slashMenuState, setSlashMenuState] = useState<SlashMenuState | null>(null);
   const [floatingToolbarState, setFloatingToolbarState] = useState<FloatingToolbarState | null>(null);
   const [tabContextMenu, setTabContextMenu] = useState<{ x: number; y: number; tabPath: string } | null>(null);
+  const [fileChipContextMenu, setFileChipContextMenu] = useState<{
+    x: number;
+    y: number;
+    nodePos: number;
+    nodeSize: number;
+    name: string;
+    path: string;
+    missing: boolean;
+  } | null>(null);
   const [wikilinkSuggestState, setWikilinkSuggestState] = useState<WikilinkSuggestState | null>(null);
 
   // Backlinks State
@@ -572,6 +581,72 @@ export const EditorHost: React.FC<EditorHostProps> = ({
     };
   }, [handleOpenAddTag, handleOpenSetStatus]);
 
+  const refreshFileChips = useCallback((editorInstance: Editor, noteRelPath: string | null) => {
+    if (!window.wrriter?.attachment?.getInfo) return;
+    const doc = editorInstance.state.doc;
+    const chips: Array<{ pos: number; path: string; name: string }> = [];
+
+    doc.descendants((node, pos) => {
+      if (node.type.name === 'fileChip') {
+        const p = (node.attrs['path'] as string) || '';
+        const name = (node.attrs['name'] as string) || '';
+        if (p) {
+          chips.push({ pos, path: p, name });
+        }
+      }
+    });
+
+    if (chips.length === 0) return;
+
+    void Promise.all(
+      chips.map(async (chip) => {
+        const infoRes = await window.wrriter.attachment.getInfo({
+          notePath: noteRelPath || '',
+          path: chip.path
+        });
+        return { chip, infoRes };
+      })
+    ).then((results) => {
+      if (!editorRef.current || editorRef.current.isDestroyed) return;
+      let tr = editorRef.current.state.tr;
+      let updated = false;
+
+      for (const { chip, infoRes } of results) {
+        if (chip.pos < tr.doc.content.size) {
+          const nodeAtPos = tr.doc.nodeAt(chip.pos);
+          if (nodeAtPos && nodeAtPos.type.name === 'fileChip') {
+            if (infoRes?.ok && infoRes.value.exists) {
+              const newAttrs = {
+                ...nodeAtPos.attrs,
+                size: infoRes.value.formattedSize,
+                fileType: infoRes.value.fileType,
+                missing: false
+              };
+              tr = tr.setNodeMarkup(chip.pos, undefined, newAttrs);
+              updated = true;
+            } else if (infoRes?.ok && !infoRes.value.exists) {
+              const newAttrs = {
+                ...nodeAtPos.attrs,
+                missing: true
+              };
+              tr = tr.setNodeMarkup(chip.pos, undefined, newAttrs);
+              updated = true;
+            }
+          }
+        }
+      }
+
+      if (updated) {
+        tr = tr.setMeta('isMetadataSync', true);
+        tr = tr.setMeta('addToHistory', false);
+        editorRef.current.view.dispatch(tr);
+      }
+    });
+  }, []);
+
+  const refreshFileChipsRef = useRef(refreshFileChips);
+  refreshFileChipsRef.current = refreshFileChips;
+
   // Initialize the single live TipTap editor on mount
   useEffect(() => {
     if (!containerRef.current) return;
@@ -605,7 +680,9 @@ export const EditorHost: React.FC<EditorHostProps> = ({
         WikilinkMark,
         WebLinkMark,
         MarkdownShortcutsExtension,
-        PasteHandlerExtension,
+        PasteHandlerExtension.configure({
+          getActiveNotePath: () => activePathRef.current
+        }),
         FindReplaceExtension,
         HeadingFoldingExtension,
         KeyboardMoveExtension,
@@ -789,6 +866,25 @@ export const EditorHost: React.FC<EditorHostProps> = ({
         },
         handleDoubleClick(view, pos, event) {
           const target = event.target as HTMLElement;
+
+          // FileChip double-click opens default Windows app
+          const fchipEl = target.closest('.fchip') as HTMLElement | null;
+          if (fchipEl) {
+            event.preventDefault();
+            const $pos = view.state.doc.resolve(pos);
+            for (let d = $pos.depth; d > 0; d--) {
+              const node = $pos.node(d);
+              if (node.type.name === 'fileChip') {
+                const pathAttr = (node.attrs['path'] as string) || '';
+                const notePath = activePathRef.current || '';
+                if (pathAttr && window.wrriter?.attachment?.open) {
+                  void window.wrriter.attachment.open({ notePath, path: pathAttr });
+                }
+                return true;
+              }
+            }
+          }
+
           // Image double-click resets back to natural size
           if (target.tagName === 'IMG' || target.closest('.phw')) {
             event.preventDefault();
@@ -807,6 +903,34 @@ export const EditorHost: React.FC<EditorHostProps> = ({
             }
           }
           return false;
+        },
+        handleDOMEvents: {
+          contextmenu(view, event) {
+            const target = event.target as HTMLElement;
+            const fchipEl = target.closest('.fchip') as HTMLElement | null;
+            if (fchipEl) {
+              event.preventDefault();
+              const pos = view.posAtDOM(fchipEl, 0);
+              const $pos = view.state.doc.resolve(pos);
+              for (let d = $pos.depth; d > 0; d--) {
+                const node = $pos.node(d);
+                if (node.type.name === 'fileChip') {
+                  const nodePos = $pos.before(d);
+                  setFileChipContextMenu({
+                    x: event.clientX,
+                    y: event.clientY,
+                    nodePos,
+                    nodeSize: node.nodeSize,
+                    name: (node.attrs['name'] as string) || 'Attachment',
+                    path: (node.attrs['path'] as string) || '',
+                    missing: Boolean(node.attrs['missing'])
+                  });
+                  return true;
+                }
+              }
+            }
+            return false;
+          }
         }
       },
       onTransaction({ editor: currentEditor }) {
@@ -817,7 +941,11 @@ export const EditorHost: React.FC<EditorHostProps> = ({
           setCurrentMatchIndex(frState.activeIndex);
         }
       },
-      onUpdate({ editor: currentEditor }) {
+      onUpdate({ editor: currentEditor, transaction }) {
+        if (transaction?.getMeta('isMetadataSync')) {
+          return;
+        }
+
         const currentPath = activePathRef.current;
         if (currentPath === null && !isQuickCapture) return;
 
@@ -1003,6 +1131,7 @@ export const EditorHost: React.FC<EditorHostProps> = ({
 
         // Set content in live editor
         editor.commands.setContent(docJson as any, { emitUpdate: false });
+        refreshFileChipsRef.current(editor, targetTab.path);
         editor.view.dispatch(
           editor.state.tr.setMeta(propertiesLinePluginKey, { tags, status })
         );
@@ -1014,6 +1143,7 @@ export const EditorHost: React.FC<EditorHostProps> = ({
       } else if (targetTab.editorState) {
         // Swap EditorState in O(1) time without re-mounting editor DOM
         editor.view.updateState(targetTab.editorState);
+        refreshFileChipsRef.current(editor, targetTab.path);
         if (targetTab.savedSelection) {
           try {
             const maxPos = editor.state.doc.content.size;
@@ -1037,6 +1167,7 @@ export const EditorHost: React.FC<EditorHostProps> = ({
         const rawText = targetTab.lastSavedText ?? (targetTab.originalBytes.length > 0 ? new TextDecoder().decode(targetTab.originalBytes) : '');
         const docJson = markdownToTipTapDoc(rawText);
         editor.commands.setContent(docJson as any, { emitUpdate: false });
+        refreshFileChipsRef.current(editor, targetTab.path);
         editor.view.dispatch(
           editor.state.tr.setMeta(propertiesLinePluginKey, {
             tags: targetTab.tags || [],
@@ -1624,6 +1755,7 @@ export const EditorHost: React.FC<EditorHostProps> = ({
       if (customEvent.detail?.except !== 'slash-menu') setSlashMenuState(null);
       if (customEvent.detail?.except !== 'floating-toolbar') setFloatingToolbarState(null);
       if (customEvent.detail?.except !== 'tab-context-menu') setTabContextMenu(null);
+      if (customEvent.detail?.except !== 'file-chip-menu') setFileChipContextMenu(null);
     };
 
     const handleCloseTabCmd = () => {
@@ -1866,6 +1998,65 @@ export const EditorHost: React.FC<EditorHostProps> = ({
               icon: <PopOutIcon style={{ width: 14, height: 14 }} />,
               onClick: () => {
                 void window.wrriter?.capture?.openPopOut({ path: tabContextMenu.tabPath });
+              }
+            }
+          ]}
+        />
+      )}
+
+      {/* FileChip Context Menu */}
+      {fileChipContextMenu && (
+        <ContextMenu
+          isOpen={true}
+          x={fileChipContextMenu.x}
+          y={fileChipContextMenu.y}
+          menuId="file-chip-menu"
+          onClose={() => setFileChipContextMenu(null)}
+          items={[
+            {
+              id: 'open',
+              label: 'Open',
+              isDisabled: fileChipContextMenu.missing,
+              onClick: () => {
+                void window.wrriter?.attachment?.open?.({
+                  notePath: activePathRef.current || '',
+                  path: fileChipContextMenu.path
+                });
+              }
+            },
+            {
+              id: 'show-in-explorer',
+              label: 'Show in File Explorer',
+              isDisabled: fileChipContextMenu.missing,
+              onClick: () => {
+                void window.wrriter?.attachment?.showInExplorer?.({
+                  notePath: activePathRef.current || '',
+                  path: fileChipContextMenu.path
+                });
+              }
+            },
+            {
+              id: 'copy',
+              label: 'Copy',
+              onClick: () => {
+                void navigator.clipboard?.writeText(
+                  `[${fileChipContextMenu.name}](${fileChipContextMenu.path})`
+                );
+              }
+            },
+            { id: 'div-1', label: '', isDivider: true },
+            {
+              id: 'remove',
+              label: 'Remove from note',
+              isDanger: true,
+              onClick: () => {
+                if (editorRef.current) {
+                  const tr = editorRef.current.state.tr.delete(
+                    fileChipContextMenu.nodePos,
+                    fileChipContextMenu.nodePos + fileChipContextMenu.nodeSize
+                  );
+                  editorRef.current.view.dispatch(tr);
+                }
               }
             }
           ]}

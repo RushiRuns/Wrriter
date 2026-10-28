@@ -442,11 +442,11 @@ Nothing that depends on a row is built until it is decided. Rows 15 to 17 are ne
 
 ### Attachments
 
-- [ ] `AttachmentService`: one hidden `attachments/` folder at the vault root, original names kept, a number added on a clash, characters Windows does not allow replaced with a hyphen, an identical file reused, never deleted with a note and never copied with a duplicate
-- [ ] Written as `![name](attachments/name.png)` or `[report.pdf](attachments/report%202.pdf)`, percent-encoded and relative to the note
-- [ ] Shown inline: PNG, JPEG, GIF, WebP, SVG and BMP, plus any other type Antigravity confirms the engine shows (AVIF, for example). HEIC and every other type is a file chip
-- [ ] `FileChip`: type icon, name and size. Double-click opens the default Windows app. Right-click: Open, Show in File Explorer, Copy, Remove from note (removes the link only). A missing file shows `File not found: name` and the note is unchanged
-- [ ] Pasted images and screenshots are saved as `Pasted image YYYYMMDD-HHmmss.png` and inserted like a dropped file
+- [x] `AttachmentService`: one hidden `attachments/` folder at the vault root, original names kept, a number added on a clash, characters Windows does not allow replaced with a hyphen, an identical file reused, never deleted with a note and never copied with a duplicate
+- [x] Written as `![name](attachments/name.png)` or `[report.pdf](attachments/report%202.pdf)`, percent-encoded and relative to the note
+- [x] Shown inline: PNG, JPEG, GIF, WebP, SVG and BMP, plus any other type Antigravity confirms the engine shows (AVIF, for example). HEIC and every other type is a file chip
+- [x] `FileChip`: type icon, name and size. Double-click opens the default Windows app. Right-click: Open, Show in File Explorer, Copy, Remove from note (removes the link only). A missing file shows `File not found: name` and the note is unchanged
+- [x] Pasted images and screenshots are saved as `Pasted image YYYYMMDD-HHmmss.png` and inserted like a dropped file
 
 ### All drag and drop (the table in Features 5)
 

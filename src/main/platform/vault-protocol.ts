@@ -42,8 +42,9 @@ export function setupVaultProtocolHandler(vaultService: VaultService): void {
       const vaultRoot = activeRes.value.path;
       const url = new URL(request.url);
 
-      // Decoded path inside vault (e.g. /attachments/photo.png -> attachments/photo.png)
-      let relativePath = decodeURIComponent(url.pathname);
+      // Decoded path inside vault (e.g. /attachments/photo.png or wrriter-vault://attachments/photo.png)
+      const rawPath = url.host ? `${url.host}${url.pathname}` : url.pathname;
+      let relativePath = decodeURIComponent(rawPath);
       if (relativePath.startsWith('/')) {
         relativePath = relativePath.slice(1);
       }

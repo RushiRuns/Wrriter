@@ -53,6 +53,30 @@ export function validateBoolean(field: string, value: unknown): Result<boolean> 
   return ok(value);
 }
 
+export function validateUint8Array(field: string, value: unknown): Result<Uint8Array> {
+  if (value instanceof Uint8Array) {
+    return ok(value);
+  }
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    'buffer' in value &&
+    (value as { buffer: unknown }).buffer instanceof ArrayBuffer &&
+    'byteOffset' in value &&
+    typeof (value as { byteOffset: unknown }).byteOffset === 'number' &&
+    'byteLength' in value &&
+    typeof (value as { byteLength: unknown }).byteLength === 'number'
+  ) {
+    const view = value as ArrayBufferView;
+    return ok(new Uint8Array(view.buffer, view.byteOffset, view.byteLength));
+  }
+  return err({
+    kind: 'validation',
+    field,
+    reason: `expected Uint8Array or Buffer, received ${typeof value}`
+  });
+}
+
 export function validateEmptyArgs(input: unknown): Result<Record<string, never>> {
   if (input === undefined || input === null) {
     return ok({});

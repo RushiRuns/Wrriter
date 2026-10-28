@@ -1345,6 +1345,20 @@
   transform: rotate(-1.2deg);
 }
 
+.fchip.miss {
+  opacity: 0.85;
+  border: 1px dashed var(--div);
+  box-shadow: none;
+  background: var(--fpaper);
+  color: var(--tx2);
+  cursor: default;
+}
+
+.fchip.miss .fname {
+  font-style: italic;
+  color: var(--tx2);
+}
+
 .fchip:before, .fchip:after {
   content: "";
   position: absolute;

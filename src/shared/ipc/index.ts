@@ -119,6 +119,13 @@ export interface WrriterApi {
     getCaptureState(): Promise<Result<import('./contracts').CaptureStateResult>>;
     saveQuickNote(args: import('./contracts').SaveQuickNoteArgs): Promise<Result<import('./contracts').SaveQuickNoteResult>>;
   };
+  readonly attachment: {
+    save(args: import('./contracts').AttachmentSaveArgs): Promise<Result<import('./contracts').AttachmentSaveResult>>;
+    savePastedImage(args: import('./contracts').AttachmentSavePastedImageArgs): Promise<Result<import('./contracts').AttachmentSaveResult>>;
+    getInfo(args: import('./contracts').AttachmentGetInfoArgs): Promise<Result<import('./contracts').AttachmentGetInfoResult>>;
+    open(args: import('./contracts').AttachmentOpenArgs): Promise<Result<void>>;
+    showInExplorer(args: import('./contracts').AttachmentShowInExplorerArgs): Promise<Result<void>>;
+  };
   readonly showItemInFolder?: (path: string) => Promise<Result<void>>;
   readonly invoke: <K extends IpcChannel>(
     channel: K,

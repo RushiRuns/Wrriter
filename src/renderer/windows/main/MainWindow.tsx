@@ -17,7 +17,8 @@ import {
   FolderClosedIcon,
   LinkIcon,
   ShowInExplorerIcon,
-  NewNoteIcon
+  NewNoteIcon,
+  DuplicateIcon
 } from '../../components/icons';
 import { FirstRunScreen } from '../../components/FirstRunScreen';
 import { VaultMenu } from '../../components/VaultMenu';
@@ -835,15 +836,50 @@ export const MainWindow: React.FC = () => {
     [selectedNotePath, notes]
   );
 
+  // Duplicate note action
+  const handleDuplicateNote = useCallback(
+    async (notePath: string) => {
+      setNoteContextMenu(null);
+      if (!window.wrriter?.note?.duplicate) return;
+      const res = await window.wrriter.note.duplicate({ path: notePath });
+      if (res.ok) {
+        await refreshFolders();
+        await refreshNotes();
+        handleSelectNote(undefined, res.value.path);
+      } else {
+        setNoticeMessage('Failed to duplicate note');
+      }
+    },
+    [refreshFolders, refreshNotes, handleSelectNote]
+  );
+
   const handleFollowLink = useCallback(
     async (targetOrHref: string, isNewTab: boolean) => {
       const activePath = selectedNotePath ?? '';
 
       // 1. Check if it's a vault markdown link [text](path.md)
       const mdResolved = resolveMarkdownLink(targetOrHref, activePath, notes);
-      if (mdResolved && mdResolved.path) {
-        handleSelectNote(isNewTab ? ({ ctrlKey: true } as any) : undefined, mdResolved.path);
-        return;
+      if (mdResolved) {
+        if (mdResolved.resolved && mdResolved.path) {
+          handleSelectNote(isNewTab ? ({ ctrlKey: true } as any) : undefined, mdResolved.path);
+          return;
+        }
+        if (mdResolved.isMissing && mdResolved.path) {
+          const targetRelPath = mdResolved.path.endsWith('.md') ? mdResolved.path : `${mdResolved.path}.md`;
+          const defaultContent = `# ${mdResolved.targetName}\n\n`;
+          if (window.wrriter?.note?.save) {
+            const saveRes = await window.wrriter.note.save({
+              path: targetRelPath,
+              content: defaultContent
+            });
+            if (saveRes.ok) {
+              await refreshFolders();
+              await refreshNotes();
+              handleSelectNote(isNewTab ? ({ ctrlKey: true } as any) : undefined, targetRelPath);
+            }
+          }
+          return;
+        }
       }
 
       // 2. Resolve as wikilink [[target]]
@@ -868,12 +904,13 @@ export const MainWindow: React.FC = () => {
           });
           if (saveRes.ok) {
             await refreshFolders();
+            await refreshNotes();
             handleSelectNote(isNewTab ? ({ ctrlKey: true } as any) : undefined, newPath);
           }
         }
       }
     },
-    [selectedNotePath, notes, handleSelectNote, refreshFolders]
+    [selectedNotePath, notes, handleSelectNote, refreshFolders, refreshNotes]
   );
 
   // Global Keyboard Shortcuts handler
@@ -1022,7 +1059,11 @@ export const MainWindow: React.FC = () => {
         title: 'Duplicate note',
         category: 'File',
         keywords: ['copy', 'clone'],
-        run: () => setNoticeMessage('Duplicate note arrives in Milestone 3')
+        run: () => {
+          if (selectedNotePath) {
+            void handleDuplicateNote(selectedNotePath);
+          }
+        }
       },
       {
         id: 'wrriter:add-tag',
@@ -1733,6 +1774,12 @@ export const MainWindow: React.FC = () => {
                   onClick: () => void handleTogglePinNote(noteContextMenu.note)
                 },
                 {
+                  id: 'duplicate',
+                  label: 'Duplicate note',
+                  icon: <DuplicateIcon style={{ width: 14, height: 14 }} />,
+                  onClick: () => void handleDuplicateNote(noteContextMenu.note.path)
+                },
+                {
                   id: 'move-to-folder',
                   label: 'Move to folder',
                   icon: <MoveToFolderIcon style={{ width: 14, height: 14 }} />,
@@ -1814,6 +1861,11 @@ export const MainWindow: React.FC = () => {
                 onShowInExplorer={() => {
                   if (selectedNotePath && window.wrriter?.showItemInFolder) {
                     void window.wrriter.showItemInFolder(selectedNotePath);
+                  }
+                }}
+                onDuplicateNote={() => {
+                  if (selectedNotePath) {
+                    void handleDuplicateNote(selectedNotePath);
                   }
                 }}
                 onDeleteNote={() => void handleDeleteNote(selectedNote)}

@@ -395,12 +395,12 @@ Nothing that depends on a row is built until it is decided. Rows 15 to 17 are ne
 
 ### Notes features that need the index or frontmatter
 
-- [ ] Duplicate: in the same folder with a number added, the first line unchanged, a fresh `created:`, no pin, tags and status kept, attachments shared, and the copy opens
-- [ ] Links to a deleted note stay as written and show as unresolved
+- [x] Duplicate: in the same folder with a number added, the first line unchanged, a fresh `created:`, no pin, tags and status kept, attachments shared, and the copy opens
+- [x] Links to a deleted note stay as written and show as unresolved
 
 **Done when**
 
-- [ ] Deleting the index file and restarting rebuilds it, and nothing is lost
+- [x] Deleting the index file and restarting rebuilds it, and nothing is lost
 - [ ] The window stays usable while the first index of 50,000 notes is built, and a second launch with nothing changed reads no notes again
 - [x] First search results on 50,000 notes in under 200 ms, and quick switcher results in under 30 ms
 - [ ] The tag list opens instantly on 50,000 notes, a nested tag shows as a tree, and renaming a tag keeps every count right

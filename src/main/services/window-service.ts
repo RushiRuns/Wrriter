@@ -403,6 +403,11 @@ export class WindowService {
         ? this.linkService.moveNoteWithLinks(this.activeVault.id, this.activeVault.path, args.oldPath, args.newPath)
         : err({ kind: 'vaultUnavailable' })
     );
+    this.ipcRouter.register('note.duplicate', async (args) =>
+      this.activeVault
+        ? this.noteService.duplicateNote(this.activeVault.path, args.path)
+        : err({ kind: 'vaultUnavailable' })
+    );
 
     // 6. Folder channels
     this.ipcRouter.register('folder.create', (args) =>

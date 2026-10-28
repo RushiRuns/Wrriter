@@ -1275,7 +1275,10 @@
   opacity: 0.85;
 }
 
-.wl.missing {
+.wl.missing,
+.wl.unresolved,
+.wl.md-link.missing,
+.wl.md-link.unresolved {
   color: var(--tx3);
   background: var(--bg-card);
   border: 1px dashed var(--b-med);

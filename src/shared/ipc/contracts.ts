@@ -172,6 +172,15 @@ export interface MoveNoteArgs {
   readonly newPath: string;
 }
 
+export interface DuplicateNoteArgs {
+  readonly path: string;
+}
+
+export interface DuplicateNoteResult {
+  readonly path: string;
+  readonly title: string;
+}
+
 export interface NoteJobResult {
   readonly jobId?: string | undefined;
   readonly affectedCount: number;
@@ -338,6 +347,7 @@ export interface IpcChannelTable {
   'note.setOrder': { args: SetNoteOrderArgs; result: void };
   'note.rename': { args: RenameNoteArgs; result: NoteJobResult };
   'note.move': { args: MoveNoteArgs; result: NoteJobResult };
+  'note.duplicate': { args: DuplicateNoteArgs; result: DuplicateNoteResult };
   'folder.create': { args: CreateFolderArgs; result: void };
   'folder.rename': { args: RenameFolderArgs; result: void };
   'folder.delete': { args: DeleteFolderArgs; result: void };
@@ -536,6 +546,13 @@ export const IPC_VALIDATORS: { readonly [K in IpcChannel]: Validator<IpcChannelT
     const newPath = validateNonEmptyString('newPath', input['newPath']);
     if (!newPath.ok) return newPath;
     return ok({ oldPath: oldPath.value, newPath: newPath.value });
+  },
+
+  'note.duplicate': (input: unknown): Result<DuplicateNoteArgs> => {
+    if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });
+    const path = validateNonEmptyString('path', input['path']);
+    if (!path.ok) return path;
+    return ok({ path: path.value });
   },
 
   'folder.create': (input: unknown): Result<CreateFolderArgs> => {

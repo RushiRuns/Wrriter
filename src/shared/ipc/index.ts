@@ -74,6 +74,7 @@ export interface WrriterApi {
     save(args: SaveNoteArgs): Promise<Result<SaveOutcome>>;
     rename(args: import('./contracts').RenameNoteArgs): Promise<Result<import('./contracts').NoteJobResult>>;
     move(args: import('./contracts').MoveNoteArgs): Promise<Result<import('./contracts').NoteJobResult>>;
+    duplicate(args: import('./contracts').DuplicateNoteArgs): Promise<Result<import('./contracts').DuplicateNoteResult>>;
     setPinned(args: SetPinnedArgs): Promise<Result<void>>;
     delete(args: DeleteNoteArgs): Promise<Result<void>>;
     list(args?: ListNotesArgs): Promise<Result<readonly NoteListItem[]>>;

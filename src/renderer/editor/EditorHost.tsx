@@ -47,7 +47,7 @@ import { markdownToTipTapDoc, tipTapDocToMarkdown } from './markdown-converter';
 import { planSave, encodeUtf8 } from '../../shared/markdown/save';
 import { parseFrontmatter, updateFrontmatter, formatCreatedDate } from '../../shared/domain/frontmatter';
 import { parseTagsInput } from '../../shared/domain/tags';
-import { resolveLink } from '../../shared/domain/links';
+import { resolveLink, resolveMarkdownLink } from '../../shared/domain/links';
 import { WikilinkSuggestExtension, type WikilinkSuggestState } from './extensions/wikilink-suggest';
 import { PropertiesLineExtension, propertiesLinePluginKey } from './extensions/properties-line';
 import { Dialog } from '../components/Dialog';
@@ -594,7 +594,13 @@ export const EditorHost: React.FC<EditorHostProps> = ({
                             const target = (mark.attrs['target'] as string) || node.text || '';
                             const res = resolveLink(target, activePath, available);
                             if (res.isMissing) {
-                              decos.push(Decoration.inline(pos, pos + node.nodeSize, { class: 'missing' }));
+                              decos.push(Decoration.inline(pos, pos + node.nodeSize, { class: 'missing unresolved' }));
+                            }
+                          } else if (mark.type.name === 'webLink') {
+                            const href = (mark.attrs['href'] as string) || '';
+                            const mdRes = resolveMarkdownLink(href, activePath, available);
+                            if (mdRes && mdRes.isMissing) {
+                              decos.push(Decoration.inline(pos, pos + node.nodeSize, { class: 'missing unresolved' }));
                             }
                           }
                         }

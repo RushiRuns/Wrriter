@@ -79,7 +79,7 @@ Each of these exists exactly once. A second copy is a bug.
 | Name | Purpose | Milestone | Status |
 |---|---|---|---|
 | `VaultService` | Open a folder as a vault, create a vault, the vault list, unavailable vaults, `resolveInside` (`src/main/services/vault-service.ts`) | M1 | Built |
-| `NoteService` | Save, rename on leaving, duplicate, delete to the Recycle Bin, pin (`src/main/services/note-service.ts`) | M1 to M2 | Built |
+| `NoteService` | Save, rename on leaving, duplicate (number increment, fresh created:, unchanged first line, unpinned), delete to the Recycle Bin, pin (`src/main/services/note-service.ts`) | M1 to M3 | Built |
 | `FolderService` | New, rename, move, delete with a count (`src/main/services/folder-service.ts`) | M1 | Built |
 | `OrderService` | Manual order and pins in `.wrriter` (`src/main/services/order-service.ts`) | M1 | Built |
 | `JobService` | Writes jobs to the pending list, hands them to the job worker, finishes them at start (`src/main/services/job-service.ts`) | M1 | Built |

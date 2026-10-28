@@ -16,6 +16,7 @@ export interface EditorMenuProps {
   onFindInNote: () => void;
   onShowInExplorer: () => void;
   onDeleteNote: () => void;
+  onDuplicateNote?: () => void;
 }
 
 export const EditorMenu: React.FC<EditorMenuProps> = ({
@@ -25,7 +26,8 @@ export const EditorMenu: React.FC<EditorMenuProps> = ({
   onTogglePin,
   onFindInNote,
   onShowInExplorer,
-  onDeleteNote
+  onDeleteNote,
+  onDuplicateNote
 }) => {
   const menuRef = useRef<HTMLUListElement | null>(null);
 
@@ -83,16 +85,18 @@ export const EditorMenu: React.FC<EditorMenuProps> = ({
         <span className="vn">{isPinned ? 'Unpin note' : 'Pin note'}</span>
       </li>
 
-      {/* 2. Duplicate (works from M3) */}
+      {/* 2. Duplicate */}
       <li
-        className="vi disabled"
+        className="vi"
         role="menuitem"
-        aria-disabled="true"
-        style={{ cursor: 'default', opacity: 0.5 }}
+        onClick={() => {
+          onClose();
+          onDuplicateNote?.();
+        }}
+        style={{ cursor: 'pointer' }}
       >
         <DuplicateIcon />
         <span className="vn">Duplicate</span>
-        <span style={{ marginLeft: 'auto', fontSize: 'var(--fs-small)', color: 'var(--tx3)' }}>M3</span>
       </li>
 
       {/* 3. Find in note */}

@@ -10,6 +10,8 @@ import { sortNotesWithManualOrder, generateKeyBetween } from '../../shared/domai
 import type { NoteListItem } from '../../shared/ipc/contracts';
 import { planSave } from '../../shared/markdown/save';
 import type { IndexClient } from './index-client';
+import { updateFrontmatter, formatCreatedDate } from '../../shared/domain/frontmatter';
+import { lightIndexNote } from '../../shared/markdown/light-index';
 
 export interface NoteServiceOptions {
   safeWriter?: SafeWriter | undefined;
@@ -81,6 +83,74 @@ export class NoteService {
       void this.indexClient?.noteDeleted(noteRelPath);
     }
     return res;
+  }
+
+  /**
+   * Duplicates a note:
+   * - In the same folder with a number added (e.g. Note 2.md, Note 3.md).
+   * - First line of the body remains strictly unchanged.
+   * - Fresh created: timestamp in frontmatter (ISO-8601).
+   * - Tags, status, unowned keys, and comments preserved.
+   * - Not pinned (pins untouched).
+   * - Attachments shared (relative paths preserved, attachment files not duplicated).
+   * - Notifies index client of noteChanged.
+   */
+  async duplicateNote(
+    vaultRoot: string,
+    noteRelPath: string
+  ): Promise<Result<{ path: string; title: string }>> {
+    const resolved = resolveInsideVault(vaultRoot, noteRelPath);
+    if (!resolved.ok) return resolved;
+
+    if (!fs.existsSync(resolved.value)) {
+      return err({ kind: 'notFound' });
+    }
+
+    const readRes = await this.vaultReader.read(vaultRoot, noteRelPath);
+    if (!readRes.ok) return readRes;
+    const sourceText = readRes.value.text;
+
+    // Determine target file name in the same folder with an incremented number
+    const normPath = noteRelPath.replace(/\\/g, '/');
+    const folder = path.posix.dirname(normPath);
+    const baseFileName = path.posix.basename(normPath);
+    const ext = path.posix.extname(baseFileName);
+    const nameWithoutExt = path.posix.basename(baseFileName, ext);
+
+    const numMatch = nameWithoutExt.match(/^(.*?)(?: (\d+))$/);
+    const hasValidStem = Boolean(numMatch && numMatch[1] && numMatch[1].trim().length > 0);
+    const baseStem = hasValidStem && numMatch ? numMatch[1] : nameWithoutExt;
+    let counter = hasValidStem && numMatch && numMatch[2] ? parseInt(numMatch[2], 10) + 1 : 2;
+
+    let newRelPath: string;
+    let newFullPath: string;
+    do {
+      const candidateFileName = `${baseStem} ${counter}${ext || '.md'}`;
+      newRelPath = folder === '.' ? candidateFileName : `${folder}/${candidateFileName}`;
+      const resCandidate = resolveInsideVault(vaultRoot, newRelPath);
+      if (!resCandidate.ok) return resCandidate;
+      newFullPath = resCandidate.value;
+      counter++;
+    } while (fs.existsSync(newFullPath));
+
+    // Update frontmatter with fresh created timestamp while keeping tags, status, comments, unowned keys
+    const freshCreated = formatCreatedDate(new Date());
+    const newContent = updateFrontmatter(sourceText, { created: freshCreated });
+
+    const writeRes = await this.safeWriter.write(vaultRoot, newRelPath, newContent);
+    if (!writeRes.ok) return writeRes;
+
+    // Duplicate is NOT pinned: pins remain untouched
+    // Notify index client
+    void this.indexClient?.noteChanged(newRelPath);
+
+    // Extract title from new content
+    const light = lightIndexNote(newRelPath, newContent);
+
+    return ok({
+      path: newRelPath,
+      title: light.title
+    });
   }
 
   /**

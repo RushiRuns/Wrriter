@@ -224,6 +224,7 @@ All checks are executed prior to builds and gated in CI/tests (`npm run check`):
 | **Note Title Trail Regression** | [`tests/renderer/note-title-trail-regression.test.ts`](file:///c:/Dev/Wrriter/tests/renderer/note-title-trail-regression.test.ts) | Verifies synchronous flush of live title updates, suppression of redundant IPC during typing, and layout reflow bypass in VirtualList. |
 | **Folder Inline Creation** | [`tests/renderer/folder-creation-inline.test.tsx`](file:///c:/Dev/Wrriter/tests/renderer/folder-creation-inline.test.tsx) | Verifies root-level folder inline creation via header plus icon and subfolder creation via context menu with Windows name validation. |
 | **Folder Context Menu Regression** | [`tests/renderer/folder-context-menu-regression.test.tsx`](file:///c:/Dev/Wrriter/tests/renderer/folder-context-menu-regression.test.tsx) | Verifies FolderTree passes `menuId="folder-context-menu"` to prevent self-closing collision with `wrriter:close-all-menus`. |
+| **Folder Icon Empty Parent Regression** | [`tests/renderer/folder-icon-empty-parent-regression.test.tsx`](file:///c:/Dev/Wrriter/tests/renderer/folder-icon-empty-parent-regression.test.tsx) | Verifies leaf folders without children never receive the `.open` class and retain their closed folder icon when subfolders are deleted. |
 
 ---
 

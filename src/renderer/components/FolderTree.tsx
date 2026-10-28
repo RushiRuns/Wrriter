@@ -213,6 +213,11 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
       const res = await window.wrriter.folder.delete({ path: folder.relPath });
       if (res.ok) {
         setDeleteConfirm(null);
+        setExpandedPaths((prev) => {
+          const next = new Set(prev);
+          next.delete(folder.relPath);
+          return next;
+        });
         await onRefresh();
         if (selectedFolder === folder.relPath) {
           onSelectFolder(null);
@@ -295,10 +300,10 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
 
   const renderFolderItem = (folder: FolderNode, depth: number = 0) => {
     const isSelected = selectedFolder === folder.relPath;
-    const isExpanded = expandedPaths.has(folder.relPath);
-    const hasChildren = folder.children && folder.children.length > 0;
-    const isRenaming = renamingPath === folder.relPath;
+    const hasChildren = Boolean(folder.children && folder.children.length > 0);
     const isCreatingHere = creatingFolder?.parentRelPath === folder.relPath;
+    const isExpanded = (hasChildren || isCreatingHere) && expandedPaths.has(folder.relPath);
+    const isRenaming = renamingPath === folder.relPath;
 
     return (
       <React.Fragment key={folder.relPath}>

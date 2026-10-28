@@ -63,7 +63,7 @@ Each of these exists exactly once. A second copy is a bug.
 | `frontmatter` | `shared/domain/frontmatter.ts` | Read and edit the owned keys, keep every other key, comment and the order | M2 / M3 | Built |
 | `wikilinks` | `shared/domain/wikilinks.ts` | Parse `[[...]]` forms, rewrite on rename keeping alias and heading | M3 | Planned |
 | `links` | `shared/domain/links.ts` | Resolve a plain link: same folder first, then most recently modified | M3 | Planned |
-| `tags` | `shared/domain/tags.ts` | Allowed characters, case folding, nesting by slash, rename and merge | M3 | Planned |
+| `tags` | `shared/domain/tags.ts` | Allowed characters, case folding, nesting by slash, rename and merge | M3 | Built |
 | `FractionalIndex` | `shared/domain/ordering.ts` | Positions between neighbours, rebalance | M1 | Built |
 | `searchFilters` | `shared/domain/search-filters.ts` | Parse `tag:`, `status:` and `folder:` with words | M3 | Planned |
 | `jobPlans` | `shared/domain/job-plans.ts` | What changes and which files, for rename, move, tag rename and import | M3 | Planned |
@@ -84,7 +84,7 @@ Each of these exists exactly once. A second copy is a bug.
 | `OrderService` | Manual order and pins in `.wrriter` (`src/main/services/order-service.ts`) | M1 | Built |
 | `JobService` | Writes jobs to the pending list, hands them to the job worker, finishes them at start (`src/main/services/job-service.ts`) | M1 | Built |
 | `SearchService` | Vault search with filters, the quick switcher | M3 | Planned |
-| `TagService` | Tag list, add, remove, rename and merge (as jobs) | M3 | Planned |
+| `TagService` | Tag list with counts, rename and merge (as jobs) (`src/main/services/tag-service.ts`) | M3 | Built |
 | `LinkService` | Backlinks, link updates on rename and move (as jobs) | M3 | Planned |
 | `CaptureService` | Quick capture window, pop-outs, Inbox, last active vault | M4 | Planned |
 | `AttachmentService` | Copy in, reuse identical files, names, missing file state | M4 | Planned |
@@ -147,6 +147,8 @@ Record every request here as it is written, so a second one is not added for the
 | `index.getStatus` | `{}` | `IndexStatus` | M3 | Built |
 | `index.getStatuses` | `{}` | `string[]` | M3 | Built |
 | `index.getTags` | `{}` | `string[]` | M3 | Built |
+| `index.getTagCounts` | `{}` | `IndexTagCount[]` | M3 | Built |
+| `tag.rename` | `{ oldTag: string, newTag: string }` | `TagRenameResult` | M3 | Built |
 
 ## Index Queries
 
@@ -161,6 +163,7 @@ Record every query here as it is written.
 | `index.getStatus` | `IndexStatus` | M3 | Built |
 | `index.getStatuses` | `readonly string[]` | M3 | Built |
 | `index.getTags` | `readonly string[]` | M3 | Built |
+| `index.getTagCounts` | `readonly IndexTagCount[]` | M3 | Built |
 
 ## Shared Components (`src/renderer/components`)
 

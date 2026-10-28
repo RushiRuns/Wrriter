@@ -363,10 +363,10 @@ Nothing that depends on a row is built until it is decided. Rows 15 to 17 are ne
 
 ### Tags
 
-- [ ] `shared/domain/tags`: allowed characters, not case sensitive with the first spelling shown, nesting by slash. A space while adding a tag starts the next one. A `#word` in the text stays plain text
-- [ ] The Tags tile switches the lower part of the first pane to the tag list, built from the folder row (not drawn in the mockup, shown to Krishna), nested as a tree, with counts from the index
-- [ ] Choosing a tag lists exactly the notes that have it
-- [ ] Tag rename and merge from the tag's right-click menu, run as a job: a confirmation with the number of notes, only the `tags` key touched, no cancel button
+- [x] `shared/domain/tags`: allowed characters, not case sensitive with the first spelling shown, nesting by slash. A space while adding a tag starts the next one. A `#word` in the text stays plain text
+- [x] The Tags tile switches the lower part of the first pane to the tag list, built from the folder row (not drawn in the mockup, shown to Krishna), nested as a tree, with counts from the index
+- [x] Choosing a tag lists exactly the notes that have it
+- [x] Tag rename and merge from the tag's right-click menu, run as a job: a confirmation with the number of notes, only the `tags` key touched, no cancel button
 
 ### Wikilinks and backlinks
 

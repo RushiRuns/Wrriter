@@ -2,6 +2,7 @@ import { BrowserWindow, nativeTheme, Menu, MenuItem, shell } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import { AppDataStore, type AppSettings, type WindowState, type KnownVault, type FirstPaintState } from '../store/app-data-store';
+import { JobsStore } from '../store/jobs-store';
 import { createSecureWindow } from '../windows/window-factory';
 import { IpcRouter } from '../ipc/router';
 import { VaultReader } from './vault-reader';
@@ -10,6 +11,7 @@ import { JobService } from './job-service';
 import { VaultService } from './vault-service';
 import { FolderService } from './folder-service';
 import { NoteService } from './note-service';
+import { TagService } from './tag-service';
 import { IndexClient } from './index-client';
 import { Result, ok, err } from '../../shared/result';
 import type { StartupState, AccentName, SetPaneWidthsArgs, SetOpenTabsArgs } from '../../shared/ipc';
@@ -20,6 +22,7 @@ export interface WindowServiceOptions {
   vaultService?: VaultService | undefined;
   folderService?: FolderService | undefined;
   noteService?: NoteService | undefined;
+  tagService?: TagService | undefined;
   indexClient?: IndexClient | undefined;
   vaultReader?: VaultReader | undefined;
   watcherAdapter?: { start(): Promise<void>; stop(): Promise<void> } | undefined;
@@ -34,6 +37,7 @@ export class WindowService {
   private readonly vaultService: VaultService;
   private readonly folderService: FolderService;
   private readonly noteService: NoteService;
+  private readonly tagService: TagService;
   private readonly indexClient?: IndexClient | undefined;
   private readonly vaultReader: VaultReader;
   private readonly watcherAdapter?: { start(): Promise<void>; stop(): Promise<void> };
@@ -68,6 +72,13 @@ export class WindowService {
       new NoteService({
         vaultReader: this.vaultReader,
         indexClient: this.indexClient
+      });
+    this.tagService =
+      options.tagService ??
+      new TagService({
+        jobService: options.jobService ?? new JobService(new JobsStore(path.join(process.cwd(), '.wrriter'))),
+        indexClient: this.indexClient,
+        vaultReader: this.vaultReader
       });
     if (options.watcherAdapter) {
       this.watcherAdapter = options.watcherAdapter;
@@ -419,6 +430,16 @@ export class WindowService {
     );
     this.ipcRouter.register('index.getTags', async () =>
       this.indexClient ? this.indexClient.getTags() : ok([])
+    );
+    this.ipcRouter.register('index.getTagCounts', async () =>
+      this.activeVault ? this.tagService.getTagsWithCounts(this.activeVault.path) : ok([])
+    );
+
+    // 9. Tag channels (M3)
+    this.ipcRouter.register('tag.rename', async (args) =>
+      this.activeVault
+        ? this.tagService.renameTag(this.activeVault.id, this.activeVault.path, args.oldTag, args.newTag)
+        : err({ kind: 'vaultUnavailable' })
     );
   }
 

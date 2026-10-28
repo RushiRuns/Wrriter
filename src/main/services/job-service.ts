@@ -15,6 +15,7 @@ export class JobService {
   private readonly idGen: IdGenerator;
   private isProcessing = false;
   private readonly noticeListeners: ((notice: JobServiceNotice) => void)[] = [];
+  private readonly registeredHandlers = new Map<string, JobExecutionCallbacks['fileHandler']>();
 
   constructor(
     store: JobsStore,
@@ -24,6 +25,13 @@ export class JobService {
     this.store = store;
     this.runner = runner;
     this.idGen = idGen;
+  }
+
+  /**
+   * Registers a file handler for a job type so interrupted jobs can resume on startup.
+   */
+  registerHandler(type: string, handler: JobExecutionCallbacks['fileHandler']): void {
+    this.registeredHandlers.set(type, handler);
   }
 
   onNotice(listener: (notice: JobServiceNotice) => void): () => void {
@@ -59,7 +67,8 @@ export class JobService {
         }
 
         console.log(`Resuming interrupted job ${job.id} (${job.completedCount}/${job.files.length} done)...`);
-        await this.executeJob(job, defaultHandler);
+        const handler = this.registeredHandlers.get(job.type) ?? defaultHandler;
+        await this.executeJob(job, handler);
       }
     }
   }
@@ -74,10 +83,15 @@ export class JobService {
     type: string,
     files: string[],
     params: Record<string, any>,
-    handler: JobExecutionCallbacks['fileHandler']
+    handler?: JobExecutionCallbacks['fileHandler']
   ): Promise<Result<PersistentJob>> {
     if (!fs.existsSync(vaultRoot)) {
       return err({ kind: 'vaultUnavailable' });
+    }
+
+    const effectiveHandler = handler ?? this.registeredHandlers.get(type);
+    if (!effectiveHandler) {
+      return err({ kind: 'unexpected', message: `No handler registered for job type ${type}` });
     }
 
     const job: PersistentJob = {
@@ -97,7 +111,7 @@ export class JobService {
     if (!storeRes.ok) return storeRes;
 
     // 2. Execute job
-    await this.executeJob(job, handler);
+    await this.executeJob(job, effectiveHandler);
 
     return ok(job);
   }

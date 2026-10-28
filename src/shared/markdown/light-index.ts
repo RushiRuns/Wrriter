@@ -1,5 +1,6 @@
 import { parseFrontmatter } from '../domain/frontmatter';
 import { extractNotePreviewAndImage, extractTitleFromFirstLine } from '../domain/titles';
+import { cleanTag, isValidTag, normalizeTag } from '../domain/tags';
 
 export interface LightIndexResult {
   readonly title: string;
@@ -52,17 +53,21 @@ export function lightIndexNote(relPath: string, text: string): LightIndexResult 
   const fm = parseFrontmatter(text);
   const hasValidFrontmatter = fm.hasFrontmatter && !fm.isBroken;
 
-  // Normalized tags (lowercase, trimmed, deduplicated)
-  const tagSet = new Set<string>();
+  // Tags: not case sensitive, first spelling preserved, deduplicated
+  const tags: string[] = [];
+  const seenTagNormalized = new Set<string>();
   if (hasValidFrontmatter && fm.tags.length > 0) {
     for (const rawTag of fm.tags) {
-      const cleaned = rawTag.trim().toLowerCase().replace(/^\/+|\/+$/g, '');
-      if (cleaned) {
-        tagSet.add(cleaned);
+      const cleaned = cleanTag(rawTag);
+      if (cleaned && isValidTag(cleaned)) {
+        const norm = normalizeTag(cleaned);
+        if (!seenTagNormalized.has(norm)) {
+          seenTagNormalized.add(norm);
+          tags.push(cleaned);
+        }
       }
     }
   }
-  const tags = Array.from(tagSet);
 
   const status = hasValidFrontmatter ? fm.status : null;
   const created = hasValidFrontmatter ? fm.created : null;

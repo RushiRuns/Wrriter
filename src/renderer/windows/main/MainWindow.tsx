@@ -22,6 +22,7 @@ import {
 import { FirstRunScreen } from '../../components/FirstRunScreen';
 import { VaultMenu } from '../../components/VaultMenu';
 import { FolderTree } from '../../components/FolderTree';
+import { TagTree } from '../../components/TagTree';
 import { NoteRow } from '../../components/NoteRow';
 import { VirtualList } from '../../components/VirtualList';
 import { NotesPaneMenu } from '../../components/NotesPaneMenu';
@@ -39,7 +40,8 @@ import type {
   NoteListItem,
   StartupState,
   VaultInfo,
-  AppSettingsContract
+  AppSettingsContract,
+  IndexTagCount
 } from '../../../shared/ipc';
 
 const SettingsWindow = React.lazy(() => import('../../components/SettingsWindow'));
@@ -115,6 +117,8 @@ export const MainWindow: React.FC = () => {
   // Folder & notes state
   const [folders, setFolders] = useState<readonly FolderNode[]>([]);
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [tagsWithCounts, setTagsWithCounts] = useState<readonly IndexTagCount[]>([]);
   const [notes, setNotes] = useState<readonly NoteListItem[]>([]);
   const [totalVaultNotesCount, setTotalVaultNotesCount] = useState<number>(0);
   const [selectedNotePath, setSelectedNotePath] = useState<string | null>(null);
@@ -220,15 +224,30 @@ export const MainWindow: React.FC = () => {
     }
   }, []);
 
-  // Refresh notes from disk
-  const refreshNotes = useCallback(async (folderPath: string | null = selectedFolder, currentSort: 'manual' | 'modified' | 'title' = sortBy) => {
+  // Refresh tags from index/disk
+  const refreshTags = useCallback(async () => {
+    if (window.wrriter?.index?.getTagCounts) {
+      const res = await window.wrriter.index.getTagCounts();
+      if (res.ok) {
+        setTagsWithCounts(res.value);
+      }
+    }
+  }, []);
+
+  // Refresh notes from disk/index
+  const refreshNotes = useCallback(async (
+    folderPath: string | null = selectedFolder,
+    currentSort: 'manual' | 'modified' | 'title' = sortBy,
+    tagFilter: string | null = selectedTag
+  ) => {
     if (window.wrriter?.note?.list) {
       const res = await window.wrriter.note.list({
         folder: folderPath ?? undefined,
+        tag: tagFilter ?? undefined,
         sortBy: currentSort
       });
       if (res.ok) {
-        if (folderPath === null || folderPath === '') {
+        if ((folderPath === null || folderPath === '') && !tagFilter) {
           setTotalVaultNotesCount(res.value.length);
         }
         setNotes((prevNotes) => {
@@ -1146,6 +1165,10 @@ export const MainWindow: React.FC = () => {
 
   // Compute folder title in notes pane header
   const getFolderHeaderName = () => {
+    if (activeTile === 'tags') {
+      if (selectedTag) return `#${selectedTag}`;
+      return 'All Tags';
+    }
     if (!selectedFolder) return 'Notes';
     const parts = selectedFolder.split('/');
     return parts[parts.length - 1] || 'Notes';
@@ -1201,7 +1224,8 @@ export const MainWindow: React.FC = () => {
               onClick={() => {
                 setActiveTile('notes');
                 setSelectedFolder(null);
-                void refreshNotes(null);
+                setSelectedTag(null);
+                void refreshNotes(null, sortBy, null);
               }}
               title="Notes"
             >
@@ -1218,7 +1242,12 @@ export const MainWindow: React.FC = () => {
             <button
               type="button"
               className={`tile ${activeTile === 'tags' ? 'on' : ''}`}
-              onClick={() => setActiveTile('tags')}
+              onClick={() => {
+                setActiveTile('tags');
+                setSelectedFolder(null);
+                void refreshTags();
+                void refreshNotes(null, sortBy, selectedTag);
+              }}
               title="Tags"
             >
               <TagsTileIcon />
@@ -1252,20 +1281,37 @@ export const MainWindow: React.FC = () => {
           {/* 1px divider */}
           <div className="sep" />
 
-          {/* Folder Tree Hierarchy */}
-          <FolderTree
-            folders={folders}
-            selectedFolder={selectedFolder}
-            onSelectFolder={(path) => {
-              setSelectedFolder(path);
-              void refreshNotes(path);
-            }}
-            totalVaultNotesCount={totalVaultNotesCount}
-            onRefresh={async () => {
-              await refreshFolders();
-              await refreshNotes();
-            }}
-          />
+          {/* Lower Pane: Tag Tree or Folder Tree based on active tile */}
+          {activeTile === 'tags' ? (
+            <TagTree
+              tagsWithCounts={tagsWithCounts}
+              selectedTag={selectedTag}
+              onSelectTag={(tag) => {
+                setSelectedTag(tag);
+                void refreshNotes(null, sortBy, tag);
+              }}
+              onRefresh={async () => {
+                await refreshTags();
+                await refreshNotes(null, sortBy, selectedTag);
+              }}
+              onNotice={(msg) => setNoticeMessage(msg)}
+            />
+          ) : (
+            <FolderTree
+              folders={folders}
+              selectedFolder={selectedFolder}
+              onSelectFolder={(path) => {
+                setSelectedFolder(path);
+                setSelectedTag(null);
+                void refreshNotes(path, sortBy, null);
+              }}
+              totalVaultNotesCount={totalVaultNotesCount}
+              onRefresh={async () => {
+                await refreshFolders();
+                await refreshNotes(selectedFolder, sortBy, null);
+              }}
+            />
+          )}
 
           {/* Bottom Vault Button, Settings Gear and Popup Menu */}
           <div className="vaults" style={{ position: 'relative' }}>

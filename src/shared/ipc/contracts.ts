@@ -140,7 +140,8 @@ export interface DeleteNoteArgs {
 
 export interface ListNotesArgs {
   readonly folder?: string;
-  readonly sortBy?: 'manual' | 'modified' | 'title';
+  readonly tag?: string;
+  readonly sortBy?: 'manual' | 'modified' | 'created' | 'title';
 }
 
 export interface NoteListItem {
@@ -221,6 +222,7 @@ export type SaveSettingsArgs = Partial<AppSettingsContract>;
 // 6. index.*
 export interface IndexGetNotesArgs {
   readonly folder?: string | undefined;
+  readonly tag?: string | undefined;
   readonly sortBy?: 'manual' | 'modified' | 'created' | 'title' | undefined;
   readonly after?: { readonly path: string; readonly sortVal: string | number } | null | undefined;
   readonly limit?: number | undefined;
@@ -237,6 +239,23 @@ export interface IndexSearchArgs {
 export type IndexGetStatusArgs = Record<string, never>;
 export type IndexGetStatusesArgs = Record<string, never>;
 export type IndexGetTagsArgs = Record<string, never>;
+export type IndexGetTagCountsArgs = Record<string, never>;
+
+export interface IndexTagCount {
+  readonly tag: string;
+  readonly count: number;
+}
+
+// 7. tag.*
+export interface TagRenameArgs {
+  readonly oldTag: string;
+  readonly newTag: string;
+}
+
+export interface TagRenameResult {
+  readonly jobId: string;
+  readonly affectedCount: number;
+}
 
 export interface IndexSearchResultItem {
   readonly path: string;
@@ -308,6 +327,8 @@ export interface IpcChannelTable {
   'index.getStatus': { args: IndexGetStatusArgs; result: IndexStatus };
   'index.getStatuses': { args: IndexGetStatusesArgs; result: readonly string[] };
   'index.getTags': { args: IndexGetTagsArgs; result: readonly string[] };
+  'index.getTagCounts': { args: IndexGetTagCountsArgs; result: readonly IndexTagCount[] };
+  'tag.rename': { args: TagRenameArgs; result: TagRenameResult };
 }
 
 export type IpcChannel = keyof IpcChannelTable;
@@ -442,12 +463,15 @@ export const IPC_VALIDATORS: { readonly [K in IpcChannel]: Validator<IpcChannelT
 
   'note.list': (input: unknown): Result<ListNotesArgs> => {
     if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });
-    const res: { folder?: string; sortBy?: 'manual' | 'modified' | 'title' } = {};
+    const res: { folder?: string; tag?: string; sortBy?: 'manual' | 'modified' | 'created' | 'title' } = {};
     if (typeof input['folder'] === 'string') {
       res.folder = input['folder'];
     }
+    if (typeof input['tag'] === 'string') {
+      res.tag = input['tag'];
+    }
     if (typeof input['sortBy'] === 'string') {
-      if (input['sortBy'] === 'manual' || input['sortBy'] === 'modified' || input['sortBy'] === 'title') {
+      if (input['sortBy'] === 'manual' || input['sortBy'] === 'modified' || input['sortBy'] === 'created' || input['sortBy'] === 'title') {
         res.sortBy = input['sortBy'];
       }
     }
@@ -527,11 +551,13 @@ export const IPC_VALIDATORS: { readonly [K in IpcChannel]: Validator<IpcChannelT
     if (!isObject(input)) return ok({});
     const res: {
       folder?: string | undefined;
+      tag?: string | undefined;
       sortBy?: 'manual' | 'modified' | 'created' | 'title' | undefined;
       after?: { path: string; sortVal: string | number } | null | undefined;
       limit?: number | undefined;
     } = {};
     if (typeof input['folder'] === 'string') res.folder = input['folder'];
+    if (typeof input['tag'] === 'string') res.tag = input['tag'];
     if (
       typeof input['sortBy'] === 'string' &&
       (input['sortBy'] === 'manual' || input['sortBy'] === 'modified' || input['sortBy'] === 'created' || input['sortBy'] === 'title')
@@ -566,6 +592,16 @@ export const IPC_VALIDATORS: { readonly [K in IpcChannel]: Validator<IpcChannelT
 
   'index.getStatus': validateEmptyArgs,
   'index.getStatuses': validateEmptyArgs,
-  'index.getTags': validateEmptyArgs
+  'index.getTags': validateEmptyArgs,
+  'index.getTagCounts': validateEmptyArgs,
+
+  'tag.rename': (input: unknown): Result<TagRenameArgs> => {
+    if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });
+    const oldTag = validateNonEmptyString('oldTag', input['oldTag']);
+    if (!oldTag.ok) return oldTag;
+    const newTag = validateNonEmptyString('newTag', input['newTag']);
+    if (!newTag.ok) return newTag;
+    return ok({ oldTag: oldTag.value, newTag: newTag.value });
+  }
 };
 

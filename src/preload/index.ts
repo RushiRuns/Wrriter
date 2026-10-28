@@ -87,7 +87,11 @@ const api: WrriterApi = {
     search: (args) => invoke('index.search', args),
     getStatus: () => invoke('index.getStatus', {}),
     getStatuses: () => invoke('index.getStatuses', {}),
-    getTags: () => invoke('index.getTags', {})
+    getTags: () => invoke('index.getTags', {}),
+    getTagCounts: () => invoke('index.getTagCounts', {})
+  },
+  tag: {
+    rename: (args) => invoke('tag.rename', args)
   },
   showItemInFolder: (path: string) => invoke('vault.showInExplorer', { path }),
   invoke

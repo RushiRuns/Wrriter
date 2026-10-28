@@ -82,6 +82,13 @@ export const TagsTileIcon: React.FC<IconProps> = ({ className = 'ic xl', style }
   </svg>
 );
 
+export const TagItemIcon: React.FC<IconProps> = ({ className = 'ic sm', style }) => (
+  <svg className={className} style={style} viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z" />
+    <circle cx="7.5" cy="7.5" r="1.2" />
+  </svg>
+);
+
 // 11. Search tile
 export const SearchTileIcon: React.FC<IconProps> = ({ className = 'ic xl', style }) => (
   <svg className={className} style={style} viewBox="0 0 24 24" aria-hidden="true">

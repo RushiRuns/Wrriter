@@ -115,10 +115,12 @@ export class NoteService {
     vaultRoot: string,
     options: {
       folder?: string | undefined;
+      tag?: string | undefined;
       sortBy?: 'manual' | 'modified' | 'created' | 'title' | undefined;
     } = {}
   ): Promise<Result<NoteListItem[]>> {
     const folderFilter = options.folder ? options.folder.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '') : null;
+    const tagFilter = options.tag ? options.tag.trim() : null;
     const sortBy = options.sortBy ?? 'manual';
 
     const [pins, orderFile] = await Promise.all([
@@ -131,6 +133,7 @@ export class NoteService {
       const indexSort = sortBy === 'manual' ? 'modified' : sortBy;
       const indexRes = await this.indexClient.getNotes({
         folder: folderFilter ?? undefined,
+        tag: tagFilter ?? undefined,
         sortBy: indexSort
       });
 

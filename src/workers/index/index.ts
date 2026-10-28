@@ -14,6 +14,7 @@ export interface IndexWorkerInitPayload {
 
 export interface IndexWorkerGetNotesPayload {
   readonly folder?: string | undefined;
+  readonly tag?: string | undefined;
   readonly sortBy?: 'modified' | 'created' | 'title' | undefined;
   readonly after?: { path: string; sortVal: string | number } | null | undefined;
   readonly limit?: number | undefined;
@@ -37,6 +38,9 @@ export type IndexWorkerIncomingMessage =
   | { id: string; type: 'query.getStatus'; payload?: Record<string, never> }
   | { id: string; type: 'query.getStatuses'; payload?: Record<string, never> }
   | { id: string; type: 'query.getTags'; payload?: Record<string, never> }
+  | { id: string; type: 'query.getTagCounts'; payload?: Record<string, never> }
+  | { id: string; type: 'query.getNotePathsWithTag'; payload: { tag: string } }
+  | { id: string; type: 'query.getTagNotesCount'; payload: { tag: string } }
   | { id: string; type: 'close'; payload?: Record<string, never> };
 
 export type IndexWorkerOutgoingMessage =
@@ -195,6 +199,36 @@ export class IndexWorkerCore {
           }
           const tags = this.db.getTags();
           this.postMessage({ id, ok: true, data: tags });
+          return;
+        }
+
+        case 'query.getTagCounts': {
+          if (!this.db) {
+            this.postMessage({ id, ok: false, error: 'Index worker not initialized' });
+            return;
+          }
+          const tagCounts = this.db.getTagCounts();
+          this.postMessage({ id, ok: true, data: tagCounts });
+          return;
+        }
+
+        case 'query.getNotePathsWithTag': {
+          if (!this.db) {
+            this.postMessage({ id, ok: false, error: 'Index worker not initialized' });
+            return;
+          }
+          const paths = this.db.getNotePathsWithTag(msg.payload.tag);
+          this.postMessage({ id, ok: true, data: paths });
+          return;
+        }
+
+        case 'query.getTagNotesCount': {
+          if (!this.db) {
+            this.postMessage({ id, ok: false, error: 'Index worker not initialized' });
+            return;
+          }
+          const count = this.db.getTagNotesCount(msg.payload.tag);
+          this.postMessage({ id, ok: true, data: { count } });
           return;
         }
 

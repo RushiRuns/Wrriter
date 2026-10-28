@@ -43,6 +43,7 @@ import { TabStrip } from '../components/TabStrip';
 import { markdownToTipTapDoc, tipTapDocToMarkdown } from './markdown-converter';
 import { planSave, encodeUtf8 } from '../../shared/markdown/save';
 import { parseFrontmatter, updateFrontmatter, formatCreatedDate } from '../../shared/domain/frontmatter';
+import { parseTagsInput } from '../../shared/domain/tags';
 import { PropertiesLineExtension, propertiesLinePluginKey } from './extensions/properties-line';
 import { Dialog } from '../components/Dialog';
 import {
@@ -398,10 +399,7 @@ export const EditorHost: React.FC<EditorHostProps> = ({
     }
 
     // A space while adding a tag starts the next one (M3 Tags specification)
-    const parts = raw
-      .split(/[\s,]+/)
-      .map((t) => t.replace(/^#/, '').trim())
-      .filter((t) => t.length > 0);
+    const parts = parseTagsInput(raw);
 
     const currentTags = [...(activeTab.tags || [])];
     let changed = false;

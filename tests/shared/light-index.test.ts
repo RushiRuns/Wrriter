@@ -22,8 +22,8 @@ Also embed ![[logo.png]] should not count as note wikilink.
 
     expect(res.title).toBe('Launch Strategy');
     expect(res.folder).toBe('Work');
-    // Tags normalized to lowercase and deduplicated
-    expect(res.tags).toEqual(['work', 'project/alpha']);
+    // Tags: case-insensitive deduplication, first spelling preserved
+    expect(res.tags).toEqual(['Work', 'Project/Alpha']);
     expect(res.status).toBe('active');
     expect(res.created).toBe('2026-10-28T14:30');
     expect(res.hasFrontmatter).toBe(true);

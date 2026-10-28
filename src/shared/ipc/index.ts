@@ -101,6 +101,10 @@ export interface WrriterApi {
     getStatus(): Promise<Result<import('./contracts').IndexStatus>>;
     getStatuses(): Promise<Result<readonly string[]>>;
     getTags(): Promise<Result<readonly string[]>>;
+    getTagCounts(): Promise<Result<readonly import('./contracts').IndexTagCount[]>>;
+  };
+  readonly tag: {
+    rename(args: import('./contracts').TagRenameArgs): Promise<Result<import('./contracts').TagRenameResult>>;
   };
   readonly showItemInFolder?: (path: string) => Promise<Result<void>>;
   readonly invoke: <K extends IpcChannel>(

@@ -65,5 +65,9 @@ describe('IPC Validators and Request Contracts', () => {
     expect(IPC_VALIDATORS['index.getStatus']({}).ok).toBe(true);
     expect(IPC_VALIDATORS['index.getStatuses']({}).ok).toBe(true);
     expect(IPC_VALIDATORS['index.getTags']({}).ok).toBe(true);
+    expect(IPC_VALIDATORS['index.getTagCounts']({}).ok).toBe(true);
+    expect(IPC_VALIDATORS['tag.rename']({ oldTag: 'work', newTag: 'office' }).ok).toBe(true);
+    expect(IPC_VALIDATORS['tag.rename']({ oldTag: '', newTag: 'office' }).ok).toBe(false);
+    expect(IPC_VALIDATORS['note.list']({ tag: 'work', sortBy: 'created' }).ok).toBe(true);
   });
 });

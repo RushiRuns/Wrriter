@@ -61,6 +61,9 @@ export class IndexDb {
 
   private stmtGetStatuses!: Statement;
   private stmtGetTags!: Statement;
+  private stmtGetTagCounts!: Statement;
+  private stmtGetNotePathsWithTag!: Statement;
+  private stmtGetTagNotesCount!: Statement;
 
   private stmtInsertFts!: Statement;
   private stmtDeleteFts!: Statement;
@@ -69,10 +72,13 @@ export class IndexDb {
   // Keyset queries for note listing
   private stmtListNotesByMtime!: Statement;
   private stmtListNotesByMtimeFolder!: Statement;
+  private stmtListNotesByMtimeTag!: Statement;
   private stmtListNotesByCreated!: Statement;
   private stmtListNotesByCreatedFolder!: Statement;
+  private stmtListNotesByCreatedTag!: Statement;
   private stmtListNotesByTitle!: Statement;
   private stmtListNotesByTitleFolder!: Statement;
+  private stmtListNotesByTitleTag!: Statement;
 
   constructor(dbPath: string) {
     this.dbPath = dbPath;
@@ -261,6 +267,21 @@ export class IndexDb {
       SELECT DISTINCT tag FROM note_tags
       ORDER BY tag COLLATE NOCASE ASC
     `);
+    this.stmtGetTagCounts = db.prepare(`
+      SELECT tag, COUNT(*) as count
+      FROM note_tags
+      GROUP BY tag COLLATE NOCASE
+      ORDER BY tag COLLATE NOCASE ASC
+    `);
+    this.stmtGetNotePathsWithTag = db.prepare(`
+      SELECT DISTINCT note_path FROM note_tags
+      WHERE tag = ? COLLATE NOCASE OR tag LIKE (? || '/%')
+      ORDER BY note_path ASC
+    `);
+    this.stmtGetTagNotesCount = db.prepare(`
+      SELECT COUNT(DISTINCT note_path) as count FROM note_tags
+      WHERE tag = ? COLLATE NOCASE OR tag LIKE (? || '/%')
+    `);
 
     this.stmtInsertFts = db.prepare(`INSERT INTO fts_notes (path, title, body) VALUES (?, ?, ?)`);
     this.stmtDeleteFts = db.prepare(`DELETE FROM fts_notes WHERE path = ?`);
@@ -296,6 +317,14 @@ export class IndexDb {
       ORDER BY mtime_ms DESC, path ASC
       LIMIT ?
     `);
+    this.stmtListNotesByMtimeTag = db.prepare(`
+      SELECT n.* FROM notes n
+      JOIN note_tags nt ON n.path = nt.note_path
+      WHERE nt.tag = ? COLLATE NOCASE
+        AND (? IS NULL OR n.mtime_ms < ? OR (n.mtime_ms = ? AND n.path > ?))
+      ORDER BY n.mtime_ms DESC, n.path ASC
+      LIMIT ?
+    `);
 
     // Created:
     this.stmtListNotesByCreated = db.prepare(`
@@ -311,6 +340,14 @@ export class IndexDb {
       ORDER BY created DESC, path ASC
       LIMIT ?
     `);
+    this.stmtListNotesByCreatedTag = db.prepare(`
+      SELECT n.* FROM notes n
+      JOIN note_tags nt ON n.path = nt.note_path
+      WHERE nt.tag = ? COLLATE NOCASE
+        AND (? IS NULL OR n.created < ? OR (n.created = ? AND n.path > ?))
+      ORDER BY n.created DESC, n.path ASC
+      LIMIT ?
+    `);
 
     // Title:
     this.stmtListNotesByTitle = db.prepare(`
@@ -324,6 +361,14 @@ export class IndexDb {
       WHERE folder = ?
         AND (? IS NULL OR title COLLATE NOCASE > ? OR (title COLLATE NOCASE = ? AND path > ?))
       ORDER BY title COLLATE NOCASE ASC, path ASC
+      LIMIT ?
+    `);
+    this.stmtListNotesByTitleTag = db.prepare(`
+      SELECT n.* FROM notes n
+      JOIN note_tags nt ON n.path = nt.note_path
+      WHERE nt.tag = ? COLLATE NOCASE
+        AND (? IS NULL OR n.title COLLATE NOCASE > ? OR (n.title COLLATE NOCASE = ? AND n.path > ?))
+      ORDER BY n.title COLLATE NOCASE ASC, n.path ASC
       LIMIT ?
     `);
   }
@@ -425,6 +470,31 @@ export class IndexDb {
   }
 
   /**
+   * Retrieves all unique tags with their exact note count from the index.
+   * Preserves the first spelling used, grouped case-insensitively.
+   */
+  getTagCounts(): { tag: string; count: number }[] {
+    const rows = this.stmtGetTagCounts.all() as { tag: string; count: number }[];
+    return rows;
+  }
+
+  /**
+   * Retrieves all relative note paths tagged with a given tag (exact or child namespace).
+   */
+  getNotePathsWithTag(tag: string): string[] {
+    const rows = this.stmtGetNotePathsWithTag.all(tag, tag) as { note_path: string }[];
+    return rows.map((r) => r.note_path);
+  }
+
+  /**
+   * Retrieves the number of distinct notes tagged with a given tag (exact or child namespace).
+   */
+  getTagNotesCount(tag: string): number {
+    const row = this.stmtGetTagNotesCount.get(tag, tag) as { count: number } | undefined;
+    return row?.count ?? 0;
+  }
+
+  /**
    * Performs an FTS5 search.
    */
   search(escapedQuery: string, limit = 50): SearchResultItem[] {
@@ -437,18 +507,23 @@ export class IndexDb {
    */
   listNotes(options: {
     folder?: string | undefined;
+    tag?: string | undefined;
     sortBy?: 'modified' | 'created' | 'title' | undefined;
     after?: KeysetCursor | null | undefined;
     limit?: number | undefined;
   } = {}): NoteRecord[] {
     const limit = options.limit ?? 100;
     const folder = options.folder !== undefined && options.folder !== '' ? options.folder : null;
+    const tag = options.tag !== undefined && options.tag !== '' ? options.tag : null;
     const sortBy = options.sortBy ?? 'modified';
     const after = options.after ?? null;
 
     if (sortBy === 'title') {
       const sortVal = after ? String(after.sortVal) : null;
       const pathVal = after ? after.path : null;
+      if (tag !== null) {
+        return this.stmtListNotesByTitleTag.all(tag, sortVal, sortVal, sortVal, pathVal, limit) as NoteRecord[];
+      }
       if (folder !== null) {
         return this.stmtListNotesByTitleFolder.all(folder, sortVal, sortVal, sortVal, pathVal, limit) as NoteRecord[];
       }
@@ -458,6 +533,9 @@ export class IndexDb {
     if (sortBy === 'created') {
       const sortVal = after ? String(after.sortVal) : null;
       const pathVal = after ? after.path : null;
+      if (tag !== null) {
+        return this.stmtListNotesByCreatedTag.all(tag, sortVal, sortVal, sortVal, pathVal, limit) as NoteRecord[];
+      }
       if (folder !== null) {
         return this.stmtListNotesByCreatedFolder.all(folder, sortVal, sortVal, sortVal, pathVal, limit) as NoteRecord[];
       }
@@ -467,6 +545,9 @@ export class IndexDb {
     // Default: modified descending
     const sortVal = after ? Number(after.sortVal) : null;
     const pathVal = after ? after.path : null;
+    if (tag !== null) {
+      return this.stmtListNotesByMtimeTag.all(tag, sortVal, sortVal, sortVal, pathVal, limit) as NoteRecord[];
+    }
     if (folder !== null) {
       return this.stmtListNotesByMtimeFolder.all(folder, sortVal, sortVal, sortVal, pathVal, limit) as NoteRecord[];
     }

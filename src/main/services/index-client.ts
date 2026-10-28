@@ -7,6 +7,7 @@ import type {
   IndexFolderCount,
   IndexTitleItem,
   IndexStatus,
+  IndexTagCount,
   NoteListItem
 } from '../../shared/ipc/contracts';
 import type { IndexProgress, IndexSummary } from '../../workers/index/indexer';
@@ -210,6 +211,27 @@ export class IndexClient {
       return ok([]);
     }
     return this.sendRequest<readonly string[]>('query.getTags', {});
+  }
+
+  async getTagCounts(): Promise<Result<readonly IndexTagCount[]>> {
+    if (!this.isStarted) {
+      return ok([]);
+    }
+    return this.sendRequest<readonly IndexTagCount[]>('query.getTagCounts', {});
+  }
+
+  async getNotePathsWithTag(tag: string): Promise<Result<readonly string[]>> {
+    if (!this.isStarted) {
+      return ok([]);
+    }
+    return this.sendRequest<readonly string[]>('query.getNotePathsWithTag', { tag });
+  }
+
+  async getTagNotesCount(tag: string): Promise<Result<{ count: number }>> {
+    if (!this.isStarted) {
+      return ok({ count: 0 });
+    }
+    return this.sendRequest<{ count: number }>('query.getTagNotesCount', { tag });
   }
 
   async close(): Promise<void> {

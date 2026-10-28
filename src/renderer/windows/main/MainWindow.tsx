@@ -664,8 +664,9 @@ export const MainWindow: React.FC = () => {
 
     if (newPath === note.path) return;
 
-    if (window.wrriter?.folder?.rename) {
-      const res = await window.wrriter.folder.rename({
+    const moveFn = window.wrriter?.note?.move ?? window.wrriter?.folder?.rename;
+    if (moveFn) {
+      const res = await moveFn({
         oldPath: note.path,
         newPath
       });
@@ -702,8 +703,9 @@ export const MainWindow: React.FC = () => {
       return;
     }
 
-    if (window.wrriter?.folder?.rename) {
-      const res = await window.wrriter.folder.rename({
+    const renameFn = window.wrriter?.note?.rename ?? window.wrriter?.folder?.rename;
+    if (renameFn) {
+      const res = await renameFn({
         oldPath: selectedNotePath,
         newPath
       });

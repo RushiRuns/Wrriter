@@ -83,7 +83,8 @@ export class JobService {
     type: string,
     files: string[],
     params: Record<string, any>,
-    handler?: JobExecutionCallbacks['fileHandler']
+    handler?: JobExecutionCallbacks['fileHandler'],
+    runInBackground = false
   ): Promise<Result<PersistentJob>> {
     if (!fs.existsSync(vaultRoot)) {
       return err({ kind: 'vaultUnavailable' });
@@ -110,8 +111,12 @@ export class JobService {
     const storeRes = await this.store.addJob(job);
     if (!storeRes.ok) return storeRes;
 
-    // 2. Execute job
-    await this.executeJob(job, effectiveHandler);
+    // 2. Execute job (in background or awaited)
+    if (runInBackground) {
+      void this.executeJob(job, effectiveHandler);
+    } else {
+      await this.executeJob(job, effectiveHandler);
+    }
 
     return ok(job);
   }
@@ -132,6 +137,8 @@ export class JobService {
         onProgress: async (completed, total) => {
           job.completedCount = completed;
           await this.store.updateProgress(job.vaultId, job.id, completed, 'running');
+          const jobLabel = job.type.toLowerCase().includes('tag') ? 'Updating tags' : 'Updating links';
+          this.dispatchNotice(job.id, `${jobLabel} ${completed} of ${total}`);
         }
       });
 
@@ -139,7 +146,8 @@ export class JobService {
         job.status = 'completed';
         job.completedCount = job.files.length;
         await this.store.markCompleted(job.vaultId, job.id);
-        this.dispatchNotice(job.id, `Finished job: updated ${result.value.processed} files`);
+        const jobLabel = job.type.toLowerCase().includes('tag') ? 'updating tags' : 'updating links';
+        this.dispatchNotice(job.id, `Finished job ${job.id}: ${jobLabel} (${result.value.processed} files)`);
       }
     } catch (err: any) {
       job.status = 'failed';

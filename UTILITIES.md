@@ -66,10 +66,10 @@ Each of these exists exactly once. A second copy is a bug.
 | `tags` | `shared/domain/tags.ts` | Allowed characters, case folding, nesting by slash, rename and merge | M3 | Built |
 | `FractionalIndex` | `shared/domain/ordering.ts` | Positions between neighbours, rebalance | M1 | Built |
 | `searchFilters` | `shared/domain/search-filters.ts` | Parse `tag:`, `status:` and `folder:` with words | M3 | Planned |
-| `jobPlans` | `shared/domain/job-plans.ts` | What changes and which files, for rename, move, tag rename and import | M3 | Planned |
+| `jobPlans` | `shared/domain/job-plans.ts` | What changes and which files, for rename, move, tag rename and import | M3 | Built |
 | `conflictNames` | `shared/domain/conflicts.ts` | Detect `sync-conflict` copies next to a note | M1 (shown), V2 (handled) | Planned |
 | `captureNames` | `shared/domain/names.ts` | `Quick note YYYY-MM-DD HH.mm`, `Pasted image YYYYMMDD-HHmmss.png` | M4 | Planned |
-| `imagePaths` | `shared/domain/image-paths.ts` | Relative image and attachment paths, percent-encoding, rewrite on move | M2 | Planned |
+| `imagePaths` | `shared/domain/image-paths.ts` | Relative image and attachment paths, percent-encoding, rewrite on move | M3 | Built |
 | `blockSplitter` | `shared/markdown/blocks.ts` | Split a note into blocks with their exact source text | M2 | Built |
 | `planSave` | `shared/markdown/save.ts` | Re-serialize only edited blocks, keep line endings, byte order mark and style | M2 | Built |
 | `lightIndexer` | `src/shared/markdown/light-index.ts` | Frontmatter, tags, wikilinks and first lines by pattern matching, for the index | M3 | Built |
@@ -85,7 +85,7 @@ Each of these exists exactly once. A second copy is a bug.
 | `JobService` | Writes jobs to the pending list, hands them to the job worker, finishes them at start (`src/main/services/job-service.ts`) | M1 | Built |
 | `SearchService` | Vault search with filters, the quick switcher | M3 | Planned |
 | `TagService` | Tag list with counts, rename and merge (as jobs) (`src/main/services/tag-service.ts`) | M3 | Built |
-| `LinkService` | Backlinks, link updates on rename and move (as jobs) | M3 | Planned |
+| `LinkService` | Backlinks, link updates on rename and move (as jobs) (`src/main/services/link-service.ts`) | M3 | Built |
 | `CaptureService` | Quick capture window, pop-outs, Inbox, last active vault | M4 | Planned |
 | `AttachmentService` | Copy in, reuse identical files, names, missing file state | M4 | Planned |
 | `ImportService` | Import notes and folders (as a job with a cancel button) | M4 | Planned |
@@ -128,6 +128,8 @@ Record every request here as it is written, so a second one is not added for the
 | `note.delete` | `{ path: string }` | `void` | M1 | Built |
 | `note.list` | `{ folder?: string, sortBy?: string }` | `NoteListItem[]` | M1 | Built |
 | `note.setOrder` | `{ path: string, folder?: string, beforeKey?: string, afterKey?: string }` | `void` | M1 | Built |
+| `note.rename` | `{ oldPath: string, newPath: string }` | `NoteJobResult` | M3 | Built |
+| `note.move` | `{ oldPath: string, newPath: string }` | `NoteJobResult` | M3 | Built |
 | `folder.create` | `{ path: string }` | `void` | M1 | Built |
 | `folder.rename` | `{ oldPath: string, newPath: string }` | `void` | M1 | Built |
 | `folder.delete` | `{ path: string }` | `void` | M1 | Built |
@@ -249,7 +251,7 @@ Record every query here as it is written.
 | Long-dash check | Fails on en-dash or em-dash in app UI text (`scripts/check-dash.mjs`) | M1 | Built |
 | Layer import check | The import rules in ARCHITECTURE.md (`scripts/check-rules.mjs`) | M1 | Built |
 | `Round-trip check` | The sample notes, byte for byte (`tests/samples/round-trip.test.ts`) | M2 | Built |
-| Random-stop test | Jobs interrupted 100 times | M3 | Planned |
+| Random-stop test | Jobs interrupted 100 times (`tests/main/jobs-random-stop.test.ts`) | M3 | Built |
 | Vault generator | The 50,000-note test vault (`tests/vault-gen/generate-vault.ts`) | M1 | Built |
 | Benchmark harness | Quick set every build, full set per milestone (`tests/bench/benchmark-suite.mjs`) | M1 | Built |
 | Lag monitor | Main process blocks and long window tasks over 50 ms (`src/main/platform/lag-monitor.ts`, `src/renderer/lag-monitor.ts`) | M1 | Built |

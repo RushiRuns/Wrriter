@@ -12,6 +12,7 @@ import { VaultService } from './vault-service';
 import { FolderService } from './folder-service';
 import { NoteService } from './note-service';
 import { TagService } from './tag-service';
+import { LinkService } from './link-service';
 import { IndexClient } from './index-client';
 import { Result, ok, err } from '../../shared/result';
 import type { StartupState, AccentName, SetPaneWidthsArgs, SetOpenTabsArgs } from '../../shared/ipc';
@@ -23,6 +24,7 @@ export interface WindowServiceOptions {
   folderService?: FolderService | undefined;
   noteService?: NoteService | undefined;
   tagService?: TagService | undefined;
+  linkService?: LinkService | undefined;
   indexClient?: IndexClient | undefined;
   vaultReader?: VaultReader | undefined;
   watcherAdapter?: { start(): Promise<void>; stop(): Promise<void> } | undefined;
@@ -38,6 +40,7 @@ export class WindowService {
   private readonly folderService: FolderService;
   private readonly noteService: NoteService;
   private readonly tagService: TagService;
+  private readonly linkService: LinkService;
   private readonly indexClient?: IndexClient | undefined;
   private readonly vaultReader: VaultReader;
   private readonly watcherAdapter?: { start(): Promise<void>; stop(): Promise<void> };
@@ -76,6 +79,13 @@ export class WindowService {
     this.tagService =
       options.tagService ??
       new TagService({
+        jobService: options.jobService ?? new JobService(new JobsStore(path.join(process.cwd(), '.wrriter'))),
+        indexClient: this.indexClient,
+        vaultReader: this.vaultReader
+      });
+    this.linkService =
+      options.linkService ??
+      new LinkService({
         jobService: options.jobService ?? new JobService(new JobsStore(path.join(process.cwd(), '.wrriter'))),
         indexClient: this.indexClient,
         vaultReader: this.vaultReader
@@ -375,14 +385,32 @@ export class WindowService {
         ? this.noteService.setOrder(this.activeVault.path, args.folder ?? '', args.path, args.beforeKey ?? null, args.afterKey ?? null)
         : err({ kind: 'vaultUnavailable' })
     );
+    this.ipcRouter.register('note.rename', async (args) =>
+      this.activeVault
+        ? this.linkService.renameNoteWithLinks(this.activeVault.id, this.activeVault.path, args.oldPath, args.newPath)
+        : err({ kind: 'vaultUnavailable' })
+    );
+    this.ipcRouter.register('note.move', async (args) =>
+      this.activeVault
+        ? this.linkService.moveNoteWithLinks(this.activeVault.id, this.activeVault.path, args.oldPath, args.newPath)
+        : err({ kind: 'vaultUnavailable' })
+    );
 
     // 6. Folder channels
     this.ipcRouter.register('folder.create', (args) =>
       this.activeVault ? this.folderService.createFolder(this.activeVault.path, args.path) : err({ kind: 'vaultUnavailable' })
     );
-    this.ipcRouter.register('folder.rename', (args) =>
-      this.activeVault ? this.folderService.renameFolder(this.activeVault.path, args.oldPath, args.newPath) : err({ kind: 'vaultUnavailable' })
-    );
+    this.ipcRouter.register('folder.rename', async (args) => {
+      if (!this.activeVault) return err({ kind: 'vaultUnavailable' });
+      const res = await this.linkService.renameFolderWithLinks(
+        this.activeVault.id,
+        this.activeVault.path,
+        args.oldPath,
+        args.newPath
+      );
+      if (!res.ok) return res;
+      return ok(undefined);
+    });
     this.ipcRouter.register('folder.delete', async (args) => {
       if (!this.activeVault) return err({ kind: 'vaultUnavailable' });
       const res = await this.folderService.deleteFolder(this.activeVault.path, args.path);

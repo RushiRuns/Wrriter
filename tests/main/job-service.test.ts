@@ -73,8 +73,8 @@ describe('Job System: JobsStore, JobRunner, and JobService', () => {
     }
 
     // Verify notice dispatched
-    expect(notices.length).toBe(1);
-    expect(notices[0]?.message).toContain('Finished job');
+    expect(notices.length).toBeGreaterThanOrEqual(1);
+    expect(notices[notices.length - 1]?.message).toContain('Finished job');
 
     // Verify stored state in JobsStore is completed
     const saved = await store.loadJobs('vault-1');

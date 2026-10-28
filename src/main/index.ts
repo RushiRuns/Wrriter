@@ -11,6 +11,7 @@ import { JobsStore } from './store/jobs-store';
 import { JobService } from './services/job-service';
 import { VaultService } from './services/vault-service';
 import { TagService } from './services/tag-service';
+import { LinkService } from './services/link-service';
 import { IndexClient } from './services/index-client';
 import { registerVaultProtocolPrivileges, setupVaultProtocolHandler } from './platform/vault-protocol';
 
@@ -39,6 +40,12 @@ const tagService = new TagService({
   vaultReader,
   safeWriter
 });
+const linkService = new LinkService({
+  jobService,
+  indexClient,
+  vaultReader,
+  safeWriter
+});
 const vaultService = new VaultService({
   appDataStore,
   safeWriter
@@ -51,6 +58,7 @@ const windowService = new WindowService({
   vaultReader,
   indexClient,
   tagService,
+  linkService,
   watcherFactory: (vaultPath: string) =>
     new WatcherAdapter(vaultPath, safeWriter, {
       onEvents: (events) => {

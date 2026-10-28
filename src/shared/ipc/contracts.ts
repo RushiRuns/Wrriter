@@ -162,6 +162,21 @@ export interface SetNoteOrderArgs {
   readonly afterKey?: string;
 }
 
+export interface RenameNoteArgs {
+  readonly oldPath: string;
+  readonly newPath: string;
+}
+
+export interface MoveNoteArgs {
+  readonly oldPath: string;
+  readonly newPath: string;
+}
+
+export interface NoteJobResult {
+  readonly jobId?: string | undefined;
+  readonly affectedCount: number;
+}
+
 // 4. folder.*
 export interface CreateFolderArgs {
   readonly path: string;
@@ -321,6 +336,8 @@ export interface IpcChannelTable {
   'note.delete': { args: DeleteNoteArgs; result: void };
   'note.list': { args: ListNotesArgs; result: readonly NoteListItem[] };
   'note.setOrder': { args: SetNoteOrderArgs; result: void };
+  'note.rename': { args: RenameNoteArgs; result: NoteJobResult };
+  'note.move': { args: MoveNoteArgs; result: NoteJobResult };
   'folder.create': { args: CreateFolderArgs; result: void };
   'folder.rename': { args: RenameFolderArgs; result: void };
   'folder.delete': { args: DeleteFolderArgs; result: void };
@@ -501,6 +518,24 @@ export const IPC_VALIDATORS: { readonly [K in IpcChannel]: Validator<IpcChannelT
     if (typeof input['beforeKey'] === 'string') res.beforeKey = input['beforeKey'];
     if (typeof input['afterKey'] === 'string') res.afterKey = input['afterKey'];
     return ok(res);
+  },
+
+  'note.rename': (input: unknown): Result<RenameNoteArgs> => {
+    if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });
+    const oldPath = validateNonEmptyString('oldPath', input['oldPath']);
+    if (!oldPath.ok) return oldPath;
+    const newPath = validateNonEmptyString('newPath', input['newPath']);
+    if (!newPath.ok) return newPath;
+    return ok({ oldPath: oldPath.value, newPath: newPath.value });
+  },
+
+  'note.move': (input: unknown): Result<MoveNoteArgs> => {
+    if (!isObject(input)) return err({ kind: 'validation', field: 'args', reason: 'expected object' });
+    const oldPath = validateNonEmptyString('oldPath', input['oldPath']);
+    if (!oldPath.ok) return oldPath;
+    const newPath = validateNonEmptyString('newPath', input['newPath']);
+    if (!newPath.ok) return newPath;
+    return ok({ oldPath: oldPath.value, newPath: newPath.value });
   },
 
   'folder.create': (input: unknown): Result<CreateFolderArgs> => {

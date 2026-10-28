@@ -379,14 +379,14 @@ Nothing that depends on a row is built until it is decided. Rows 15 to 17 are ne
 
 ### Jobs that keep links working
 
-- [ ] `jobPlans` in `shared/domain`
-- [ ] Rename job: every link to a renamed note is updated, including when the file follows its first line. Only the link text changes, and display text and heading parts are kept. A note open in another tab is updated in place with the cursor kept
-- [ ] Folder rename and move job: one rename on disk, control back at once, then path-style wikilinks and relative image paths rewritten in the background. A folder rename triggers it from now on, dragging a folder from M4
-- [ ] Note move job: the moved note's image paths and path-style links to it are rewritten. Triggered by Move to folder if decision 4 keeps it, and by dragging from M4
-- [ ] Job progress such as `Updating links 120 of 3,400`: where it shows waits on open item 15
-- [ ] Link updates, tag renames and folder moves have no cancel button
-- [ ] Random-stop test, 100 times each: renaming a note with 5,000 links, moving a folder of 5,000 notes, renaming a tag used by 5,000 notes. After each restart every link is right and nothing else in any note changed. The job design is fixed before M3 counts as done
-- [ ] A rename done outside Wrriter updates no links
+- [x] `jobPlans` in `shared/domain`
+- [x] Rename job: every link to a renamed note is updated, including when the file follows its first line. Only the link text changes, and display text and heading parts are kept. A note open in another tab is updated in place with the cursor kept
+- [x] Folder rename and move job: one rename on disk, control back at once, then path-style wikilinks and relative image paths rewritten in the background. A folder rename triggers it from now on, dragging a folder from M4
+- [x] Note move job: the moved note's image paths and path-style links to it are rewritten. Triggered by Move to folder if decision 4 keeps it, and by dragging from M4
+- [x] Job progress such as `Updating links 120 of 3,400`: where it shows waits on open item 15
+- [x] Link updates, tag renames and folder moves have no cancel button
+- [x] Random-stop test, 100 times each: renaming a note with 5,000 links, moving a folder of 5,000 notes, renaming a tag used by 5,000 notes. After each restart every link is right and nothing else in any note changed. The job design is fixed before M3 counts as done
+- [x] A rename done outside Wrriter updates no links
 
 ### Search and switching
 
@@ -405,8 +405,8 @@ Nothing that depends on a row is built until it is decided. Rows 15 to 17 are ne
 - [ ] First search results on 50,000 notes in under 200 ms, and quick switcher results in under 30 ms
 - [ ] The tag list opens instantly on 50,000 notes, a nested tag shows as a tree, and renaming a tag keeps every count right
 - [ ] Setting a tag or status writes only that key, and a note with keys such as `aliases` keeps them untouched
-- [ ] Renaming a note with 200 links to it updates all of them and nothing else in those notes
-- [ ] All three random-stop tests pass 100 times
+- [x] Renaming a note with 200 links to it updates all of them and nothing else in those notes
+- [x] All three random-stop tests pass 100 times
 - [ ] Opening a note with 500 backlinks shows the count with no delay
 - [ ] A vault of 50,000 notes receiving all its files from Syncthing at once stays usable and ends fully indexed
 - [ ] The M3 report is sent, and Krishna says go

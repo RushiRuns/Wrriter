@@ -118,6 +118,7 @@ export interface TabSession {
   created?: string | null;
   frontmatterRaw?: string;
   isBrokenFrontmatter?: boolean;
+  savedSelection?: { from: number; to: number };
 }
 
 export interface EditorHostProps {
@@ -377,8 +378,8 @@ export const EditorHost: React.FC<EditorHostProps> = ({
         const newFileName = deriveFileNameFromTitle(newTitle);
         const newPath = folder ? `${folder}/${newFileName}` : newFileName;
 
-        if (window.wrriter?.folder?.rename) {
-          const res = await window.wrriter.folder.rename({
+        if (window.wrriter?.note?.rename) {
+          const res = await window.wrriter.note.rename({
             oldPath: tab.path,
             newPath
           });
@@ -397,6 +398,7 @@ export const EditorHost: React.FC<EditorHostProps> = ({
             onPathChangeRef.current?.(oldPath, newPath);
             onTitleChangeRef.current?.(newTitle);
             notifyTabs();
+            void checkExternalChanges();
           }
         }
       }
@@ -836,6 +838,10 @@ export const EditorHost: React.FC<EditorHostProps> = ({
         const prevTab = tabsRef.current.get(prevPath);
         if (prevTab) {
           prevTab.editorState = editor.state;
+          prevTab.savedSelection = {
+            from: editor.state.selection.from,
+            to: editor.state.selection.to
+          };
           prevTab.findBarState = { ...findBarStateRef.current };
           if (scrollRef.current) {
             prevTab.scrollTop = scrollRef.current.scrollTop;
@@ -932,12 +938,44 @@ export const EditorHost: React.FC<EditorHostProps> = ({
       } else if (targetTab.editorState) {
         // Swap EditorState in O(1) time without re-mounting editor DOM
         editor.view.updateState(targetTab.editorState);
+        if (targetTab.savedSelection) {
+          try {
+            const maxPos = editor.state.doc.content.size;
+            const from = Math.min(targetTab.savedSelection.from, maxPos);
+            const to = Math.min(targetTab.savedSelection.to, maxPos);
+            editor.commands.setTextSelection({ from, to });
+          } catch {}
+        }
         editor.view.dispatch(
           editor.state.tr.setMeta(propertiesLinePluginKey, {
             tags: targetTab.tags || [],
             status: targetTab.status || null
           })
         );
+        onTitleChangeRef.current?.(targetTab.title);
+        setActiveTags(targetTab.tags || []);
+        setActiveStatus(targetTab.status || null);
+        setActiveDateLine(targetTab.dateLine || '');
+      } else {
+        // Target tab in memory but editorState cleared (e.g. quietly reloaded in place while in background)
+        const rawText = targetTab.lastSavedText ?? (targetTab.originalBytes.length > 0 ? new TextDecoder().decode(targetTab.originalBytes) : '');
+        const docJson = markdownToTipTapDoc(rawText);
+        editor.commands.setContent(docJson as any, { emitUpdate: false });
+        editor.view.dispatch(
+          editor.state.tr.setMeta(propertiesLinePluginKey, {
+            tags: targetTab.tags || [],
+            status: targetTab.status || null
+          })
+        );
+        targetTab.editorState = editor.state;
+        if (targetTab.savedSelection) {
+          try {
+            const maxPos = editor.state.doc.content.size;
+            const from = Math.min(targetTab.savedSelection.from, maxPos);
+            const to = Math.min(targetTab.savedSelection.to, maxPos);
+            editor.commands.setTextSelection({ from, to });
+          } catch {}
+        }
         onTitleChangeRef.current?.(targetTab.title);
         setActiveTags(targetTab.tags || []);
         setActiveStatus(targetTab.status || null);
@@ -1031,6 +1069,13 @@ export const EditorHost: React.FC<EditorHostProps> = ({
               editorRef.current.commands.setTextSelection({ from, to });
             } catch {}
           } else {
+            // Note open in another tab updated in place; preserve its cursor
+            if (tab.editorState) {
+              tab.savedSelection = {
+                from: tab.editorState.selection.from,
+                to: tab.editorState.selection.to
+              };
+            }
             tab.editorState = null;
           }
         } else {

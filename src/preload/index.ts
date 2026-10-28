@@ -59,6 +59,8 @@ const api: WrriterApi = {
   note: {
     read: (args: ReadNoteArgs) => invoke('note.read', args),
     save: (args: SaveNoteArgs) => invoke('note.save', args),
+    rename: (args: import('../shared/ipc/contracts').RenameNoteArgs) => invoke('note.rename', args),
+    move: (args: import('../shared/ipc/contracts').MoveNoteArgs) => invoke('note.move', args),
     setPinned: (args: SetPinnedArgs) => invoke('note.setPinned', args),
     delete: (args: DeleteNoteArgs) => invoke('note.delete', args),
     list: (args: ListNotesArgs = {}) => invoke('note.list', args),

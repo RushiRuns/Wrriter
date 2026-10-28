@@ -109,8 +109,11 @@ export function VirtualList<T>({
   const totalCount = items.length;
   const totalHeight = totalCount * itemHeight;
 
-  const startIndex = Math.max(0, Math.floor(scrollTop / itemHeight) - overscan);
-  const endIndex = Math.min(totalCount, Math.ceil((scrollTop + viewportHeight) / itemHeight) + overscan);
+  // When all items fit comfortably in the viewport without scrolling, bypass virtualization
+  // to eliminate phantom offsetY jumps from ephemeral scroll/layout recalculations.
+  const isVirtual = totalHeight > viewportHeight;
+  const startIndex = isVirtual ? Math.max(0, Math.floor(scrollTop / itemHeight) - overscan) : 0;
+  const endIndex = isVirtual ? Math.min(totalCount, Math.ceil((scrollTop + viewportHeight) / itemHeight) + overscan) : totalCount;
 
   const visibleItems = items.slice(startIndex, endIndex);
   const offsetY = startIndex * itemHeight;

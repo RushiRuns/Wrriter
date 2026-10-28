@@ -57,6 +57,31 @@ export function noteBelongsToFolder(noteRelPath: string, folderRelPath: string |
   return getNoteFolderRelPath(noteRelPath) === folderRelPath;
 }
 
+export function areNoteListsEqual(
+  a: readonly NoteListItem[],
+  b: readonly NoteListItem[]
+): boolean {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const itemA = a[i];
+    const itemB = b[i];
+    if (!itemA || !itemB) return false;
+    if (
+      itemA.path !== itemB.path ||
+      itemA.title !== itemB.title ||
+      itemA.modified !== itemB.modified ||
+      itemA.pinned !== itemB.pinned ||
+      itemA.preview !== itemB.preview ||
+      itemA.hasImage !== itemB.hasImage ||
+      itemA.orderKey !== itemB.orderKey
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
 function flattenFolderNodes(nodes: readonly FolderNode[]): { name: string; relPath: string }[] {
   const result: { name: string; relPath: string }[] = [];
   const walk = (list: readonly FolderNode[]) => {
@@ -229,6 +254,11 @@ export const MainWindow: React.FC = () => {
             if (unsaved && noteBelongsToFolder(unsaved.path, folderPath)) {
               updated = [{ ...unsaved, title: currentTitle || unsaved.title }, ...updated];
             }
+          }
+
+          // If notes content hasn't changed, retain previous reference to avoid unnecessary re-renders
+          if (areNoteListsEqual(prevNotes, updated)) {
+            return prevNotes;
           }
 
           return updated;
@@ -1419,7 +1449,7 @@ export const MainWindow: React.FC = () => {
               No notes yet. Click new note to begin writing.
             </div>
           ) : (
-            <div style={{ flex: 1, overflowY: 'auto' }}>
+            <div className="notes-scroll" style={{ flex: 1, overflowY: 'auto' }}>
               {/* Pinned Group */}
               {pinnedNotes.length > 0 && (
                 <>

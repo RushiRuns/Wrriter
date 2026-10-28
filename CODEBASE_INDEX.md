@@ -218,6 +218,7 @@ All checks are executed prior to builds and gated in CI/tests (`npm run check`):
 | **Jobs & Resilience** | [`tests/main/job-service.test.ts`](file:///c:/Dev/Wrriter/tests/main/job-service.test.ts) | Resumes interrupted bulk jobs without undoing or corrupting completed work. |
 | **Domain Logic** | [`tests/shared/`](file:///c:/Dev/Wrriter/tests/shared) | Unit tests for blocks, clock, frontmatter, id generation, IPC validators, names, ordering, and titles. |
 | **Vault Generator** | [`tests/vault-gen/`](file:///c:/Dev/Wrriter/tests/vault-gen) | Generates synthetic 10k-note vaults for scale and stress testing. |
+| **Empty Folder & Count Regression** | [`tests/renderer/folder-empty-note-leak-regression.test.ts`](file:///c:/Dev/Wrriter/tests/renderer/folder-empty-note-leak-regression.test.ts) | Prevents active note retention leaking across folder boundaries and decouples root folder count badge from filtered list state. |
 
 ---
 

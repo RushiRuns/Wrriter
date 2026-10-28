@@ -50,6 +50,13 @@ function getNoteFolderRelPath(filePath: string): string {
   return lastSlash >= 0 ? norm.slice(0, lastSlash) : '';
 }
 
+export function noteBelongsToFolder(noteRelPath: string, folderRelPath: string | null): boolean {
+  if (folderRelPath === null || folderRelPath === '') {
+    return true;
+  }
+  return getNoteFolderRelPath(noteRelPath) === folderRelPath;
+}
+
 function flattenFolderNodes(nodes: readonly FolderNode[]): { name: string; relPath: string }[] {
   const result: { name: string; relPath: string }[] = [];
   const walk = (list: readonly FolderNode[]) => {
@@ -83,6 +90,7 @@ export const MainWindow: React.FC = () => {
   const [folders, setFolders] = useState<readonly FolderNode[]>([]);
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [notes, setNotes] = useState<readonly NoteListItem[]>([]);
+  const [totalVaultNotesCount, setTotalVaultNotesCount] = useState<number>(0);
   const [selectedNotePath, setSelectedNotePath] = useState<string | null>(null);
   const [noteTitle, setNoteTitle] = useState('Welcome to Wrriter');
   const [noteContent, setNoteContent] = useState('');
@@ -174,6 +182,12 @@ export const MainWindow: React.FC = () => {
         setFolders(res.value);
       }
     }
+    if (window.wrriter?.note?.list) {
+      const allRes = await window.wrriter.note.list({});
+      if (allRes.ok) {
+        setTotalVaultNotesCount(allRes.value.length);
+      }
+    }
   }, []);
 
   // Refresh notes from disk
@@ -184,6 +198,9 @@ export const MainWindow: React.FC = () => {
         sortBy: currentSort
       });
       if (res.ok) {
+        if (folderPath === null || folderPath === '') {
+          setTotalVaultNotesCount(res.value.length);
+        }
         setNotes((prevNotes) => {
           const currentSelected = selectedNotePathRef.current;
           const currentTitle = noteTitleRef.current;
@@ -199,10 +216,14 @@ export const MainWindow: React.FC = () => {
             return diskNote;
           });
 
-          // Preserve unsaved active note that is not yet on disk
-          if (currentSelected && !updated.some((n: NoteListItem) => n.path === currentSelected)) {
+          // Preserve unsaved active note that is not yet on disk only if it belongs to current folder view
+          if (
+            currentSelected &&
+            noteBelongsToFolder(currentSelected, folderPath) &&
+            !updated.some((n: NoteListItem) => n.path === currentSelected)
+          ) {
             const unsaved = prevNotes.find((n) => n.path === currentSelected);
-            if (unsaved) {
+            if (unsaved && noteBelongsToFolder(unsaved.path, folderPath)) {
               updated = [{ ...unsaved, title: currentTitle || unsaved.title }, ...updated];
             }
           }
@@ -529,6 +550,7 @@ export const MainWindow: React.FC = () => {
     if (window.wrriter?.note?.delete) {
       const res = await window.wrriter.note.delete({ path: note.path });
       if (res.ok) {
+        setTotalVaultNotesCount((prev) => Math.max(0, prev - 1));
         await refreshNotes();
         await refreshFolders();
         if (selectedNotePath === note.path) {
@@ -646,6 +668,7 @@ export const MainWindow: React.FC = () => {
     };
 
     setNotes((prev) => [newNoteItem, ...prev]);
+    setTotalVaultNotesCount((prev) => prev + 1);
     setSelectedNotePath(newPath);
     setNoteTitle(defaultTitle);
     tabHistoriesRef.current.set(newPath, { stack: [newPath], index: 0 });
@@ -1180,7 +1203,7 @@ export const MainWindow: React.FC = () => {
               setSelectedFolder(path);
               void refreshNotes(path);
             }}
-            totalVaultNotesCount={notes.length}
+            totalVaultNotesCount={totalVaultNotesCount}
             onRefresh={async () => {
               await refreshFolders();
               await refreshNotes();

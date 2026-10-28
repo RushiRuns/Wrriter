@@ -1233,6 +1233,24 @@ export const EditorHost: React.FC<EditorHostProps> = ({
         if (prevPath) handleSelectTab(prevPath);
       }
     };
+    const handleNoteDeleted = (e: Event) => {
+      const customEvent = e as CustomEvent<{ path: string }>;
+      const deletedPath = customEvent.detail?.path;
+      if (!deletedPath) return;
+
+      const tab = tabsRef.current.get(deletedPath);
+      if (tab) {
+        tabsRef.current.delete(deletedPath);
+        if (activePathRef.current === deletedPath) {
+          const remaining = Array.from(tabsRef.current.keys());
+          const next = remaining[remaining.length - 1] ?? null;
+          setActiveTabPath(next);
+          activePathRef.current = next;
+          onSelectTabRef.current?.(next);
+        }
+        notifyTabs();
+      }
+    };
 
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('wrriter:find-in-note', handleFindPaletteCommand);
@@ -1246,6 +1264,7 @@ export const EditorHost: React.FC<EditorHostProps> = ({
     window.addEventListener('wrriter:close-tabs-to-right', handleCloseRightCmd);
     window.addEventListener('wrriter:next-tab', handleNextTabCmd);
     window.addEventListener('wrriter:prev-tab', handlePrevTabCmd);
+    window.addEventListener('wrriter:note-deleted', handleNoteDeleted);
     slashListeners.forEach(([event, handler]) => window.addEventListener(event, handler));
     formatListeners.forEach(([event, handler]) => window.addEventListener(event, handler));
 
@@ -1262,6 +1281,7 @@ export const EditorHost: React.FC<EditorHostProps> = ({
       window.removeEventListener('wrriter:close-tabs-to-right', handleCloseRightCmd);
       window.removeEventListener('wrriter:next-tab', handleNextTabCmd);
       window.removeEventListener('wrriter:prev-tab', handlePrevTabCmd);
+      window.removeEventListener('wrriter:note-deleted', handleNoteDeleted);
       slashListeners.forEach(([event, handler]) => window.removeEventListener(event, handler));
       formatListeners.forEach(([event, handler]) => window.removeEventListener(event, handler));
     };

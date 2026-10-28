@@ -109,6 +109,9 @@ export const MainWindow: React.FC = () => {
   const [newFolderNameInput, setNewFolderNameInput] = useState('');
   const [newFolderInputError, setNewFolderInputError] = useState<string | null>(null);
   const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
+  const handleDismissNotice = useCallback(() => {
+    setNoticeMessage(null);
+  }, []);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
 
   // Per-tab navigation history and panes state
@@ -547,23 +550,32 @@ export const MainWindow: React.FC = () => {
   // Delete note action (sends to Recycle Bin)
   const handleDeleteNote = async (note: NoteListItem) => {
     setNoteContextMenu(null);
+
+    const remaining = notes.filter((n) => n.path !== note.path);
+    setNotes(remaining);
+
+    if (selectedNotePath === note.path) {
+      const nextNote = remaining[0] ?? null;
+      setSelectedNotePath(nextNote?.path ?? null);
+      selectedNotePathRef.current = nextNote?.path ?? null;
+      setNoteTitle(nextNote?.title ?? (remaining.length === 0 ? 'Welcome to Wrriter' : 'Untitled'));
+      if (!nextNote) {
+        setNoteContent('');
+      }
+    }
+
+    // Drop open tab in EditorHost without saving
+    window.dispatchEvent(
+      new CustomEvent('wrriter:note-deleted', { detail: { path: note.path } })
+    );
+
+    setTotalVaultNotesCount((prev) => Math.max(0, prev - 1));
+
     if (window.wrriter?.note?.delete) {
       const res = await window.wrriter.note.delete({ path: note.path });
       if (res.ok) {
-        setTotalVaultNotesCount((prev) => Math.max(0, prev - 1));
         await refreshNotes();
         await refreshFolders();
-        if (selectedNotePath === note.path) {
-          const remaining = notes.filter((n) => n.path !== note.path);
-          if (remaining.length > 0) {
-            setSelectedNotePath(remaining[0]?.path ?? null);
-            setNoteTitle(remaining[0]?.title ?? 'Untitled');
-          } else {
-            setSelectedNotePath(null);
-            setNoteTitle('Welcome to Wrriter');
-            setNoteContent('');
-          }
-        }
       }
     }
   };
@@ -1785,7 +1797,7 @@ export const MainWindow: React.FC = () => {
 
       {/* Temporary Notice Banner */}
       {noticeMessage && (
-        <Notice message={noticeMessage} onDismiss={() => setNoticeMessage(null)} />
+        <Notice message={noticeMessage} onDismiss={handleDismissNotice} />
       )}
     </WindowShell>
   );

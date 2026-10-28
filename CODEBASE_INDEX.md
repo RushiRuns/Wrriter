@@ -219,6 +219,7 @@ All checks are executed prior to builds and gated in CI/tests (`npm run check`):
 | **Domain Logic** | [`tests/shared/`](file:///c:/Dev/Wrriter/tests/shared) | Unit tests for blocks, clock, frontmatter, id generation, IPC validators, names, ordering, and titles. |
 | **Vault Generator** | [`tests/vault-gen/`](file:///c:/Dev/Wrriter/tests/vault-gen) | Generates synthetic 10k-note vaults for scale and stress testing. |
 | **Empty Folder & Count Regression** | [`tests/renderer/folder-empty-note-leak-regression.test.ts`](file:///c:/Dev/Wrriter/tests/renderer/folder-empty-note-leak-regression.test.ts) | Prevents active note retention leaking across folder boundaries and decouples root folder count badge from filtered list state. |
+| **Note Deletion Regression** | [`tests/renderer/note-deletion-anomalies-regression.test.ts`](file:///c:/Dev/Wrriter/tests/renderer/note-deletion-anomalies-regression.test.ts) | Verifies deletion note removal, immediate selection update, tab eviction on internal delete, and notice auto-dismissal. |
 
 ---
 

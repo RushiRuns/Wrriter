@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 export interface NoticeProps {
   message: string;
@@ -18,13 +18,16 @@ export const Notice: React.FC<NoticeProps> = ({
   onDismiss,
   durationMs = 4000
 }) => {
+  const onDismissRef = useRef(onDismiss);
+  onDismissRef.current = onDismiss;
+
   useEffect(() => {
     if (durationMs <= 0) return;
     const timer = setTimeout(() => {
-      onDismiss();
+      onDismissRef.current();
     }, durationMs);
     return () => clearTimeout(timer);
-  }, [durationMs, onDismiss]);
+  }, [durationMs, message]);
 
   const typeBorderColor =
     type === 'error'
